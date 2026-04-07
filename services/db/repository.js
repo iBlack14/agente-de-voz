@@ -1,0 +1,103 @@
+const { query } = require('./postgres.service');
+
+/**
+ * Handles all database interactions for call records and transcripts.
+ */
+module.exports = {
+  /**
+   * Logs or updates a call record and its transcript turns.
+   */
+  logCall: async (entry) => {
+    const callId = String(entry.callId || 'unknown');
+    const transcript = Array.isArray(entry.transcript) ? entry.transcript : null;
+
+    await query(
+      `INSERT INTO calls (call_id, direction, from_number, to_number, started_at, ended_at, duration_sec, turn_count, status, recording_url, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+       ON CONFLICT (call_id) DO UPDATE SET 
+         direction = COALESCE(EXCLUDED.direction, calls.direction),
+         from_number = COALESCE(EXCLUDED.from_number, calls.from_number),
+         to_number = COALESCE(EXCLUDED.to_number, calls.to_number),
+         started_at = COALESCE(EXCLUDED.started_at, calls.started_at),
+         ended_at = COALESCE(EXCLUDED.ended_at, calls.ended_at),
+         duration_sec = COALESCE(EXCLUDED.duration_sec, calls.duration_sec),
+         turn_count = COALESCE(EXCLUDED.turn_count, calls.turn_count),
+         status = COALESCE(EXCLUDED.status, calls.status),
+         recording_url = COALESCE(EXCLUDED.recording_url, calls.recording_url),
+         updated_at = NOW()`,
+      [callId, entry.direction, entry.from, entry.to, entry.startedAt, entry.endedAt, entry.durationSec, entry.turnCount, entry.status, entry.recordingUrl]
+    );
+
+    if (transcript) {
+      await query('DELETE FROM call_transcripts WHERE call_id = $1', [callId]);
+      for (const msg of transcript) {
+        await query(`INSERT INTO call_transcripts (call_id, role, text, at) VALUES ($1, $2, $3, $4)`, [callId, msg.role, msg.text, msg.at]);
+      }
+    }
+  },
+
+  /**
+   * Reads call history with associated transcripts.
+   */
+  readCallLog: async () => {
+    const { rows: calls } = await query(`SELECT * FROM calls ORDER BY COALESCE(started_at, created_at) DESC LIMIT 200`);
+    if (!calls.length) return [];
+
+    const ids = calls.map(c => c.call_id);
+    const placeholders = ids.map((_, i) => `$${i + 1}`).join(', ');
+    const { rows: transcripts } = await query(`SELECT * FROM call_transcripts WHERE call_id IN (${placeholders}) ORDER BY id ASC`, ids);
+
+    const transcriptsMap = transcripts.reduce((acc, t) => {
+      if (!acc[t.call_id]) acc[t.call_id] = [];
+      acc[t.call_id].push({ role: t.role, text: t.text, at: t.at });
+      return acc;
+    }, {});
+
+    return calls.map(r => ({
+      callId: r.call_id,
+      direction: r.direction,
+      from: r.from_number,
+      to: r.to_number,
+      startedAt: r.started_at,
+      endedAt: r.ended_at,
+      durationSec: r.duration_sec,
+      turnCount: r.turn_count,
+      status: r.status,
+      recordingUrl: r.recording_url,
+      transcript: transcriptsMap[r.call_id] || []
+    }));
+  },
+
+  /**
+   * Logs usage metrics for AI or Telephony services.
+   */
+  logUsage: async ({ callId, service, metric, value }) => {
+    await query(
+      `INSERT INTO usage_logs (call_id, service, metric, value) VALUES ($1, $2, $3, $4)`,
+      [callId || null, service, metric, value]
+    );
+  },
+
+  /**
+   * Aggregates usage statistics for the dashboard.
+   */
+  getUsageStats: async () => {
+    const { rows } = await query(`
+      SELECT 
+        service, 
+        metric, 
+        SUM(value) as total 
+      FROM usage_logs 
+      GROUP BY service, metric
+    `);
+    
+    // Also include telnyx call duration from calls table
+    const { rows: telnyxRows } = await query(`SELECT SUM(duration_sec) as total_sec FROM calls WHERE duration_sec > 0`);
+    const totalSec = telnyxRows[0]?.total_sec || 0;
+
+    return {
+      usage: rows,
+      telnyx_seconds: totalSec
+    };
+  }
+};

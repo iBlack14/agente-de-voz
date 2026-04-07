@@ -1,0 +1,20 @@
+# Dependencias
+node_modules/
+
+# Variables de entorno (CONTIENE API KEYS SENSIBLES)
+.env
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# PM2
+ecosystem.config.js

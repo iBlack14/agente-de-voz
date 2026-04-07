@@ -1,0 +1,3 @@
+{
+  "ignore": ["prompts.json", "call_log.json"]
+}
