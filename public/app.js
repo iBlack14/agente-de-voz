@@ -170,24 +170,30 @@ const initDashboardApp = () => {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const rawValue = numberInput.value;
-    const numbers = rawValue
-      .split('\n')
-      .map(n => n.trim().replace(/[^0-9+]/g, ''))
-      .filter(n => n.length >= 8);
+    const lines = rawValue.split('\n').filter(l => l.trim().length > 0);
+    const entries = [];
+    
+    lines.forEach(line => {
+      const parts = line.split(/[,\s\t;|]+/).map(p => p.trim()).filter(p => p.length > 0);
+      const num = (parts[0] || '').replace(/[^0-9+]/g, '');
+      if (num.length >= 8) {
+        entries.push({ number: num, domain: parts[1] || '' });
+      }
+    });
 
-    if (!numbers.length) return;
+    if (!entries.length) return;
 
     startBtn.disabled = true;
     startBtn.textContent = 'PROCESANDO...';
     emptyState.style.display = 'none';
 
-    for (const num of numbers) {
+    for (const entry of entries) {
       const li = document.createElement('li');
       li.className = 'px-5 py-4 rounded-xl bg-surface-container-highest/30 border border-outline-variant/10 flex justify-between items-center animate-pulse';
       li.innerHTML = `
         <div class="flex items-center gap-3">
           <span class="material-symbols-outlined text-primary text-sm">contact_phone</span>
-          <span class="text-xs font-bold font-label tracking-widest text-on-surface">${num}</span>
+          <span class="text-xs font-bold font-label tracking-widest text-on-surface">${entry.number}${entry.domain ? ' · ' + escapeHtml(entry.domain) : ''}</span>
         </div>
         <span class="call-status text-[9px] uppercase tracking-widest font-bold text-primary/60">Llamando...</span>
       `;
@@ -197,7 +203,7 @@ const initDashboardApp = () => {
         const resp = await fetch('/make-call', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ number: num })
+          body: JSON.stringify({ number: entry.number, domain: entry.domain })
         });
         const data = await resp.json();
         const statusEl = li.querySelector('.call-status');
@@ -206,7 +212,7 @@ const initDashboardApp = () => {
         if (resp.ok && data.success) {
           statusEl.className = 'call-status text-[9px] uppercase tracking-widest font-bold text-green-400';
           statusEl.textContent = 'EN CURSO';
-          li.dataset.number = num;
+          li.dataset.number = entry.number;
         } else {
           statusEl.className = 'call-status text-[9px] uppercase tracking-widest font-bold text-red-500';
           statusEl.textContent = data.message || data.error || 'ERROR';
@@ -1010,6 +1016,70 @@ const initDashboardApp = () => {
   if (importRem) handleFileImport(importRem, document.getElementById('reminder-phones'), () => {
       document.getElementById('reminder-phones').dispatchEvent(new Event('input'));
   });
+
+  // ─── Voice Preview System ──────────────────────────────
+  const previewBar = document.getElementById('voice-preview-bar');
+  const previewAudio = document.getElementById('voice-preview-audio');
+  const closePreview = document.getElementById('close-preview');
+  const previewPulse = document.getElementById('preview-pulse');
+
+  function showPreviewBar() {
+    if (previewBar) previewBar.style.transform = 'translateY(0)';
+  }
+  function hidePreviewBar() {
+    if (previewBar) previewBar.style.transform = 'translateY(100%)';
+    if (previewAudio) { previewAudio.pause(); previewAudio.src = ''; }
+  }
+
+  if (closePreview) closePreview.addEventListener('click', hidePreviewBar);
+
+  async function previewVoice(text) {
+    if (!text || !text.trim()) {
+      appAlert('Escribe un texto para escuchar la voz.', true);
+      return;
+    }
+    showPreviewBar();
+    if (previewPulse) previewPulse.classList.add('animate-pulse');
+
+    try {
+      const resp = await fetch('/api/tts-preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: text.trim() })
+      });
+
+      if (!resp.ok) throw new Error('Error al generar audio');
+
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      previewAudio.src = url;
+      previewAudio.play();
+      if (previewPulse) previewPulse.classList.remove('animate-pulse');
+    } catch (e) {
+      hidePreviewBar();
+      appAlert('Error al generar la vista previa de voz.', true);
+    }
+  }
+
+  // Identity tab preview
+  const previewPromptBtn = document.getElementById('preview-prompt-btn');
+  if (previewPromptBtn) {
+    previewPromptBtn.addEventListener('click', () => {
+      const greeting = document.getElementById('prompt-greeting')?.value || '';
+      const text = document.getElementById('prompt-text')?.value || '';
+      previewVoice(greeting || text || 'Hola, esta es una prueba de voz.');
+    });
+  }
+
+  // Reminders tab preview
+  const previewReminderBtn = document.getElementById('preview-reminder-btn');
+  if (previewReminderBtn) {
+    previewReminderBtn.addEventListener('click', () => {
+      const greeting = document.getElementById('reminder-greeting')?.value || '';
+      const msg = document.getElementById('reminder-msg')?.value || '';
+      previewVoice(`${greeting} ${msg}`.trim() || 'Hola, esta es una prueba de voz.');
+    });
+  }
 };
 
 if (document.readyState === 'loading') {

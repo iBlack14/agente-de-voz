@@ -115,7 +115,7 @@ function createSession(ws) {
           for await (const chunk of stream) {
               if (abortController.signal.aborted) break;
               if (ws.readyState === WebSocket.OPEN) {
-                  ws.send(JSON.stringify({ event: 'media', stream_id: streamId, media: { payload: chunk.toString('base64') } }));
+                  ws.send(JSON.stringify({ event: 'media', media: { payload: chunk.toString('base64') } }));
                   bytesSent += chunk.length;
               }
               await new Promise(r => setImmediate(r));
@@ -151,7 +151,16 @@ function createSession(ws) {
     const timeG = h >= 5 && h < 12 ? 'Buenos días' : (h >= 12 && h < 19 ? 'Buenas tardes' : 'Buenas noches');
     const domain = context?.domain || 'su sitio web';
     
-    greeting = greeting.replace(/Buenas \(\)/gi, timeG).replace(/\(\)/g, timeG).replace(/\{DOMAIN\}/gi, domain).replace(/aqui ira el dominio/gi, domain).trim();
+    // Replace all known domain placeholders
+    greeting = greeting
+      .replace(/Buenas \(\)/gi, timeG)
+      .replace(/\(\)/g, timeG)
+      .replace(/\{DOMAIN\}/gi, domain)
+      .replace(/aqui ira el dominio/gi, domain)
+      .replace(/\.{3,}/g, domain)              // ...... or ... as placeholder
+      .replace(/\[dominio\]/gi, domain)         // [dominio]
+      .replace(/\(dominio\)/gi, domain)         // (dominio)
+      .trim();
 
     conversationHistory.push({ role: 'assistant', content: greeting });
     meta.transcriptLog.push({ role: 'assistant', text: greeting, at: new Date().toISOString() });
@@ -174,7 +183,24 @@ async function precomputeGreeting(callId) {
     try {
         const [identity, reminder] = await Promise.all([getActivePrompt(), getActiveReminderPrompt()]);
         const context = getCallContext(callId);
-        const greeting = context?.customGreeting ? `${context.customGreeting} ${context.customInstructions}`.trim() : (context?.mode === 'reminder' ? `${reminder.greeting} ${reminder.text}`.trim() : identity.greeting);
+        let greeting = context?.customGreeting ? `${context.customGreeting} ${context.customInstructions}`.trim() : (context?.mode === 'reminder' ? `${reminder.greeting} ${reminder.text}`.trim() : identity.greeting);
+        
+        // Apply domain & time replacements BEFORE generating audio
+        const now = new Date(new Date().getTime() + (new Date().getTimezoneOffset() * 60000) + (3600000 * -5));
+        const h = now.getHours();
+        const timeG = h >= 5 && h < 12 ? 'Buenos días' : (h >= 12 && h < 19 ? 'Buenas tardes' : 'Buenas noches');
+        const domain = context?.domain || 'su sitio web';
+        
+        greeting = greeting
+          .replace(/Buenas \(\)/gi, timeG)
+          .replace(/\(\)/g, timeG)
+          .replace(/\{DOMAIN\}/gi, domain)
+          .replace(/aqui ira el dominio/gi, domain)
+          .replace(/\.{3,}/g, domain)
+          .replace(/\[dominio\]/gi, domain)
+          .replace(/\(dominio\)/gi, domain)
+          .trim();
+
         const stream = await textToSpeech(greeting, callId);
         if (stream) readyGreetings.set(callId, { stream, greeting });
     } catch (e) {}

@@ -100,5 +100,37 @@ router.get('/stats', async (req, res) => {
   }
 });
 
+/**
+ * TTS Voice Preview — Listen to the AI voice directly from the dashboard
+ */
+router.post('/tts-preview', async (req, res) => {
+  const { text } = req.body;
+  if (!text || !text.trim()) return res.status(400).json({ error: 'Texto requerido' });
+
+  const apiKey = process.env.ELEVENLABS_API_KEY;
+  const voiceId = process.env.ELEVENLABS_VOICE_ID || '90ipbRoKi4CpHXvKVtl0';
+
+  try {
+    const response = await axios.post(
+      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream?output_format=mp3_44100_128`,
+      {
+        text: text.trim(),
+        model_id: 'eleven_turbo_v2_5',
+        voice_settings: { stability: 0.5, similarity_boost: 0.8, use_speaker_boost: true }
+      },
+      {
+        headers: { 'xi-api-key': apiKey, 'Content-Type': 'application/json' },
+        responseType: 'stream',
+        timeout: 15000,
+      }
+    );
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.setHeader('Cache-Control', 'no-cache');
+    response.data.pipe(res);
+  } catch (err) {
+    console.error('[TTS Preview] Error:', err.message);
+    res.status(500).json({ error: 'Error al generar audio de vista previa' });
+  }
+});
 
 module.exports = router;

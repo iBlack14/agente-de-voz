@@ -121,10 +121,15 @@
                             <textarea id="prompt-text" class="w-full bg-surface-container-lowest border border-zinc-800/60 rounded-xl p-6 text-sm min-h-[180px] focus:ring-1 focus:ring-primary outline-none text-white no-scrollbar"></textarea>
                         </div>
                     </div>
-                    <div class="flex justify-end mt-8 gap-4">
-                        <button id="delete-prompt-btn" class="px-6 py-3 bg-error/10 text-error font-bold rounded-xl hover:bg-error/20 transition-all uppercase tracking-widest text-[9px] border border-error/20">Eliminar Nodo</button>
-                        <button id="new-prompt-btn" class="px-8 py-3 bg-zinc-800 text-zinc-300 font-bold rounded-xl hover:bg-zinc-700 transition-all uppercase tracking-widest text-[9px]">Nuevo Nodo</button>
-                        <button id="save-prompt-btn" class="px-10 py-3 bg-gradient-to-r from-primary to-primary-container text-[#050505] font-black rounded-xl shadow-lg shadow-primary/20 hover:scale-[0.98] transition-all uppercase tracking-widest text-[9px]">Guardar DNA</button>
+                    <div class="flex justify-between mt-8 gap-4">
+                        <button id="preview-prompt-btn" class="px-6 py-3 bg-secondary-container/10 text-secondary-container font-bold rounded-xl hover:bg-secondary-container/20 transition-all uppercase tracking-widest text-[9px] border border-secondary-container/20 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-sm">play_circle</span> Escuchar Voz
+                        </button>
+                        <div class="flex gap-4">
+                            <button id="delete-prompt-btn" class="px-6 py-3 bg-error/10 text-error font-bold rounded-xl hover:bg-error/20 transition-all uppercase tracking-widest text-[9px] border border-error/20">Eliminar Nodo</button>
+                            <button id="new-prompt-btn" class="px-8 py-3 bg-zinc-800 text-zinc-300 font-bold rounded-xl hover:bg-zinc-700 transition-all uppercase tracking-widest text-[9px]">Nuevo Nodo</button>
+                            <button id="save-prompt-btn" class="px-10 py-3 bg-gradient-to-r from-primary to-primary-container text-[#050505] font-black rounded-xl shadow-lg shadow-primary/20 hover:scale-[0.98] transition-all uppercase tracking-widest text-[9px]">Guardar DNA</button>
+                        </div>
                     </div>
                 </section>
             </div>
@@ -187,6 +192,11 @@
                                      </div>
                                 </div>
                                 <textarea id="reminder-msg" class="w-full bg-surface-container-lowest border border-zinc-800/60 rounded-xl p-6 text-sm focus:ring-1 focus:ring-primary outline-none text-white no-scrollbar" rows="4" placeholder="Escribe instrucciones aquí o selecciona de tu matriz guardada..."></textarea>
+                            </div>
+                            <div class="pt-4">
+                                <button id="preview-reminder-btn" type="button" class="w-full py-3 bg-secondary-container/10 text-secondary-container font-bold rounded-xl hover:bg-secondary-container/20 transition-all uppercase tracking-widest text-[9px] border border-secondary-container/20 flex items-center justify-center gap-2">
+                                    <span class="material-symbols-outlined text-sm">play_circle</span> Escuchar Guión
+                                </button>
                             </div>
                         </form>
                     </section>
@@ -415,5 +425,21 @@
                     <button type="submit" class="flex-1 py-4 rounded-xl bg-gradient-to-r from-primary to-primary-container text-[#050505] font-black text-[10px] uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-[0.98] transition-all">Confirmar</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Floating Voice Preview Player -->
+    <div id="voice-preview-bar" class="fixed bottom-0 left-0 right-0 z-[90] bg-[#131313]/95 backdrop-blur-xl border-t border-primary/20 p-4 flex items-center gap-4 translate-y-full transition-transform duration-300" style="margin-left: 16rem;">
+        <div class="flex items-center gap-3 flex-1">
+            <div class="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center animate-pulse" id="preview-pulse">
+                <span class="material-symbols-outlined text-primary">graphic_eq</span>
+            </div>
+            <div class="flex-1">
+                <p class="text-[9px] font-bold uppercase tracking-widest text-zinc-500 mb-1">Vista Previa de Voz AI</p>
+                <audio id="voice-preview-audio" class="w-full h-8" controls></audio>
+            </div>
+            <button id="close-preview" class="text-zinc-500 hover:text-white transition-colors">
+                <span class="material-symbols-outlined">close</span>
+            </button>
         </div>
     </div>
