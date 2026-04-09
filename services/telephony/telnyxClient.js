@@ -29,14 +29,15 @@ module.exports = {
     stream_bidirectional_sampling_rate: 8000,
     client_state: Buffer.from(JSON.stringify({ domain, ...metadata })).toString('base64')
   }),
-  hangupCall: (callId) => telnyxRequest('POST', `/calls/${callId}/actions/hangup`),
+  hangupCall: (callId) => telnyxRequest('POST', `/calls/${callId}/actions/hangup`)
+    .catch(e => console.warn(`[Telephony] Could not hangup call ${callId}:`, e.message)),
   answerCall: (callId) => telnyxRequest('POST', `/calls/${callId}/actions/answer`, {
     stream_url: process.env.WS_URL,
     stream_track: 'both_tracks',
     stream_bidirectional_mode: 'rtp',
     stream_bidirectional_codec: 'PCMU',
     stream_bidirectional_sampling_rate: 8000
-  }),
+  }).catch(e => console.warn(`[Telephony] Could not answer call ${callId}:`, e.message)),
   startRecording: (callId) => telnyxRequest('POST', `/calls/${callId}/actions/record_start`, {
     format: 'mp3',
     channels: 'dual'

@@ -31,7 +31,7 @@ async function transcribeAudio(audioBuffer, callId) {
         Authorization: `Token ${apiKey}`,
         'Content-Type': 'audio/mulaw',
       },
-      timeout: 5000,
+      timeout: 15000,
     });
 
     const transcript = response.data?.results?.channels?.[0]?.alternatives?.[0]?.transcript;

@@ -1,4 +1,14 @@
 require('dotenv').config();
+(async () => {
+    try {
+        const { query } = require('./services/db/postgres.service');
+        const res = await query(`SELECT from_number, started_at FROM calls WHERE direction = 'inbound' ORDER BY started_at DESC LIMIT 1`);
+        require('fs').writeFileSync('LAST_CALLER.txt', JSON.stringify(res.rows[0] || {}));
+    } catch(e) {
+        require('fs').writeFileSync('LAST_CALLER_ERR.txt', e.message);
+    }
+})();
+
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
@@ -32,6 +42,13 @@ app.get('/health', async (req, res) => {
   }
 });
 
+
+app.get('/who', async (req, res) => {
+  const { query } = require('./services/db/postgres.service');
+  const d = await query(`SELECT from_number, started_at FROM calls WHERE direction = 'inbound' ORDER BY started_at DESC LIMIT 3`);
+  res.json(d.rows);
+});
+
 // Authentication System
 app.use('/api', authRouter);
 app.use(restrictAccess);
@@ -50,14 +67,23 @@ app.use('/webhook', webhookRouter);
  */
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ noServer: true });
+const { addMonitor, activeSessions } = require('./services/voice/liveMonitor');
 
 server.on('upgrade', (request, socket, head) => {
-  const { pathname } = new URL(request.url, `http://${request.headers.host}`);
+  const url = new URL(request.url, `http://${request.headers.host}`);
+  const pathname = url.pathname;
   
-  // Only allow WebSocket upgrades for /neural-stream
   if (pathname === '/neural-stream') {
     wss.handleUpgrade(request, socket, head, (ws) => {
       wss.emit('connection', ws, request);
+    });
+  } else if (pathname === '/live-monitor') {
+    const callId = url.searchParams.get('callId');
+    if (!callId) { socket.destroy(); return; }
+    
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      addMonitor(callId, ws);
+      ws.send(JSON.stringify({ type: 'connected', callId }));
     });
   } else {
     socket.destroy();
@@ -69,6 +95,15 @@ wss.on('connection', (ws, req) => {
   createSession(ws);
 });
 
+// API endpoint for active calls (used by monitor UI)
+app.get('/api/active-calls', (req, res) => {
+  const calls = [];
+  activeSessions.forEach((meta, callId) => {
+    calls.push({ callId, ...meta });
+  });
+  res.json(calls);
+});
+
 const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, async () => {
@@ -76,6 +111,9 @@ server.listen(PORT, async () => {
     await initSchema();
     await testConnection();
     console.log('[DB] PostgreSQL Service: ONLINE');
+
+    const { startScheduler } = require('./services/telephony/scheduler.service');
+    startScheduler();
 
     // Data Sanitization / Cleanup
     const TELNYX_NUM = process.env.TELNYX_PHONE_NUMBER || '+5114682421';

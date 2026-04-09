@@ -25,6 +25,19 @@ module.exports = {
       try {
           await pool.query(`ALTER TABLE calls ADD COLUMN IF NOT EXISTS recording_url TEXT;`);
           await pool.query(`ALTER TABLE calls ADD COLUMN IF NOT EXISTS direction TEXT;`); // Just in case
+          await pool.query(`
+            CREATE TABLE IF NOT EXISTS scheduled_calls (
+              id BIGSERIAL PRIMARY KEY,
+              to_number TEXT NOT NULL,
+              domain TEXT,
+              greeting TEXT,
+              instructions TEXT,
+              scheduled_for TIMESTAMPTZ NOT NULL,
+              retry_interval_hours INTEGER DEFAULT 0,
+              status TEXT DEFAULT 'pending',
+              created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+          `);
       } catch (e) {
           console.log('[DB Migration] Column check handled.');
       }

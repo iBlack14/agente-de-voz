@@ -1,6 +1,8 @@
 /**
  * Simple Async Task Queue to handle concurrency limits (Telnyx D1).
  */
+const { inflightOutbound } = require('../callState');
+
 class CallQueue {
   constructor(concurrency = 1) {
     this.concurrency = concurrency;
@@ -22,6 +24,12 @@ class CallQueue {
     if (this.running >= this.concurrency || this.queue.length === 0) {
       return;
     }
+    
+    // Semáforo Inteligente: Ensure we don't exceed Telnyx channel limit of active outbounds
+    if (inflightOutbound.size + this.running >= this.concurrency) {
+      setTimeout(() => this.next(), 2000);
+      return;
+    }
 
     const { task, resolve, reject } = this.queue.shift();
     this.running++;
@@ -40,6 +48,7 @@ class CallQueue {
 }
 
 // Single instance for the whole application
-const callQueue = new CallQueue(parseInt(process.env.MAX_CONCURRENT_CALLS) || 1);
+// Set default safe limit to 2 to avoid D1 errors on basic Telnyx accounts
+const callQueue = new CallQueue(parseInt(process.env.MAX_CONCURRENT_CALLS) || 2);
 
 module.exports = { callQueue };

@@ -31,6 +31,10 @@
                 <span class="material-symbols-outlined text-lg">monitoring</span>
                 <span class="text-sm font-medium uppercase tracking-[0.2em] text-[10px]">Consumo</span>
             </button>
+            <button class="nav-item w-full py-3 px-8 flex items-center gap-4 transition-all duration-300 text-zinc-500 hover:text-zinc-200" data-tab="monitor">
+                <span class="material-symbols-outlined text-lg">radio</span>
+                <span class="text-sm font-medium uppercase tracking-[0.2em] text-[10px]">Monitor</span>
+            </button>
         </nav>
 
         <div class="mt-auto px-8 space-y-4">
@@ -168,8 +172,18 @@
                                         <input id="reminder-time" class="w-full bg-surface-container-lowest border border-zinc-800/60 rounded-xl py-3 px-6 text-sm focus:ring-1 focus:ring-primary outline-none text-white mt-1" type="datetime-local">
                                     </div>
                                 </div>
-                                <div class="h-full flex flex-col justify-start pt-[26px]">
-                                    <button type="submit" class="w-full py-4 bg-gradient-to-r from-primary to-primary-container text-[#050505] font-black rounded-xl shadow-lg shadow-primary/20 hover:scale-[0.98] transition-all uppercase tracking-widest text-[9px] min-h-[48px]">Activar Lote</button>
+                                <div class="space-y-3">
+                                    <label class="block text-[10px] font-bold uppercase tracking-widest text-zinc-500 px-1">Frecuencia de Re-intento (Auto-Llamada)</label>
+                                    <select id="reminder-retry" class="w-full bg-surface-container-lowest border border-zinc-800/60 rounded-xl py-3 px-6 text-sm focus:ring-1 focus:ring-primary outline-none text-white appearance-none">
+                                        <option value="0">Sin reintento automático</option>
+                                        <option value="1">Reintentar cada 1 hora</option>
+                                        <option value="2">Reintentar cada 2 horas</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 gap-6 items-start mt-4">
+                                <div class="h-full flex flex-col justify-start">
+                                    <button type="submit" class="w-full py-4 bg-gradient-to-r from-primary to-primary-container text-[#050505] font-black rounded-xl shadow-lg shadow-primary/20 hover:scale-[0.98] transition-all uppercase tracking-widest text-[10px] min-h-[48px]">Activar Lote Neural</button>
                                 </div>
                             </div>
                             <div class="space-y-3 mb-4 mt-6">
@@ -236,6 +250,14 @@
                                  <span class="material-symbols-outlined">restart_alt</span>
                                  Reprogramar No Contestados
                             </button>
+                        </div>
+                        
+                        <!-- Cronograma de Re-intentos -->
+                        <div class="mt-8 space-y-4">
+                            <h3 class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest px-1">Cronograma de Re-intentos</h3>
+                            <div id="scheduled-list" class="space-y-2 max-h-[250px] overflow-y-auto no-scrollbar">
+                                <div class="opacity-10 py-10 text-center uppercase text-[8px] font-bold tracking-widest">Sin programaciones</div>
+                            </div>
                         </div>
                     </section>
                 </div>
@@ -329,6 +351,59 @@
                         <div class="flex-1">
                              <h3 class="text-3xl font-black tracking-tighter mb-2">Análisis de Consumo Neural</h3>
                              <p class="text-zinc-500 font-label text-sm max-w-2xl leading-relaxed uppercase tracking-[0.1em]">Monitoreo en tiempo real de los recursos consumidos por la matriz ViaAI. Los datos se actualizan automáticamente al finalizar cada sesión de voz.</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- TAB: MONITOR EN VIVO -->
+            <div id="tab-monitor" class="tab-content space-y-8">
+                <section class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    <!-- Lista de llamadas activas -->
+                    <div class="lg:col-span-4 glass-card rounded-3xl p-8">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-sm font-label font-bold text-primary uppercase tracking-widest flex items-center gap-2">
+                                <span class="material-symbols-outlined text-lg">sensors</span>
+                                Llamadas Activas
+                            </h3>
+                            <button id="refresh-active-calls" class="text-[9px] font-bold text-primary bg-primary/10 px-3 py-1 rounded-full uppercase tracking-widest hover:bg-primary/20 transition-all flex items-center gap-1">
+                                <span class="material-symbols-outlined text-[12px]">refresh</span> Actualizar
+                            </button>
+                        </div>
+                        <div id="active-calls-list" class="space-y-3 max-h-[500px] overflow-y-auto no-scrollbar">
+                            <div class="opacity-20 py-16 text-center uppercase text-[10px] font-bold tracking-widest flex flex-col items-center gap-3">
+                                <span class="material-symbols-outlined text-3xl">wifi_tethering_off</span>
+                                Sin llamadas activas
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Panel de escucha en vivo -->
+                    <div class="lg:col-span-8 glass-card rounded-3xl p-8 relative overflow-hidden">
+                        <div class="absolute -top-12 -right-12 w-48 h-48 bg-emerald-500/5 blur-[60px] rounded-full"></div>
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-sm font-label font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-2">
+                                <span class="material-symbols-outlined text-lg">radio</span>
+                                Monitor en Tiempo Real
+                            </h3>
+                            <div id="monitor-status" class="text-[9px] font-bold text-zinc-600 bg-zinc-800 px-3 py-1 rounded-full uppercase tracking-widest">
+                                Desconectado
+                            </div>
+                        </div>
+
+                        <!-- Transcript feed en vivo -->
+                        <div id="live-transcript" class="bg-[#0a0a0a] rounded-2xl border border-zinc-800/30 p-6 min-h-[400px] max-h-[500px] overflow-y-auto no-scrollbar space-y-4 relative">
+                            <div id="monitor-empty" class="absolute inset-0 flex flex-col items-center justify-center opacity-20">
+                                <span class="material-symbols-outlined text-5xl mb-3">headset_mic</span>
+                                <p class="text-[10px] font-bold uppercase tracking-widest">Selecciona una llamada activa para escuchar</p>
+                            </div>
+                        </div>
+
+                        <!-- Disconnect button -->
+                        <div class="mt-4 flex justify-end">
+                            <button id="disconnect-monitor" class="hidden px-6 py-3 bg-error/10 text-error font-bold rounded-xl hover:bg-error/20 transition-all uppercase tracking-widest text-[9px] border border-error/20 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-sm">stop_circle</span> Desconectar
+                            </button>
                         </div>
                     </div>
                 </section>

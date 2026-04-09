@@ -75,3 +75,18 @@ INSERT INTO reminder_prompts (id, name, greeting, text)
 VALUES ('renovacion_web', 'RENOVACON', 'Buenas () Estimado Clientes, somos de la Agencia de Publicidad VIA COMUNICATIVA.', 
 'Tenemos a cargo su servicio web dominio... Está próximo a vencer, se le recomienda realizar el pago por renovación de s/.250.00 al haber cumplido ya un año con nosotros, evitar cortes e interrupciones y pagos por reposición de servicio. Quedamos Atentos.')
 ON CONFLICT (id) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS scheduled_calls (
+  id BIGSERIAL PRIMARY KEY,
+  to_number TEXT NOT NULL,
+  domain TEXT,
+  greeting TEXT,
+  instructions TEXT,
+  scheduled_for TIMESTAMPTZ NOT NULL,
+  retry_interval_hours INTEGER DEFAULT 0,
+  status TEXT DEFAULT 'pending', -- pending, processing, completed, failed
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_scheduled_calls_status ON scheduled_calls (status);
+CREATE INDEX IF NOT EXISTS idx_scheduled_calls_time ON scheduled_calls (scheduled_for);

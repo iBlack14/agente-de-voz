@@ -59,9 +59,10 @@ router.get('/voices', async (req, res) => {
 });
 
 const { callQueue } = require('../services/telephony/queue.service');
+const { inflightOutbound } = require('../services/callState');
 
 router.post('/make-call', async (req, res) => {
-  const { number, domain, mode, greeting, instructions } = req.body || {};
+  const { number, domain, mode, greeting, instructions, retry_interval, scheduled_for } = req.body || {};
   if (!number || !isValidE164(number)) return res.status(400).json({ error: 'Número inválido' });
 
   const ip = req.ip;
@@ -71,6 +72,16 @@ router.post('/make-call', async (req, res) => {
   recent.push(now);
   callRateLimits.set(ip, recent);
 
+  if (scheduled_for) {
+     const { query } = require('../services/db/postgres.service');
+     await query(
+       `INSERT INTO scheduled_calls (to_number, domain, greeting, instructions, scheduled_for, retry_interval_hours)
+        VALUES ($1, $2, $3, $4, $5, $6)`,
+       [number, domain, greeting, instructions, scheduled_for, retry_interval || 0]
+     );
+     return res.json({ success: true, message: `Llamada programada para ${scheduled_for}` });
+  }
+
   // Add call to neural queue to handle concurrency (Telnyx D1 error fix)
   (async () => {
     try {
@@ -78,8 +89,9 @@ router.post('/make-call', async (req, res) => {
         const result = await makeOutboundCall(number, domain, { mode, customGreeting: greeting, customInstructions: instructions });
         const callId = result.data?.call_control_id;
         if (callId) {
-          setCallContext(callId, { domain, mode, customGreeting: greeting, customInstructions: instructions });
-          await logCall({ callId, from: result.data.from, to: result.data.to, direction: 'outbound', startedAt: new Date().toISOString(), status: 'queued' });
+          inflightOutbound.add(callId);
+          setCallContext(callId, { domain, mode, customGreeting: greeting, customInstructions: instructions, retry_interval });
+          await logCall({ callId, from: process.env.TELNYX_PHONE_NUMBER || '+5114682421', to: number, direction: 'outbound', startedAt: new Date().toISOString(), status: 'queued' });
         }
       });
     } catch (err) {
@@ -130,6 +142,26 @@ router.post('/tts-preview', async (req, res) => {
   } catch (err) {
     console.error('[TTS Preview] Error:', err.message);
     res.status(500).json({ error: 'Error al generar audio de vista previa' });
+  }
+});
+
+router.get('/scheduled', async (req, res) => {
+  try {
+    const { query } = require('../services/db/postgres.service');
+    const { rows } = await query(`SELECT * FROM scheduled_calls WHERE status IN ('pending', 'processing') ORDER BY scheduled_for ASC`);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete('/scheduled/:id', async (req, res) => {
+  try {
+    const { query } = require('../services/db/postgres.service');
+    await query(`DELETE FROM scheduled_calls WHERE id = $1`, [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 

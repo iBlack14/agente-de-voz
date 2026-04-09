@@ -6,6 +6,7 @@ const { hangupCall } = require('../telephony/telnyxClient');
 const { logCall } = require('../db/repository');
 const { getCallContext } = require('../telephony/context.service');
 const { getActivePrompt, getActiveReminderPrompt } = require('../prompts/promptService');
+const { broadcastToMonitors, registerActiveSession, unregisterActiveSession } = require('./liveMonitor');
 
 const readyGreetings = new Map();
 
@@ -30,31 +31,38 @@ function createSession(ws) {
   const endSession = async (reason) => {
     if (!sessionActive) return;
     sessionActive = false;
+    unregisterActiveSession(callId);
+    broadcastToMonitors(callId, { type: 'session_end', reason });
     const endedAt = new Date().toISOString();
     const durationSec = Math.round((new Date(endedAt) - new Date(meta.startedAt)) / 1000);
     await logCall({ callId: callId || 'unknown', startedAt: meta.startedAt, endedAt, durationSec, turnCount: meta.turnCount, transcript: meta.transcriptLog, status: reason });
   };
 
   ws.on('message', async (data) => {
-    const msg = JSON.parse(data.toString());
-    if (msg.event === 'start') {
-      callId = msg.start?.call_control_id || msg.start?.stream_sid;
-      streamId = msg.start?.stream_id || msg.stream_id;
-      console.log(`[Session] Stream started: callId=${callId}, streamId=${streamId}`);
-      const context = getCallContext(callId);
-      isReminderCall = context?.mode === 'reminder';
-      await sendGreeting();
-    } else if (msg.event === 'stop') {
-      await endSession('stop_event');
-      ws.close();
-    } else if (msg.event === 'media' && sessionActive) {
-      if (msg.media.track === 'outbound') return;
-      audioBuffer = Buffer.concat([audioBuffer, Buffer.from(msg.media.payload, 'base64')]);
-      if (audioBuffer.length >= 6400) {
-        const chunk = audioBuffer.subarray(0, 6400);
-        audioBuffer = audioBuffer.subarray(6400);
-        await handleAudioChunk(chunk);
+    try {
+      const msg = JSON.parse(data.toString());
+      if (msg.event === 'start') {
+        callId = msg.start?.call_control_id || msg.start?.stream_sid;
+        streamId = msg.start?.stream_id || msg.stream_id;
+        console.log(`[Session] Stream started: callId=${callId}, streamId=${streamId}`);
+        registerActiveSession(callId, meta);
+        const context = getCallContext(callId);
+        isReminderCall = context?.mode === 'reminder';
+        await sendGreeting();
+      } else if (msg.event === 'stop') {
+        await endSession('stop_event');
+        ws.close();
+      } else if (msg.event === 'media' && sessionActive) {
+        if (msg.media.track === 'outbound') return;
+        audioBuffer = Buffer.concat([audioBuffer, Buffer.from(msg.media.payload, 'base64')]);
+        if (audioBuffer.length >= 6400) {
+          const chunk = audioBuffer.subarray(0, 6400);
+          audioBuffer = audioBuffer.subarray(6400);
+          await handleAudioChunk(chunk);
+        }
       }
+    } catch (e) {
+      console.error(`[Session] Unhandled error in ws message:`, e);
     }
   });
 
@@ -87,10 +95,12 @@ function createSession(ws) {
     isProcessing = true;
     conversationHistory.push({ role: 'user', content: userText });
     meta.turnCount++; meta.transcriptLog.push({ role: 'user', text: userText, at: new Date().toISOString() });
+    broadcastToMonitors(callId, { type: 'transcript', role: 'user', text: userText });
 
     const aiResponse = await askLLM(conversationHistory, callId);
     conversationHistory.push({ role: 'assistant', content: aiResponse });
     meta.transcriptLog.push({ role: 'assistant', text: aiResponse, at: new Date().toISOString() });
+    broadcastToMonitors(callId, { type: 'transcript', role: 'assistant', text: aiResponse });
 
     console.log(`[AI Answer] "${aiResponse}"`);
     await speakText(aiResponse);
@@ -149,23 +159,38 @@ function createSession(ws) {
     const now = new Date(new Date().getTime() + (new Date().getTimezoneOffset() * 60000) + (3600000 * -5));
     const h = now.getHours();
     const timeG = h >= 5 && h < 12 ? 'Buenos días' : (h >= 12 && h < 19 ? 'Buenas tardes' : 'Buenas noches');
-    const domain = context?.domain || 'su sitio web';
+    let domainData = context?.domain || 'su sitio web';
     
-    // Replace all known domain placeholders
+    // Procesamiento especial para múltiples dominios y enfatizar (repita)
+    if (domainData && domainData !== 'su sitio web') {
+        const domains = domainData.split(/[,\s]+/).filter(d => d.trim().length > 0);
+        if (domains.length > 0) {
+            const list = domains.join(' y ');
+            // "si pone dominio repita" -> repetitive emphasis for clarity
+            domainData = domains.length === 1 ? `${list}, repito, ${list}` : `${list}. Repito los dominios: ${list}`;
+        }
+    }
+    
+    // Replace all known domain/data placeholders
     greeting = greeting
       .replace(/Buenas \(\)/gi, timeG)
       .replace(/\(\)/g, timeG)
-      .replace(/\{DOMAIN\}/gi, domain)
-      .replace(/aqui ira el dominio/gi, domain)
-      .replace(/\.{3,}/g, domain)              // ...... or ... as placeholder
-      .replace(/\[dominio\]/gi, domain)         // [dominio]
-      .replace(/\(dominio\)/gi, domain)         // (dominio)
+      .replace(/\{DOMAIN\}/gi, domainData)
+      .replace(/\{DOMINIO\}/gi, domainData)
+      .replace(/\{CLIENTE\}/gi, domainData)
+      .replace(/\{DATOS\}/gi, domainData)
+      .replace(/aqui ira el dominio/gi, domainData)
+      .replace(/\.{3,}/g, domainData)              // ...... or ... as placeholder
+      .replace(/\[dominio\]/gi, domainData)         // [dominio]
+      .replace(/\(dominio\)/gi, domainData)         // (dominio)
+      .replace(/\[datos\]/gi, domainData)
       .trim();
 
     conversationHistory.push({ role: 'assistant', content: greeting });
     meta.transcriptLog.push({ role: 'assistant', text: greeting, at: new Date().toISOString() });
 
     console.log(`[Greeting] "${greeting}"`);
+    broadcastToMonitors(callId, { type: 'transcript', role: 'assistant', text: greeting });
     const bytes = await speakText(greeting, preLoadedStream);
 
     if (isReminderCall) {
@@ -189,16 +214,27 @@ async function precomputeGreeting(callId) {
         const now = new Date(new Date().getTime() + (new Date().getTimezoneOffset() * 60000) + (3600000 * -5));
         const h = now.getHours();
         const timeG = h >= 5 && h < 12 ? 'Buenos días' : (h >= 12 && h < 19 ? 'Buenas tardes' : 'Buenas noches');
-        const domain = context?.domain || 'su sitio web';
+        let domainData = context?.domain || 'su sitio web';
+        if (domainData && domainData !== 'su sitio web') {
+            const domains = domainData.split(/[,\s]+/).filter(d => d.trim().length > 0);
+            if (domains.length > 0) {
+                const list = domains.join(' y ');
+                domainData = domains.length === 1 ? `${list}, repito, ${list}` : `${list}. Repito los dominios: ${list}`;
+            }
+        }
         
         greeting = greeting
           .replace(/Buenas \(\)/gi, timeG)
           .replace(/\(\)/g, timeG)
-          .replace(/\{DOMAIN\}/gi, domain)
-          .replace(/aqui ira el dominio/gi, domain)
-          .replace(/\.{3,}/g, domain)
-          .replace(/\[dominio\]/gi, domain)
-          .replace(/\(dominio\)/gi, domain)
+          .replace(/\{DOMAIN\}/gi, domainData)
+          .replace(/\{DOMINIO\}/gi, domainData)
+          .replace(/\{CLIENTE\}/gi, domainData)
+          .replace(/\{DATOS\}/gi, domainData)
+          .replace(/aqui ira el dominio/gi, domainData)
+          .replace(/\.{3,}/g, domainData)
+          .replace(/\[dominio\]/gi, domainData)
+          .replace(/\(dominio\)/gi, domainData)
+          .replace(/\[datos\]/gi, domainData)
           .trim();
 
         const stream = await textToSpeech(greeting, callId);

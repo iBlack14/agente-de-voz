@@ -93,7 +93,8 @@ const initDashboardApp = () => {
     prompts: 'Identidad del Agente', 
     reminders: 'Gestión de Recordatorios',
     history: 'Historial de Transmisiones',
-    stats: 'Consumo Neural'
+    stats: 'Consumo Neural',
+    monitor: 'Monitor en Vivo'
   };
 
   function switchTab(tabId) {
@@ -177,7 +178,9 @@ const initDashboardApp = () => {
       const parts = line.split(/[,\s\t;|]+/).map(p => p.trim()).filter(p => p.length > 0);
       const num = (parts[0] || '').replace(/[^0-9+]/g, '');
       if (num.length >= 8) {
-        entries.push({ number: num, domain: parts[1] || '' });
+        // Capturar todo lo que sigue al número como contexto/dominio completo
+        const extraData = line.substring(line.indexOf(parts[0]) + parts[0].length).replace(/^[,\s\t;|]+/, '').trim();
+        entries.push({ number: num, domain: extraData || '' });
       }
     });
 
@@ -692,7 +695,7 @@ const initDashboardApp = () => {
 
   // Polling para el lote actual
   setInterval(async () => {
-      if (!currentBatch.active || currentBatch.ids.length === 0) return;
+      if (!currentBatch.active || currentBatch.numbers.length === 0) return;
 
       try {
           const resp = await fetch('/api/calls');
@@ -701,11 +704,17 @@ const initDashboardApp = () => {
           let ansCount = 0;
           let failCount = 0;
 
-          currentBatch.ids.forEach(id => {
-              const call = data.find(c => c.call_id === id);
+          currentBatch.numbers.forEach(num => {
+              // Buscar la llamada más reciente al número dentro de este lote
+              const call = data.find(c => {
+                  const targetNum = c.to_number || c.to || c.from || '';
+                  const started = new Date(c.started_at || c.startedAt || null);
+                  return targetNum.includes(num) && started >= currentBatch.startTime;
+              });
+              
               if (call) {
-                  const duration = parseInt(call.duration_sec) || 0;
-                  if (call.status === 'completed' || call.status === 'terminated') {
+                  const duration = parseInt(call.duration_sec || call.durationSec) || 0;
+                  if (call.status === 'completed' || call.status === 'ws_close' || call.status === 'stop_event' || call.status === 'terminated') {
                       if (duration > 5) ansCount++;
                       else failCount++;
                   }
@@ -726,13 +735,20 @@ const initDashboardApp = () => {
     // Para simplificar, pediremos a la API los datos y compararemos
     fetch('/api/calls').then(r => r.json()).then(data => {
         const failedNumbers = [];
-        currentBatch.ids.forEach(id => {
-            const call = data.find(c => c.call_id === id);
+        currentBatch.numbers.forEach(num => {
+            const call = data.find(c => {
+                const targetNum = c.to_number || c.to || c.from || '';
+                const started = new Date(c.started_at || c.startedAt || null);
+                return targetNum.includes(num) && started >= currentBatch.startTime;
+            });
             if (call) {
-                const duration = parseInt(call.duration_sec) || 0;
+                const duration = parseInt(call.duration_sec || call.durationSec) || 0;
                 if (!duration || duration <= 5) {
-                    failedNumbers.push(call.to_number);
+                    failedNumbers.push(num);
                 }
+            } else {
+                // If call wasn't found at all in the DB (rate limit rejected or telnyx failed instantly), it's a failure too.
+                failedNumbers.push(num);
             }
         });
 
@@ -741,9 +757,13 @@ const initDashboardApp = () => {
             return;
         }
 
-        // Cargar números fallidos en el formulario
+        // Cargar números y dominios fallidos en el formulario
         const phonesTextarea = document.getElementById('reminder-phones');
-        phonesTextarea.value = failedNumbers.join('\n');
+        const restoredEntries = failedNumbers.map(num => {
+            const dom = currentBatch.domains && currentBatch.domains[num] ? currentBatch.domains[num] : '';
+            return dom ? `${num}, ${dom}` : num;
+        });
+        phonesTextarea.value = restoredEntries.join('\n');
         // Simular evento input para actualizar el conteo
         phonesTextarea.dispatchEvent(new Event('input'));
         
@@ -817,15 +837,18 @@ const initDashboardApp = () => {
           const num = (parts[0] || '').replace(/[^0-9+]/g, '');
           if (num.length >= 8) {
               numbers.push(num);
-              if (parts[1]) domains[num] = parts[1];
-              // Si no hay separador explícito, pero tenemos el mapeo del excel
-              if (!parts[1] && window.phoneContexts && window.phoneContexts[num]) {
+              // Capturar todo lo que sigue al número como "contexto/dominio/dato completo"
+              const extraData = line.substring(line.indexOf(parts[0]) + parts[0].length).replace(/^[,\s\t;|]+/, '').trim();
+              if (extraData) domains[num] = extraData;
+              
+              if (!domains[num] && window.phoneContexts && window.phoneContexts[num]) {
                   domains[num] = window.phoneContexts[num].domain;
               }
           }
       });
 
       const time = document.getElementById('reminder-time').value || 'Inmediato';
+      const retry = document.getElementById('reminder-retry').value || '0';
       const msg = document.getElementById('reminder-msg').value;
       const greeting = document.getElementById('reminder-greeting').value;
 
@@ -861,6 +884,7 @@ const initDashboardApp = () => {
           ids: [],
           stats: { answered: 0, failed: 0, total: numbers.length },
           numbers: numbers,
+          domains: domains, // Store the domains mapping
           startTime: new Date()
       };
       
@@ -900,22 +924,18 @@ const initDashboardApp = () => {
             for (const num of numbers) {
                try {
                    // Importante: Aquí puedes extender el endpoint /api/make-call luego si deseas mandar también el parámetro `msg` como custom_prompt.
-                   const resp = await fetch('/api/make-call', {
-                       method: 'POST',
-                       headers: { 'Content-Type': 'application/json' },
-                       body: JSON.stringify({ 
-                           number: num, 
-                           domain: domains[num] || '',
-                           mode: 'reminder',
-                           greeting: greeting,
-                           instructions: msg
-                       })
-                   });
-                    const data = await resp.json();
-                    if (data.callId) {
-                        currentBatch.ids.push(data.callId);
-                    }
-
+                    const resp = await fetch('/api/make-call', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            number: num, 
+                            domain: domains[num] || '',
+                            mode: 'reminder',
+                            greeting: greeting,
+                            instructions: msg,
+                            retry_interval: parseInt(retry)
+                        })
+                    });
                     if (!resp.ok) {
 
                        if (resp.status === 401) {
@@ -939,7 +959,30 @@ const initDashboardApp = () => {
             }
         })();
       } else {
-        appAlert(`🕒 Lote de ${numbers.length} recordatorios exitosamente programado para la fecha: ${time}.`);
+        appAlert(`🕒 Lote de ${numbers.length} recordatorios programado para: ${time}.`);
+        
+        // Enviar a programar en el servidor
+        (async () => {
+            const submitBtn = reminderForm.querySelector('button[type="submit"]');
+            if(submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'PROGRAMANDO...'; }
+            
+            for (const num of numbers) {
+                await fetch('/api/make-call', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        number: num, 
+                        domain: domains[num] || '',
+                        mode: 'reminder',
+                        greeting: greeting,
+                        instructions: msg,
+                        retry_interval: parseInt(retry),
+                        scheduled_for: time
+                    })
+                });
+            }
+            if(submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'ACTIVAR LOTE NEURAL'; }
+        })();
       }
     });
   }
@@ -1080,6 +1123,170 @@ const initDashboardApp = () => {
       previewVoice(`${greeting} ${msg}`.trim() || 'Hola, esta es una prueba de voz.');
     });
   }
+
+  // ─── Live Monitor System ──────────────────────────────
+  let monitorWs = null;
+  const liveTranscript = document.getElementById('live-transcript');
+  const monitorStatus = document.getElementById('monitor-status');
+  const monitorEmpty = document.getElementById('monitor-empty');
+  const activeCallsList = document.getElementById('active-calls-list');
+  const disconnectBtn = document.getElementById('disconnect-monitor');
+  const refreshBtn = document.getElementById('refresh-active-calls');
+
+  async function loadActiveCalls() {
+    try {
+      const resp = await fetch('/api/active-calls');
+      const calls = await resp.json();
+      
+      if (!calls.length) {
+        activeCallsList.innerHTML = `
+          <div class="opacity-20 py-16 text-center uppercase text-[10px] font-bold tracking-widest flex flex-col items-center gap-3">
+            <span class="material-symbols-outlined text-3xl">wifi_tethering_off</span>
+            Sin llamadas activas
+          </div>`;
+        return;
+      }
+
+      activeCallsList.innerHTML = calls.map(call => `
+        <button class="w-full p-4 rounded-xl bg-surface-container-lowest border border-zinc-800/30 hover:border-emerald-500/30 hover:bg-emerald-500/5 transition-all text-left group" data-call-id="${call.callId}">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-emerald-500/20 rounded-lg flex items-center justify-center">
+              <span class="material-symbols-outlined text-emerald-400 text-sm animate-pulse">call</span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-[10px] font-bold uppercase tracking-widest text-emerald-400">En Curso</p>
+              <p class="text-[9px] text-zinc-500 truncate">...${call.callId.slice(-12)}</p>
+            </div>
+            <span class="material-symbols-outlined text-zinc-600 group-hover:text-emerald-400 transition-colors">headset_mic</span>
+          </div>
+        </button>
+      `).join('');
+
+      // Add click handlers
+      activeCallsList.querySelectorAll('button[data-call-id]').forEach(btn => {
+        btn.addEventListener('click', () => connectMonitor(btn.dataset.callId));
+      });
+    } catch (e) {
+      console.error('Error loading active calls:', e);
+    }
+  }
+
+  function connectMonitor(callId) {
+    // Disconnect existing
+    if (monitorWs) { monitorWs.close(); monitorWs = null; }
+
+    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${location.host}/live-monitor?callId=${callId}`;
+    
+    monitorWs = new WebSocket(wsUrl);
+    monitorStatus.textContent = 'Conectando...';
+    monitorStatus.className = 'text-[9px] font-bold text-yellow-400 bg-yellow-500/10 px-3 py-1 rounded-full uppercase tracking-widest animate-pulse';
+
+    monitorWs.onopen = () => {
+      monitorStatus.textContent = '● En Vivo';
+      monitorStatus.className = 'text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full uppercase tracking-widest animate-pulse';
+      if (monitorEmpty) monitorEmpty.style.display = 'none';
+      if (disconnectBtn) disconnectBtn.classList.remove('hidden');
+      
+      liveTranscript.innerHTML = `
+        <div class="text-center py-4">
+          <span class="text-[9px] font-bold uppercase tracking-widest text-emerald-400/50">Conectado a llamada ...${callId.slice(-8)}</span>
+        </div>`;
+    };
+
+    monitorWs.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        
+        if (data.type === 'transcript') {
+          const isUser = data.role === 'user';
+          const label = isUser ? '👤 Humano' : '🤖 IA';
+          const bgCls = isUser ? 'bg-white/5 border-white/10' : 'bg-primary/10 border-primary/20';
+          
+          const msgEl = document.createElement('div');
+          msgEl.className = `p-4 rounded-xl border ${bgCls} animate-fade-in`;
+          msgEl.innerHTML = `
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-[9px] font-bold uppercase tracking-widest ${isUser ? 'text-zinc-400' : 'text-primary'}">${label}</span>
+              <span class="text-[8px] text-zinc-600">${new Date().toLocaleTimeString('es-ES')}</span>
+            </div>
+            <p class="text-sm text-zinc-200 leading-relaxed">${escapeHtml(data.text)}</p>
+          `;
+          liveTranscript.appendChild(msgEl);
+          liveTranscript.scrollTop = liveTranscript.scrollHeight;
+        }
+
+        if (data.type === 'session_end') {
+          const endEl = document.createElement('div');
+          endEl.className = 'text-center py-6';
+          endEl.innerHTML = `<span class="text-[9px] font-bold uppercase tracking-widest text-error/60">● Llamada finalizada (${data.reason})</span>`;
+          liveTranscript.appendChild(endEl);
+          
+          monitorStatus.textContent = 'Finalizada';
+          monitorStatus.className = 'text-[9px] font-bold text-zinc-500 bg-zinc-800 px-3 py-1 rounded-full uppercase tracking-widest';
+          loadActiveCalls();
+        }
+      } catch (e) {}
+    };
+
+    monitorWs.onclose = () => {
+      monitorStatus.textContent = 'Desconectado';
+      monitorStatus.className = 'text-[9px] font-bold text-zinc-600 bg-zinc-800 px-3 py-1 rounded-full uppercase tracking-widest';
+    };
+  }
+
+  if (disconnectBtn) {
+    disconnectBtn.addEventListener('click', () => {
+      if (monitorWs) { monitorWs.close(); monitorWs = null; }
+      disconnectBtn.classList.add('hidden');
+      if (monitorEmpty) monitorEmpty.style.display = '';
+      liveTranscript.innerHTML = '';
+      if (monitorEmpty) liveTranscript.appendChild(monitorEmpty);
+    });
+  }
+
+  if (refreshBtn) refreshBtn.addEventListener('click', loadActiveCalls);
+
+  async function loadScheduledCalls() {
+    try {
+      const resp = await fetch('/api/scheduled');
+      const data = await resp.json();
+      const container = document.getElementById('scheduled-list');
+      if (!container) return;
+
+      if (!data.length) {
+        container.innerHTML = '<div class="opacity-10 py-10 text-center uppercase text-[8px] font-bold tracking-widest">Sin programaciones</div>';
+        return;
+      }
+
+      container.innerHTML = data.map(s => `
+        <div class="p-3 rounded-lg bg-surface-container-lowest border border-zinc-800/30 flex justify-between items-center group">
+          <div class="min-w-0">
+            <p class="text-[10px] font-bold text-on-surface truncate">${s.to_number}${s.domain ? ' · ' + escapeHtml(s.domain) : ''}</p>
+            <p class="text-[8px] text-zinc-500 uppercase tracking-widest">${new Date(s.scheduled_for).toLocaleString('es-ES', {hour:'2-digit', minute:'2-digit'})} (Int: ${s.retry_interval_hours}h)</p>
+          </div>
+          <button onclick="cancelScheduled('${s.id}')" class="opacity-0 group-hover:opacity-100 material-symbols-outlined text-[12px] text-zinc-600 hover:text-error transition-all">cancel</button>
+        </div>
+      `).join('');
+    } catch (e) {}
+  }
+
+  window.cancelScheduled = async (id) => {
+    if (confirm('¿Cancelar este re-intento?')) {
+      await fetch(`/api/scheduled/${id}`, { method: 'DELETE' });
+      loadScheduledCalls();
+    }
+  };
+
+  setInterval(loadScheduledCalls, 5000);
+  loadScheduledCalls();
+
+  // Auto-refresh active calls when monitor tab is visible
+  const origSwitchTab = switchTab;
+  switchTab = function(tabId) {
+    origSwitchTab(tabId);
+    if (tabId === 'monitor') loadActiveCalls();
+  };
 };
 
 if (document.readyState === 'loading') {

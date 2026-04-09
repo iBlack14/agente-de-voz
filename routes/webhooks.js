@@ -4,7 +4,7 @@ const { verifyTelnyxRequest } = require('../middleware/auth');
 const { answerCall, startRecording } = require('../services/telephony/telnyxClient');
 const { precomputeGreeting } = require('../services/voice/session.service');
 const { logCall } = require('../services/db/repository');
-const { processedCalls } = require('../services/callState');
+const { processedCalls, inflightOutbound } = require('../services/callState');
 
 /**
  * Main Webhook Entry point for Telnyx Events.
@@ -54,8 +54,28 @@ router.post('/telnyx', async (req, res) => {
 
     if (type === 'call.hangup') {
       processedCalls.delete(callId);
-      await logCall({ callId, endedAt: new Date().toISOString(), status: 'completed' });
-      console.log(`[Webhook] Finalizada: ...${callId.slice(-8)}`);
+      inflightOutbound.delete(callId);
+      // Registrar finalización
+      const { query } = require('../services/db/postgres.service');
+      const { rows: statusCheck } = await query('SELECT status FROM calls WHERE call_id = $1', [callId]);
+      const currentStatus = statusCheck[0]?.status;
+      const newStatus = (currentStatus && currentStatus !== 'active' && currentStatus !== 'queued') ? currentStatus : 'completed';
+      await logCall({ callId, endedAt: new Date().toISOString(), status: newStatus });
+
+      // Lógica de Re-intento Periódico (Infinite Loop según configuración)
+      const { getCallContext } = require('../services/telephony/context.service');
+      const ctx = getCallContext(callId);
+      
+      if (ctx && ctx.retry_interval > 0) {
+          const nextAttempt = new Date(Date.now() + (ctx.retry_interval * 3600000)).toISOString();
+          console.log(`[Webhook] 🔄 Bucle de recordatorio: Programando siguiente llamada para ${payload.to} en ${ctx.retry_interval}h (${nextAttempt})`);
+          
+          await query(
+              `INSERT INTO scheduled_calls (to_number, domain, greeting, instructions, scheduled_for, retry_interval_hours)
+               VALUES ($1, $2, $3, $4, $5, $6)`,
+              [payload.to, ctx.domain, ctx.customGreeting, ctx.customInstructions, nextAttempt, ctx.retry_interval]
+          );
+      }
     }
 
     if (type === 'call.recording_saved') {
