@@ -191,9 +191,20 @@ function createSession(ws) {
 
     console.log(`[Greeting] "${greeting}"`);
     broadcastToMonitors(callId, { type: 'transcript', role: 'assistant', text: greeting });
-    await speakText(greeting, preLoadedStream);
+    const bytes = await speakText(greeting, preLoadedStream);
 
-    // Permitir interacción después del recordatorio
+    if (isReminderCall) {
+        // Cálculo exacto del tiempo de habla para no cortar el audio antes de tiempo
+        const dur = (bytes / 160) * 20; 
+        console.log(`[Recordatorio] Esperando ${Math.round(dur/1000)}s a que termine el audio...`);
+        await new Promise(r => setTimeout(r, dur + 1500)); 
+        
+        console.log(`[Recordatorio] Mensaje entregado. Colgando llamada...`);
+        if (callId) await hangupCall(callId);
+        endSession('reminder_completed');
+        return;
+    }
+
     isProcessing = false;
   }
 }
