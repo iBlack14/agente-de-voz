@@ -21,7 +21,7 @@ RUN npm install --omit=dev
 COPY . .
 
 # Expone el puerto que usa tu aplicación
-EXPOSE 3000
+EXPOSE 3211
 
 # Script de inicio
 CMD ["node", "server.js"]
