@@ -250,11 +250,17 @@
                                  <span class="material-symbols-outlined">restart_alt</span>
                                  Reprogramar No Contestados
                             </button>
+                            <button type="button" id="btn-stop-all-reminders" class="w-full mt-3 py-4 bg-error/10 text-error font-black border border-error/20 rounded-xl shadow-lg hover:bg-error/20 transition-all uppercase tracking-widest text-[10px] flex items-center justify-center gap-3">
+                                 <span class="material-symbols-outlined">stop_circle</span>
+                                 Detener Recordatorios
+                            </button>
                         </div>
                         
-                        <!-- Cronograma de Re-intentos -->
                         <div class="mt-8 space-y-4">
-                            <h3 class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest px-1">Cronograma de Re-intentos</h3>
+                            <div class="flex justify-between items-center">
+                                <h3 class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest px-1">Cronograma de Re-intentos</h3>
+                                <button id="btn-clear-scheduled" class="text-[8px] font-bold text-error uppercase tracking-widest hover:underline">Limpiar Todo</button>
+                            </div>
                             <div id="scheduled-list" class="space-y-2 max-h-[250px] overflow-y-auto no-scrollbar">
                                 <div class="opacity-10 py-10 text-center uppercase text-[8px] font-bold tracking-widest">Sin programaciones</div>
                             </div>

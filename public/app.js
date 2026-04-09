@@ -1281,6 +1281,24 @@ const initDashboardApp = () => {
   setInterval(loadScheduledCalls, 5000);
   loadScheduledCalls();
 
+  document.getElementById('btn-clear-scheduled')?.addEventListener('click', async () => {
+    if (await appPrompt('Confirma escribiendo "DETENER" para purgar todos los re-intentos programados:', 'DETENER') === 'DETENER') {
+       await fetch('/api/scheduled', { method: 'DELETE' });
+       loadScheduledCalls();
+       appAlert('✅ Todos los re-intentos han sido cancelados.');
+    }
+  });
+
+  document.getElementById('btn-stop-all-reminders')?.addEventListener('click', async () => {
+    if (confirm('¿Detener todos los recordatorios pendientes? Esta acción es irreversible.')) {
+        await fetch('/api/scheduled', { method: 'DELETE' });
+        currentBatch.active = false;
+        updateBatchMonitor();
+        loadScheduledCalls();
+        appAlert('⛔ Operación detenida. Los recordatorios en cola han sido eliminados.');
+    }
+  });
+
   // Auto-refresh active calls when monitor tab is visible
   const origSwitchTab = switchTab;
   switchTab = function(tabId) {

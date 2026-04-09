@@ -155,6 +155,16 @@ router.get('/scheduled', async (req, res) => {
   }
 });
 
+router.delete('/scheduled', async (req, res) => {
+  try {
+    const { query } = require('../services/db/postgres.service');
+    await query(`DELETE FROM scheduled_calls WHERE status = 'pending'`);
+    res.json({ success: true, message: 'Todos los recordatorios pendientes han sido eliminados.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.delete('/scheduled/:id', async (req, res) => {
   try {
     const { query } = require('../services/db/postgres.service');
