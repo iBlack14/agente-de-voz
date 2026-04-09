@@ -191,14 +191,9 @@ function createSession(ws) {
 
     console.log(`[Greeting] "${greeting}"`);
     broadcastToMonitors(callId, { type: 'transcript', role: 'assistant', text: greeting });
-    const bytes = await speakText(greeting, preLoadedStream);
+    await speakText(greeting, preLoadedStream);
 
-    if (isReminderCall) {
-        const dur = (bytes / 160) * 20; await new Promise(r => setTimeout(r, dur + 1000));
-        if (callId) await hangupCall(callId);
-        endSession('reminder_completed');
-        return;
-    }
+    // Permitir interacción después del recordatorio
     isProcessing = false;
   }
 }

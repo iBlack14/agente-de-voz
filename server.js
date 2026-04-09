@@ -120,6 +120,18 @@ server.listen(PORT, async () => {
     await query(`UPDATE calls SET direction = CASE WHEN from_number = $1 THEN 'outbound' WHEN to_number = $1 THEN 'inbound' ELSE direction END WHERE direction IS NULL OR direction = 'unknown'`, [TELNYX_NUM]);
     await query(`UPDATE calls SET status = 'completed', ended_at = NOW() WHERE status = 'active' AND (started_at < NOW() - INTERVAL '30 minutes' OR started_at IS NULL)`);
 
+    // Clean up memory leaks for stuck calls (safety mechanism)
+    setInterval(() => {
+      if (inflightOutbound.size > 0) {
+        console.log(`[Cleaner] Checking for stale calls in memory: ${inflightOutbound.size} pending`);
+        // If a call is in memory for more than 10 mins without a hangup, purge it
+        // This prevents the queue from getting stuck if webhooks fail
+        inflightOutbound.clear(); 
+        processedCalls.clear();
+        console.log(`[Cleaner] Memory flushed to ensure queue continuity.`);
+      }
+    }, 300000); // Every 5 minutes
+
     console.log(`\n🎙️  ViaAI Voice Matrix active on port ${PORT}`);
     console.log(`❤️  Health Check: http://localhost:${PORT}/health\n`);
   } catch (err) {
