@@ -16,6 +16,7 @@ const WebSocket = require('ws');
 // Core Services
 const { initSchema, testConnection, query } = require('./services/db/postgres.service');
 const { createSession } = require('./services/voice/session.service');
+const { processedCalls, inflightOutbound } = require('./services/callState');
 
 // Routing & Auth
 const { authRouter, restrictAccess } = require('./routes/auth');
@@ -143,7 +144,6 @@ server.listen(PORT, async () => {
  * Graceful Shutdown Logic
  */
 const { hangupCall } = require('./services/telephony/telnyxClient');
-const { processedCalls } = require('./services/callState');
 
 async function gracefulShutdown(signal) {
   console.log(`\n[Server] ${signal} signal received. Cleaning up active calls...`);
