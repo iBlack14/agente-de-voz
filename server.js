@@ -16,7 +16,7 @@ const WebSocket = require('ws');
 // Core Services
 const { initSchema, testConnection, query } = require('./services/db/postgres.service');
 const { createSession } = require('./services/voice/session.service');
-const { processedCalls, inflightOutbound } = require('./services/callState');
+const callState = require('./services/callState');
 
 // Routing & Auth
 const { authRouter, restrictAccess } = require('./routes/auth');
@@ -123,12 +123,12 @@ server.listen(PORT, async () => {
 
     // Clean up memory leaks for stuck calls (safety mechanism)
     setInterval(() => {
-      if (inflightOutbound.size > 0) {
-        console.log(`[Cleaner] Checking for stale calls in memory: ${inflightOutbound.size} pending`);
+      if (callState.inflightOutbound.size > 0) {
+        console.log(`[Cleaner] Checking for stale calls in memory: ${callState.inflightOutbound.size} pending`);
         // If a call is in memory for more than 10 mins without a hangup, purge it
         // This prevents the queue from getting stuck if webhooks fail
-        inflightOutbound.clear(); 
-        processedCalls.clear();
+        callState.inflightOutbound.clear(); 
+        callState.processedCalls.clear();
         console.log(`[Cleaner] Memory flushed to ensure queue continuity.`);
       }
     }, 300000); // Every 5 minutes
@@ -147,7 +147,7 @@ const { hangupCall } = require('./services/telephony/telnyxClient');
 
 async function gracefulShutdown(signal) {
   console.log(`\n[Server] ${signal} signal received. Cleaning up active calls...`);
-  const promises = Array.from(processedCalls).map(id => hangupCall(id).catch(() => {}));
+  const promises = Array.from(callState.processedCalls).map(id => hangupCall(id).catch(() => {}));
   await Promise.race([Promise.allSettled(promises), new Promise(r => setTimeout(r, 2000))]);
   process.exit(0);
 }
