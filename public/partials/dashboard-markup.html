@@ -1,5 +1,5 @@
 <!-- Sidebar -->
-    <aside class="h-screen w-72 fixed left-0 top-0 z-50 bg-[#131313] backdrop-blur-2xl border-r border-zinc-800/30 flex flex-col py-8 shadow-[10px_0_40px_rgba(0,0,0,0.5)]">
+    <aside class="h-screen w-72 fixed left-0 top-0 z-50 bg-[#251232]/95 backdrop-blur-2xl border-r border-primary/20 flex flex-col py-8 shadow-[10px_0_40px_rgba(18,6,28,0.55)]">
         <div class="px-8 mb-10 flex items-center gap-3">
             <div class="w-10 h-10 bg-gradient-to-br from-primary to-secondary-container rounded-lg flex items-center justify-center">
                 <span class="material-symbols-outlined text-[#050505]" style="font-variation-settings: 'FILL' 1;">hub</span>
@@ -47,7 +47,7 @@
 
     <main class="ml-72 min-h-screen relative z-10 flex flex-col no-scrollbar">
         <!-- TopNav -->
-        <header class="w-full sticky top-0 z-40 bg-[#050505]/80 backdrop-blur-xl flex justify-between items-center px-12 py-5 border-b border-zinc-800/30">
+        <header class="w-full sticky top-0 z-40 bg-[#1a0d28]/85 backdrop-blur-xl flex justify-between items-center px-12 py-5 border-b border-primary/15">
             <h2 id="page-title" class="text-2xl font-black tracking-tight text-white">Panel Neural</h2>
             <div class="flex items-center gap-6">
                 <p id="clock" class="text-[10px] font-label text-zinc-500 uppercase tracking-widest"></p>
@@ -144,7 +144,7 @@
                     <section class="lg:col-span-7 glass-card rounded-3xl p-8 relative overflow-hidden">
                         <h3 class="text-sm font-label font-bold text-primary mb-8 uppercase tracking-widest flex items-center gap-2">
                              <span class="material-symbols-outlined text-lg">event_note</span>
-                             Lotes de Recordatorios
+                             Llamadas de Recordatorio
                         </h3>
                         <form id="reminder-form" class="space-y-6 relative z-10">
                             <div class="space-y-3">
@@ -159,7 +159,16 @@
                                         <span id="reminder-count" class="text-[9px] font-bold text-secondary bg-secondary/10 px-3 py-1 rounded-full uppercase tracking-widest">0 Unidades</span>
                                     </div>
                                 </div>
-                                <textarea id="reminder-phones" class="w-full bg-surface-container-lowest border border-zinc-800/60 rounded-xl p-6 text-sm focus:ring-1 focus:ring-primary outline-none text-white no-scrollbar placeholder:text-zinc-600" rows="5"></textarea>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="space-y-2">
+                                        <label class="block text-[9px] font-bold uppercase tracking-widest text-zinc-500 px-1">Números</label>
+                                        <textarea id="reminder-phones" class="w-full bg-surface-container-lowest border border-zinc-800/60 rounded-xl p-6 text-sm focus:ring-1 focus:ring-primary outline-none text-white no-scrollbar placeholder:text-zinc-600" rows="5" placeholder="+51999888777&#10;+51944555666"></textarea>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="block text-[9px] font-bold uppercase tracking-widest text-zinc-500 px-1">Dominios / Datos (opcional)</label>
+                                        <textarea id="reminder-domains" class="w-full bg-surface-container-lowest border border-zinc-800/60 rounded-xl p-6 text-sm focus:ring-1 focus:ring-primary outline-none text-white no-scrollbar placeholder:text-zinc-600" rows="5" placeholder="midominio.com&#10;cliente-b.com"></textarea>
+                                    </div>
+                                </div>
                             </div>
                             <div class="grid grid-cols-2 gap-6 items-start">
                                 <div class="space-y-3">
@@ -183,7 +192,7 @@
                             </div>
                             <div class="grid grid-cols-1 gap-6 items-start mt-4">
                                 <div class="h-full flex flex-col justify-start">
-                                    <button type="submit" class="w-full py-4 bg-gradient-to-r from-primary to-primary-container text-[#050505] font-black rounded-xl shadow-lg shadow-primary/20 hover:scale-[0.98] transition-all uppercase tracking-widest text-[10px] min-h-[48px]">Activar Lote Neural</button>
+                                    <button type="submit" class="w-full py-4 bg-gradient-to-r from-primary to-primary-container text-[#050505] font-black rounded-xl shadow-lg shadow-primary/20 hover:scale-[0.98] transition-all uppercase tracking-widest text-[10px] min-h-[48px]">Activar Llamadas</button>
                                 </div>
                             </div>
                             <div class="space-y-3 mb-4 mt-6">
@@ -218,7 +227,7 @@
                         <div class="flex justify-between items-center mb-8">
                             <h3 class="text-sm font-label font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-2">
                                  <span class="material-symbols-outlined text-lg">analytics</span>
-                                 Monitor de Lote Neural
+                                 Monitor de Llamadas
                             </h3>
                             <div id="batch-badge" class="hidden text-[9px] font-bold text-primary bg-primary/10 px-3 py-1 rounded-full uppercase tracking-widest animate-pulse">En curso</div>
                         </div>
@@ -259,7 +268,24 @@
                         <div class="mt-8 space-y-4">
                             <div class="flex justify-between items-center">
                                 <h3 class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest px-1">Cronograma de Re-intentos</h3>
-                                <button id="btn-clear-scheduled" class="text-[8px] font-bold text-error uppercase tracking-widest hover:underline">Limpiar Todo</button>
+                                <div class="flex items-center gap-3">
+                                    <button id="btn-recover-stuck" class="text-[8px] font-bold text-yellow-400 uppercase tracking-widest hover:underline">Recuperar Atascados</button>
+                                    <button id="btn-clear-scheduled" class="text-[8px] font-bold text-error uppercase tracking-widest hover:underline">Limpiar Todo</button>
+                                </div>
+                            </div>
+                            <div id="scheduled-semaphore" class="grid grid-cols-3 gap-2">
+                                <div class="rounded-lg border border-yellow-500/20 bg-yellow-500/5 px-3 py-2 text-center">
+                                    <p class="text-[8px] uppercase tracking-widest text-yellow-300/80 font-bold">Atascados</p>
+                                    <p id="scheduled-stuck-count" class="text-sm font-black text-yellow-300">0</p>
+                                </div>
+                                <div class="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-center">
+                                    <p class="text-[8px] uppercase tracking-widest text-primary/80 font-bold">Procesando</p>
+                                    <p id="scheduled-processing-count" class="text-sm font-black text-primary">0</p>
+                                </div>
+                                <div class="rounded-lg border border-zinc-600/30 bg-zinc-700/10 px-3 py-2 text-center">
+                                    <p class="text-[8px] uppercase tracking-widest text-zinc-400 font-bold">Pendientes</p>
+                                    <p id="scheduled-pending-count" class="text-sm font-black text-zinc-200">0</p>
+                                </div>
                             </div>
                             <div id="scheduled-list" class="space-y-2 max-h-[250px] overflow-y-auto no-scrollbar">
                                 <div class="opacity-10 py-10 text-center uppercase text-[8px] font-bold tracking-widest">Sin programaciones</div>
@@ -271,27 +297,46 @@
 
             <!-- TAB: HISTORIAL -->
             <div id="tab-history" class="tab-content space-y-12">
-                <section class="grid grid-cols-4 gap-6">
-                    <div class="glass-card p-6 rounded-2xl">
-                         <p class="text-[10px] font-label text-zinc-500 tracking-widest uppercase mb-2">Transmisiones</p>
-                         <h4 id="stat-total-calls" class="text-3xl font-black text-white">0</h4>
+                <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="glass-card p-7 rounded-2xl border border-emerald-400/20 bg-emerald-400/5">
+                         <div class="flex items-center justify-between gap-4">
+                            <div>
+                                <p class="text-[10px] font-label text-emerald-300 tracking-widest uppercase mb-2">Llamadas Contestadas</p>
+                                <h4 id="history-answered-count" class="text-4xl font-black text-emerald-400">0</h4>
+                            </div>
+                            <span class="material-symbols-outlined text-4xl text-emerald-400/70">phone_in_talk</span>
+                         </div>
+                         <p class="mt-4 text-[10px] uppercase tracking-widest text-zinc-500">Total salientes: <span id="history-outbound-total" class="text-zinc-300 font-bold">0</span></p>
                     </div>
-                    <div class="glass-card p-6 rounded-2xl">
-                         <p class="text-[10px] font-label text-zinc-500 tracking-widest uppercase mb-2">Efectividad</p>
-                         <h4 id="stat-success-rate" class="text-3xl font-black text-emerald-400">0%</h4>
+                    <div class="glass-card p-7 rounded-2xl border border-error/20 bg-error/5">
+                         <div class="flex items-center justify-between gap-4">
+                            <div>
+                                <p class="text-[10px] font-label text-error tracking-widest uppercase mb-2">Llamadas No Contestadas</p>
+                                <h4 id="history-unanswered-count" class="text-4xl font-black text-error">0</h4>
+                            </div>
+                            <span class="material-symbols-outlined text-4xl text-error/70">phone_missed</span>
+                         </div>
+                         <div class="mt-4 flex items-center justify-between gap-4">
+                            <p class="text-[10px] uppercase tracking-widest text-zinc-500">Listas para reintento</p>
+                            <button id="history-retry-all-unanswered" class="px-4 py-2 rounded-lg bg-error/15 border border-error/30 text-error text-[9px] font-bold uppercase tracking-widest hover:bg-error/25 transition-all">
+                                Reintentar Todo
+                            </button>
+                         </div>
                     </div>
-                    <div class="glass-card p-6 rounded-2xl">
-                         <p class="text-[10px] font-label text-zinc-500 tracking-widest uppercase mb-2">Tiempo Neural</p>
-                         <h4 id="stat-total-minutes" class="text-3xl font-black text-primary">0m</h4>
+                </section>
+
+                <section class="glass-card rounded-3xl p-8">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-sm font-label font-bold text-primary uppercase tracking-widest flex items-center gap-2">
+                            <span class="material-symbols-outlined text-lg">view_module</span>
+                            Resumen por Lotes
+                        </h3>
                     </div>
-                    <div class="glass-card p-6 rounded-2xl">
-                         <p class="text-[10px] font-label text-zinc-500 tracking-widest uppercase mb-2">Líneas Activas</p>
-                         <h4 id="stat-active" class="text-3xl font-black text-white opacity-30">0</h4>
-                    </div>
+                    <div id="history-batch-container" class="grid grid-cols-1 lg:grid-cols-2 gap-4"></div>
                 </section>
                 
                 <section class="glass-card rounded-3xl overflow-hidden">
-                    <div class="p-8 border-b border-zinc-800/30 flex justify-between items-center bg-[#131313]/50">
+                    <div class="p-8 border-b border-primary/15 flex justify-between items-center bg-[#281437]/55">
                         <h3 class="text-lg font-bold tracking-tight text-white">Logs de Transmisión</h3>
                     </div>
                     <div id="history-empty" class="hidden py-20 text-center opacity-20 uppercase text-[10px] font-bold tracking-[0.5em]">Sin Registros Neurales</div>
@@ -398,7 +443,7 @@
                         </div>
 
                         <!-- Transcript feed en vivo -->
-                        <div id="live-transcript" class="bg-[#0a0a0a] rounded-2xl border border-zinc-800/30 p-6 min-h-[400px] max-h-[500px] overflow-y-auto no-scrollbar space-y-4 relative">
+                        <div id="live-transcript" class="bg-[#1c0f28]/90 rounded-2xl border border-primary/15 p-6 min-h-[400px] max-h-[500px] overflow-y-auto no-scrollbar space-y-4 relative">
                             <div id="monitor-empty" class="absolute inset-0 flex flex-col items-center justify-center opacity-20">
                                 <span class="material-symbols-outlined text-5xl mb-3">headset_mic</span>
                                 <p class="text-[10px] font-bold uppercase tracking-widest">Selecciona una llamada activa para escuchar</p>
@@ -418,7 +463,7 @@
     </main>
 
     <!-- Logout Modal -->
-    <div id="logout-confirm-modal" class="modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#050505]/95 backdrop-blur-md">
+    <div id="logout-confirm-modal" class="modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#12071b]/95 backdrop-blur-md">
         <div class="glass-card max-w-sm w-full rounded-3xl p-8 text-center space-y-6">
             <div class="w-16 h-16 bg-error/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span class="material-symbols-outlined text-error text-3xl">power_settings_new</span>
@@ -433,9 +478,9 @@
     </div>
 
     <!-- Transcript Modal -->
-    <div id="transcript-modal" class="modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#050505]/95 backdrop-blur-lg">
+    <div id="transcript-modal" class="modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#12071b]/95 backdrop-blur-lg">
         <div class="glass-card max-w-2xl w-full rounded-3xl overflow-hidden flex flex-col max-h-[85vh]">
-            <div class="p-8 border-b border-zinc-800/30 flex justify-between items-center bg-[#131313]/50">
+            <div class="p-8 border-b border-primary/15 flex justify-between items-center bg-[#281437]/55">
                 <div id="modal-meta" class="flex flex-wrap items-center gap-2 text-[10px] font-bold text-zinc-400 uppercase tracking-widest"></div>
                 <button id="modal-close" class="text-zinc-500 hover:text-white transition-colors"><span class="material-symbols-outlined">close</span></button>
             </div>
@@ -444,7 +489,7 @@
     </div>
 
     <!-- Image Full View Modal -->
-    <div id="image-modal" class="modal-overlay fixed inset-0 z-[110] flex items-center justify-center p-6 bg-[#050505]/95 backdrop-blur-xl">
+    <div id="image-modal" class="modal-overlay fixed inset-0 z-[110] flex items-center justify-center p-6 bg-[#12071b]/95 backdrop-blur-xl">
         <div class="relative group max-w-lg w-full scale-90 transition-transform duration-300" id="image-modal-content">
             <button id="image-modal-close" class="absolute -top-12 right-0 text-zinc-500 hover:text-white transition-colors">
                 <span class="material-symbols-outlined text-3xl">close</span>
@@ -456,7 +501,7 @@
     </div>
 
     <!-- New Identity Modal -->
-    <div id="new-identity-modal" class="modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#050505]/95 backdrop-blur-lg">
+    <div id="new-identity-modal" class="modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#12071b]/95 backdrop-blur-lg">
         <div class="glass-card max-w-sm w-full rounded-3xl p-8 space-y-6">
             <div class="flex justify-between items-center">
                 <h3 class="text-xl font-bold tracking-tight">Nuevo Nodo</h3>
@@ -476,7 +521,7 @@
     </div>
 
     <!-- Custom Alert Modal -->
-    <div id="custom-alert-modal" class="modal-overlay fixed inset-0 z-[120] flex items-center justify-center p-6 bg-[#050505]/95 backdrop-blur-lg">
+    <div id="custom-alert-modal" class="modal-overlay fixed inset-0 z-[120] flex items-center justify-center p-6 bg-[#12071b]/95 backdrop-blur-lg">
         <div class="glass-card max-w-sm w-full rounded-3xl p-8 text-center space-y-6 transform scale-95 transition-transform duration-300" id="custom-alert-content">
             <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span class="material-symbols-outlined text-primary text-3xl" id="custom-alert-icon">check_circle</span>
@@ -490,7 +535,7 @@
     </div>
 
     <!-- Custom Prompt Modal -->
-    <div id="custom-prompt-modal" class="modal-overlay fixed inset-0 z-[120] flex items-center justify-center p-6 bg-[#050505]/95 backdrop-blur-lg">
+    <div id="custom-prompt-modal" class="modal-overlay fixed inset-0 z-[120] flex items-center justify-center p-6 bg-[#12071b]/95 backdrop-blur-lg">
         <div class="glass-card max-w-md w-full rounded-3xl p-8 space-y-6 transform scale-95 transition-transform duration-300" id="custom-prompt-content">
             <div class="flex justify-between items-center mb-2">
                 <h3 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
@@ -510,7 +555,7 @@
     </div>
 
     <!-- Floating Voice Preview Player -->
-    <div id="voice-preview-bar" class="fixed bottom-0 left-0 right-0 z-[90] bg-[#131313]/95 backdrop-blur-xl border-t border-primary/20 p-4 flex items-center gap-4 translate-y-full transition-transform duration-300" style="margin-left: 16rem;">
+    <div id="voice-preview-bar" class="fixed bottom-0 left-0 right-0 z-[90] bg-[#241230]/95 backdrop-blur-xl border-t border-primary/20 p-4 flex items-center gap-4 translate-y-full transition-transform duration-300" style="margin-left: 16rem;">
         <div class="flex items-center gap-3 flex-1">
             <div class="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center animate-pulse" id="preview-pulse">
                 <span class="material-symbols-outlined text-primary">graphic_eq</span>

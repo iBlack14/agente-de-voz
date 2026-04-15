@@ -12,12 +12,18 @@ module.exports = {
     const transcript = Array.isArray(entry.transcript) ? entry.transcript : null;
 
     await query(
-      `INSERT INTO calls (call_id, direction, from_number, to_number, started_at, ended_at, duration_sec, turn_count, status, recording_url, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+      `INSERT INTO calls (call_id, direction, from_number, to_number, domain, mode, reminder_greeting, reminder_instructions, batch_id, batch_label, started_at, ended_at, duration_sec, turn_count, status, recording_url, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW())
        ON CONFLICT (call_id) DO UPDATE SET 
          direction = COALESCE(EXCLUDED.direction, calls.direction),
          from_number = COALESCE(EXCLUDED.from_number, calls.from_number),
          to_number = COALESCE(EXCLUDED.to_number, calls.to_number),
+         domain = COALESCE(EXCLUDED.domain, calls.domain),
+         mode = COALESCE(EXCLUDED.mode, calls.mode),
+         reminder_greeting = COALESCE(EXCLUDED.reminder_greeting, calls.reminder_greeting),
+         reminder_instructions = COALESCE(EXCLUDED.reminder_instructions, calls.reminder_instructions),
+         batch_id = COALESCE(EXCLUDED.batch_id, calls.batch_id),
+         batch_label = COALESCE(EXCLUDED.batch_label, calls.batch_label),
          started_at = COALESCE(EXCLUDED.started_at, calls.started_at),
          ended_at = COALESCE(EXCLUDED.ended_at, calls.ended_at),
          duration_sec = COALESCE(EXCLUDED.duration_sec, calls.duration_sec),
@@ -25,7 +31,24 @@ module.exports = {
          status = COALESCE(EXCLUDED.status, calls.status),
          recording_url = COALESCE(EXCLUDED.recording_url, calls.recording_url),
          updated_at = NOW()`,
-      [callId, entry.direction, entry.from, entry.to, entry.startedAt, entry.endedAt, entry.durationSec, entry.turnCount, entry.status, entry.recordingUrl]
+      [
+        callId,
+        entry.direction,
+        entry.from,
+        entry.to,
+        entry.domain,
+        entry.mode,
+        entry.reminderGreeting,
+        entry.reminderInstructions,
+        entry.batchId,
+        entry.batchLabel,
+        entry.startedAt,
+        entry.endedAt,
+        entry.durationSec,
+        entry.turnCount,
+        entry.status,
+        entry.recordingUrl
+      ]
     );
 
     if (transcript) {
@@ -58,6 +81,12 @@ module.exports = {
       direction: r.direction,
       from: r.from_number,
       to: r.to_number,
+      domain: r.domain,
+      mode: r.mode,
+      reminderGreeting: r.reminder_greeting,
+      reminderInstructions: r.reminder_instructions,
+      batchId: r.batch_id,
+      batchLabel: r.batch_label,
       startedAt: r.started_at,
       endedAt: r.ended_at,
       durationSec: r.duration_sec,

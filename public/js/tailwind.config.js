@@ -6,19 +6,19 @@ tailwind.config = {
     theme: {
         extend: {
             colors: {
-                "primary": "#d8b9ff",
-                "secondary": "#d3fbff",
-                "tertiary": "#fface8",
-                "surface": "#131313",
-                "surface-bright": "#3a3939",
-                "surface-container": "#201f1f",
-                "surface-container-low": "#1c1b1b",
-                "surface-container-lowest": "#0a0a0a",
+                "primary": "#f2a7ff",
+                "secondary": "#ff9be7",
+                "tertiary": "#d88cff",
+                "surface": "#2a1434",
+                "surface-bright": "#4a2a5a",
+                "surface-container": "#31183f",
+                "surface-container-low": "#2b1538",
+                "surface-container-lowest": "#22102e",
                 "on-surface": "#ffffff",
-                "background": "#050505",
-                "outline-variant": "#4c4355",
-                "primary-container": "#ae72ff",
-                "secondary-container": "#00eefc",
+                "background": "#14081e",
+                "outline-variant": "#5a3f64",
+                "primary-container": "#c14dff",
+                "secondary-container": "#ff4fcf",
                 "error": "#ff5555"
             },
             fontFamily: {

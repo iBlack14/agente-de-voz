@@ -27,6 +27,12 @@ CREATE TABLE IF NOT EXISTS calls (
   direction TEXT,
   from_number TEXT,
   to_number TEXT,
+  domain TEXT,
+  mode TEXT,
+  reminder_greeting TEXT,
+  reminder_instructions TEXT,
+  batch_id TEXT,
+  batch_label TEXT,
   started_at TIMESTAMPTZ,
   ended_at TIMESTAMPTZ,
   duration_sec INTEGER,
@@ -79,12 +85,18 @@ ON CONFLICT (id) DO NOTHING;
 CREATE TABLE IF NOT EXISTS scheduled_calls (
   id BIGSERIAL PRIMARY KEY,
   to_number TEXT NOT NULL,
+  batch_id TEXT,
+  batch_label TEXT,
   domain TEXT,
   greeting TEXT,
   instructions TEXT,
   scheduled_for TIMESTAMPTZ NOT NULL,
   retry_interval_hours INTEGER DEFAULT 0,
   status TEXT DEFAULT 'pending', -- pending, processing, completed, failed
+  processing_started_at TIMESTAMPTZ,
+  attempts INTEGER NOT NULL DEFAULT 0,
+  last_error TEXT,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

@@ -161,6 +161,14 @@ const initDashboardApp = () => {
   const emptyState = document.getElementById('empty-state');
 
   const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const createBatchMeta = (prefix, total) => {
+    const stamp = Date.now();
+    const hhmm = new Date(stamp).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    return {
+      batchId: `${prefix.toLowerCase()}-${stamp}`,
+      batchLabel: `${prefix} (${total}) · ${hhmm}`
+    };
+  };
 
   clearBtn.addEventListener('click', () => {
     numberInput.value = '';
@@ -185,6 +193,7 @@ const initDashboardApp = () => {
     });
 
     if (!entries.length) return;
+    const campaignBatch = createBatchMeta('Campaña', entries.length);
 
     startBtn.disabled = true;
     startBtn.textContent = 'PROCESANDO...';
@@ -206,7 +215,12 @@ const initDashboardApp = () => {
         const resp = await fetch('/make-call', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ number: entry.number, domain: entry.domain })
+          body: JSON.stringify({
+            number: entry.number,
+            domain: entry.domain,
+            batch_id: campaignBatch.batchId,
+            batch_label: campaignBatch.batchLabel
+          })
         });
         const data = await resp.json();
         const statusEl = li.querySelector('.call-status');
@@ -505,8 +519,288 @@ const initDashboardApp = () => {
   const modalMeta = document.getElementById('modal-meta');
   const modalBody = document.getElementById('modal-body');
   const modalClose = document.getElementById('modal-close');
+  const historyAnsweredCount = document.getElementById('history-answered-count');
+  const historyUnansweredCount = document.getElementById('history-unanswered-count');
+  const historyOutboundTotal = document.getElementById('history-outbound-total');
+  const historyRetryBtn = document.getElementById('history-retry-all-unanswered');
+  const historyBatchContainer = document.getElementById('history-batch-container');
 
   let callsData = [];
+  let historyBatchMap = new Map();
+
+  function isOutboundCall(call) {
+    return call?.direction === 'outbound' || call?.direction === 'outgoing';
+  }
+
+  function isCallConnected(call) {
+    const connectedStatuses = new Set(['completed', 'ws_close', 'stop_event', 'terminated']);
+    return connectedStatuses.has(String(call?.status || '').toLowerCase());
+  }
+
+  function classifyOutboundCall(call) {
+    if (!isOutboundCall(call)) return 'skip';
+    const duration = parseInt(call.durationSec ?? call.duration_sec, 10) || 0;
+    if (isCallConnected(call) && duration > 5) return 'answered';
+    if (isCallConnected(call) && duration <= 5) return 'unanswered';
+
+    const status = String(call.status || '').toLowerCase();
+    const failedStatuses = new Set(['failed', 'busy', 'no_answer', 'timeout', 'canceled', 'rejected']);
+    if (failedStatuses.has(status)) return 'unanswered';
+
+    return 'pending';
+  }
+
+  function getRetryTargetNumber(call) {
+    const raw = String(call?.to || call?.to_number || '').trim();
+    const clean = raw.replace(/[^0-9+]/g, '');
+    return clean.length >= 8 ? clean : null;
+  }
+
+  function buildRetryEntries(unansweredCalls) {
+    const entries = [];
+    const seen = new Set();
+    unansweredCalls.forEach(call => {
+      const number = getRetryTargetNumber(call);
+      if (!number) return;
+
+      const entry = {
+        number,
+        domain: (call.domain || '').trim(),
+        mode: (call.mode || '').trim() || 'reminder',
+        greeting: (call.reminderGreeting || '').trim(),
+        instructions: (call.reminderInstructions || '').trim()
+      };
+
+      const key = JSON.stringify(entry);
+      if (seen.has(key)) return;
+      seen.add(key);
+      entries.push(entry);
+    });
+    return entries;
+  }
+
+  function renderHistorySummary() {
+    const outboundCalls = callsData.filter(isOutboundCall);
+    const answered = outboundCalls.filter(c => classifyOutboundCall(c) === 'answered').length;
+    const unansweredCalls = outboundCalls.filter(c => classifyOutboundCall(c) === 'unanswered');
+
+    if (historyOutboundTotal) historyOutboundTotal.textContent = String(outboundCalls.length);
+    if (historyAnsweredCount) historyAnsweredCount.textContent = String(answered);
+    if (historyUnansweredCount) historyUnansweredCount.textContent = String(unansweredCalls.length);
+  }
+
+  function buildHistoryBatchGroups() {
+    const groups = new Map();
+    const outboundCalls = callsData.filter(isOutboundCall);
+
+    outboundCalls.forEach(call => {
+      const fallbackKey = `legacy-${call.callId || call.startedAt || Math.random()}`;
+      const key = call.batchId || fallbackKey;
+      if (!groups.has(key)) {
+        groups.set(key, {
+          key,
+          label: call.batchLabel || (call.batchId ? `Lote ${call.batchId.slice(-6)}` : ''),
+          calls: [],
+          lastStartedAt: call.startedAt || null
+        });
+      }
+      const g = groups.get(key);
+      g.calls.push(call);
+      if (call.startedAt && (!g.lastStartedAt || new Date(call.startedAt) > new Date(g.lastStartedAt))) {
+        g.lastStartedAt = call.startedAt;
+      }
+    });
+
+    return Array.from(groups.values()).sort((a, b) => {
+      const aDate = a.lastStartedAt ? new Date(a.lastStartedAt).getTime() : 0;
+      const bDate = b.lastStartedAt ? new Date(b.lastStartedAt).getTime() : 0;
+      return bDate - aDate;
+    });
+  }
+
+  function renderHistoryBatchCards() {
+    if (!historyBatchContainer) return;
+
+    const groups = buildHistoryBatchGroups();
+    historyBatchMap = new Map(groups.map(g => [g.key, g]));
+
+    if (!groups.length) {
+      historyBatchContainer.innerHTML = `
+        <div class="col-span-full opacity-30 py-8 text-center uppercase text-[9px] font-bold tracking-widest">
+          Sin lotes salientes registrados
+        </div>`;
+      return;
+    }
+
+    historyBatchContainer.innerHTML = groups.map((group, idx) => {
+      const answered = group.calls.filter(c => classifyOutboundCall(c) === 'answered').length;
+      const unansweredCalls = group.calls.filter(c => classifyOutboundCall(c) === 'unanswered');
+      const contacts = [];
+      const seenNumbers = new Set();
+      group.calls.forEach(call => {
+        const number = getRetryTargetNumber(call);
+        if (!number || seenNumbers.has(number)) return;
+        seenNumbers.add(number);
+        contacts.push({
+          number,
+          domain: (call.domain || '').trim(),
+          status: classifyOutboundCall(call)
+        });
+      });
+      const startedText = group.lastStartedAt
+        ? new Date(group.lastStartedAt).toLocaleString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+        : '—';
+      const label = group.label || `Lote ${startedText}`;
+      const detailsId = `batch-contacts-${idx}`;
+      const preview = contacts.slice(0, 3).map(c => c.number).join(' · ');
+      const moreCount = contacts.length > 3 ? contacts.length - 3 : 0;
+      const rows = contacts.length
+        ? contacts.map(c => {
+            const statusChip = c.status === 'answered'
+              ? '<span class="text-[8px] px-2 py-0.5 rounded-full bg-emerald-400/15 text-emerald-300 uppercase tracking-widest">Contestada</span>'
+              : (c.status === 'unanswered'
+                ? '<span class="text-[8px] px-2 py-0.5 rounded-full bg-error/15 text-error uppercase tracking-widest">No cont.</span>'
+                : '<span class="text-[8px] px-2 py-0.5 rounded-full bg-zinc-700/40 text-zinc-300 uppercase tracking-widest">Pendiente</span>');
+            return `<li class="flex items-center justify-between gap-3 rounded-lg bg-surface-container-lowest/60 border border-primary/10 px-3 py-2">
+              <div class="min-w-0">
+                <p class="text-[11px] font-bold text-on-surface truncate">${escapeHtml(c.number)}</p>
+                <p class="text-[9px] text-zinc-400 truncate">${escapeHtml(c.domain || 'sin dominio')}</p>
+              </div>
+              ${statusChip}
+            </li>`;
+          }).join('')
+        : '<p class="text-[9px] text-zinc-500 uppercase tracking-widest">Sin números legibles en este lote</p>';
+
+      return `
+        <article class="rounded-2xl border border-zinc-800/40 bg-surface-container-low/50 p-5">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p class="text-[9px] uppercase tracking-widest text-zinc-500 font-bold">Lote</p>
+              <h4 class="text-sm font-black text-white">${escapeHtml(label)}</h4>
+              <p class="text-[9px] text-zinc-500 mt-1">${escapeHtml(startedText)}</p>
+            </div>
+            <span class="text-[8px] uppercase tracking-widest text-zinc-400 bg-zinc-800/70 px-2 py-1 rounded-full">${group.calls.length} llamadas</span>
+          </div>
+          <div class="grid grid-cols-2 gap-3 mt-4">
+            <div class="rounded-xl bg-emerald-400/10 border border-emerald-400/20 p-3">
+              <p class="text-[8px] uppercase tracking-widest text-emerald-300">Contestadas</p>
+              <p class="text-xl font-black text-emerald-400">${answered}</p>
+            </div>
+            <div class="rounded-xl bg-error/10 border border-error/20 p-3">
+              <p class="text-[8px] uppercase tracking-widest text-error">No contestadas</p>
+              <p class="text-xl font-black text-error">${unansweredCalls.length}</p>
+            </div>
+          </div>
+          <div class="mt-4 flex items-center justify-between gap-3">
+            <div class="min-w-0 flex-1">
+              <button
+                data-target="${detailsId}"
+                class="history-toggle-numbers text-[9px] uppercase tracking-widest font-bold text-zinc-300 hover:text-primary transition-colors"
+              >
+                Ver números
+              </button>
+              <p class="text-[9px] text-zinc-500 truncate mt-1">${escapeHtml(preview || 'sin números')}</p>
+              ${moreCount > 0 ? `<p class="text-[8px] text-primary/80 uppercase tracking-widest mt-0.5">+${moreCount} más</p>` : ''}
+            </div>
+            <button
+              data-batch-key="${escapeHtml(group.key)}"
+              class="history-retry-batch px-4 py-2 rounded-lg bg-primary/15 border border-primary/30 text-primary text-[9px] font-bold uppercase tracking-widest hover:bg-primary/25 transition-all ${unansweredCalls.length ? '' : 'opacity-40 cursor-not-allowed'}"
+              ${unansweredCalls.length ? '' : 'disabled'}
+            >
+              Reintentar este lote
+            </button>
+          </div>
+          <div id="${detailsId}" class="hidden mt-3 rounded-xl border border-primary/15 bg-primary/5 p-3">
+            <p class="text-[9px] uppercase tracking-widest text-primary/90 font-bold mb-2">Números del lote</p>
+            <ul class="space-y-2 max-h-48 overflow-y-auto no-scrollbar">${rows}</ul>
+          </div>
+        </article>`;
+    }).join('');
+
+    historyBatchContainer.querySelectorAll('.history-retry-batch').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const key = btn.dataset.batchKey;
+        const group = historyBatchMap.get(key);
+        if (!group) return;
+        const unanswered = group.calls.filter(c => classifyOutboundCall(c) === 'unanswered');
+        await retryUnansweredCalls(unanswered, btn, `Reintento ${group.label}`);
+      });
+    });
+
+    historyBatchContainer.querySelectorAll('.history-toggle-numbers').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetId = btn.dataset.target;
+        const panel = document.getElementById(targetId);
+        if (!panel) return;
+        const opening = panel.classList.contains('hidden');
+        panel.classList.toggle('hidden');
+        btn.textContent = opening ? 'Ocultar números' : 'Ver números';
+      });
+    });
+  }
+
+  async function retryUnansweredCalls(unansweredCalls, buttonEl, batchLabelBase = 'Reintento') {
+    const entries = buildRetryEntries(unansweredCalls);
+    if (!entries.length) {
+      appAlert('No hay llamadas no contestadas para reintentar.');
+      return;
+    }
+
+    const previewLines = entries
+      .slice(0, 8)
+      .map(e => `${e.number}${e.domain ? ` | ${e.domain}` : ''}`)
+      .join('\n');
+    const previewSuffix = entries.length > 8 ? `\n... y ${entries.length - 8} más` : '';
+    const confirmMsg = `Lista de reintento (${entries.length}):\n${previewLines}${previewSuffix}\n\nEscribe REINTENTAR para continuar:`;
+
+    const confirmText = await appPrompt(
+      confirmMsg,
+      'REINTENTAR'
+    );
+    if (confirmText !== 'REINTENTAR') return;
+
+    if (buttonEl) {
+      buttonEl.disabled = true;
+      buttonEl.dataset.originalLabel = buttonEl.textContent;
+      buttonEl.textContent = 'REINTENTANDO...';
+    }
+
+    const retryBatchId = `retry-${Date.now()}`;
+    const retryBatchLabel = `${batchLabelBase} (${new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })})`;
+
+    let ok = 0;
+    let fail = 0;
+    for (const entry of entries) {
+      try {
+        const resp = await fetch('/api/make-call', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            number: entry.number,
+            domain: entry.domain || undefined,
+            mode: entry.mode || 'reminder',
+            greeting: entry.greeting || undefined,
+            instructions: entry.instructions || undefined,
+            batch_id: retryBatchId,
+            batch_label: retryBatchLabel
+          })
+        });
+        if (resp.ok) ok++;
+        else fail++;
+        await new Promise(r => setTimeout(r, 1200));
+      } catch {
+        fail++;
+      }
+    }
+
+    if (buttonEl) {
+      buttonEl.disabled = false;
+      buttonEl.textContent = buttonEl.dataset.originalLabel || 'Reintentar';
+    }
+
+    appAlert(`Reintento completado. Exitosas: ${ok} | Fallidas: ${fail}`);
+    loadCallHistory();
+  }
 
   modalClose.addEventListener('click', () => modal.classList.remove('visible'));
   modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('visible'); });
@@ -578,9 +872,12 @@ const initDashboardApp = () => {
   async function loadCallHistory(preloadedData = null) {
     try {
       callsData = preloadedData || await (await fetch('/api/calls')).json();
+      renderHistorySummary();
+      renderHistoryBatchCards();
       if (!callsData.length) {
         historyEmpty.style.display = 'block';
         historyContainer.innerHTML = '';
+        if (historyBatchContainer) historyBatchContainer.innerHTML = '';
         return;
       }
 
@@ -622,6 +919,7 @@ const initDashboardApp = () => {
                <div class="flex items-center gap-2">
                  <p class="text-xs font-bold font-label text-on-surface">${escapeHtml(primaryNumber)}</p>
                  <span class="text-[7px] px-1 py-0.5 rounded border border-current ${dirColor} opacity-70">${dirLabel.toUpperCase()}</span>
+                 ${c.batchLabel ? `<span class="text-[7px] px-1 py-0.5 rounded bg-primary/10 border border-primary/30 text-primary uppercase tracking-widest">${escapeHtml(c.batchLabel)}</span>` : ''}
                </div>
                <p class="text-[9px] uppercase tracking-widest text-on-surface-variant opacity-60">${escapeHtml(secondaryNumber)}</p>
             </div>
@@ -645,6 +943,13 @@ const initDashboardApp = () => {
         });
       });
     } catch (e) { console.error('Error cargando historial:', e); }
+  }
+
+  if (historyRetryBtn) {
+    historyRetryBtn.addEventListener('click', async () => {
+      const unansweredCalls = callsData.filter(c => classifyOutboundCall(c) === 'unanswered');
+      await retryUnansweredCalls(unansweredCalls, historyRetryBtn, 'Reintento General');
+    });
   }
 
   function formatDuration(sec) {
@@ -685,7 +990,7 @@ const initDashboardApp = () => {
             <div class="glass-card p-6 border-l-4 border-emerald-400 rounded-2xl bg-emerald-400/5">
                 <div class="flex items-center gap-3 mb-3">
                     <span class="material-symbols-outlined text-emerald-400">verified</span>
-                    <p class="text-[10px] font-bold uppercase tracking-widest text-emerald-400">Lote Finalizado</p>
+                    <p class="text-[10px] font-bold uppercase tracking-widest text-emerald-400">Llamadas Finalizadas</p>
                 </div>
                 <p class="text-sm text-zinc-300">Se procesaron ${currentBatch.stats.total} números. Pulsa el botón inferior para reintentar con los fallidos si es necesario.</p>
             </div>
@@ -757,14 +1062,18 @@ const initDashboardApp = () => {
             return;
         }
 
-        // Cargar números y dominios fallidos en el formulario
+        // Cargar números y dominios fallidos en el formulario (en cajas separadas)
         const phonesTextarea = document.getElementById('reminder-phones');
-        const restoredEntries = failedNumbers.map(num => {
+        const domainsTextarea = document.getElementById('reminder-domains');
+        const restoredNumbers = [];
+        const restoredDomains = [];
+        failedNumbers.forEach(num => {
             const dom = currentBatch.domains && currentBatch.domains[num] ? currentBatch.domains[num] : '';
-            return dom ? `${num}, ${dom}` : num;
+            restoredNumbers.push(num);
+            restoredDomains.push(dom);
         });
-        phonesTextarea.value = restoredEntries.join('\n');
-        // Simular evento input para actualizar el conteo
+        phonesTextarea.value = restoredNumbers.join('\n');
+        if (domainsTextarea) domainsTextarea.value = restoredDomains.join('\n');
         phonesTextarea.dispatchEvent(new Event('input'));
         
         // Tab focus
@@ -780,6 +1089,7 @@ const initDashboardApp = () => {
 
   const reminderForm = document.getElementById('reminder-form');
   const reminderPhones = document.getElementById('reminder-phones');
+  const reminderDomains = document.getElementById('reminder-domains');
   const reminderCount = document.getElementById('reminder-count');
   const reminderQueue = document.getElementById('reminder-queue');
 
@@ -819,7 +1129,10 @@ const initDashboardApp = () => {
 
   if (reminderPhones) {
     reminderPhones.addEventListener('input', () => {
-      const count = reminderPhones.value.split('\n').filter(n => n.trim().length >= 8).length;
+      const count = reminderPhones.value
+        .split('\n')
+        .map(n => (n || '').trim().replace(/[^0-9+]/g, ''))
+        .filter(n => n.length >= 8).length;
       reminderCount.textContent = `${count} Números`;
     });
   }
@@ -827,23 +1140,23 @@ const initDashboardApp = () => {
   if (reminderForm) {
     reminderForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const lines = reminderPhones.value.split('\n').filter(l => l.trim().length > 0);
+      const phoneLines = reminderPhones.value.split('\n').filter(l => l.trim().length > 0);
+      const domainLines = reminderDomains ? reminderDomains.value.split('\n') : [];
       const numbers = [];
       const domains = {};
       
-      lines.forEach(line => {
-          // Separador inteligente: busca espacios, comas, punto y coma, tabuladores o barras verticales
+      phoneLines.forEach((line, idx) => {
+          // Compatibilidad: si viene en formato antiguo "numero,dominio" también se soporta.
           const parts = line.split(/[,\s\t;|]+/).map(p => p.trim()).filter(p => p.length > 0);
-          const num = (parts[0] || '').replace(/[^0-9+]/g, '');
+          const rawNum = parts[0] || '';
+          const num = rawNum.replace(/[^0-9+]/g, '');
           if (num.length >= 8) {
               numbers.push(num);
-              // Capturar todo lo que sigue al número como "contexto/dominio/dato completo"
-              const extraData = line.substring(line.indexOf(parts[0]) + parts[0].length).replace(/^[,\s\t;|]+/, '').trim();
-              if (extraData) domains[num] = extraData;
-              
-              if (!domains[num] && window.phoneContexts && window.phoneContexts[num]) {
-                  domains[num] = window.phoneContexts[num].domain;
-              }
+              const legacyDomain = line.substring(line.indexOf(rawNum) + rawNum.length).replace(/^[,\s\t;|]+/, '').trim();
+              const explicitDomain = (domainLines[idx] || '').trim();
+              const mappedDomain = (window.phoneContexts && window.phoneContexts[num] && window.phoneContexts[num].domain) ? window.phoneContexts[num].domain : '';
+              const finalDomain = explicitDomain || legacyDomain || mappedDomain;
+              if (finalDomain) domains[num] = finalDomain;
           }
       });
 
@@ -853,6 +1166,7 @@ const initDashboardApp = () => {
       const greeting = document.getElementById('reminder-greeting').value;
 
       if (!numbers.length) return appAlert('Ingresa al menos un destino telefónico de manera manual o mediante Excel.', true);
+      const reminderBatch = createBatchMeta('Lote Recordatorio', numbers.length);
 
       // Crear elemento de lote en la cola
       const item = document.createElement('div');
@@ -864,7 +1178,7 @@ const initDashboardApp = () => {
                       <span class="material-symbols-outlined text-sm">dynamic_feed</span>
                   </div>
                   <div>
-                      <h3 class="text-xs font-bold text-on-surface">Lote de ${numbers.length} Destinatarios</h3>
+                      <h3 class="text-xs font-bold text-on-surface">Llamadas a ${numbers.length} Destinatarios</h3>
                       <p class="text-[10px] text-on-surface-variant opacity-60">${time}</p>
                   </div>
               </div>
@@ -901,7 +1215,7 @@ const initDashboardApp = () => {
       // LÓGICA NEURAL DE DISPARO:
       if (time === 'Inmediato') {
         // Enviar llamadas realmente
-        appAlert(`🚀 Despacho iniciado YA MISMO a ${numbers.length} destinos.`);
+        appAlert(`🚀 Llamadas iniciadas YA MISMO a ${numbers.length} destinos.`);
         
         // Disparar asincronicamente en segundo plano
         (async () => {
@@ -933,7 +1247,9 @@ const initDashboardApp = () => {
                             mode: 'reminder',
                             greeting: greeting,
                             instructions: msg,
-                            retry_interval: parseInt(retry)
+                            retry_interval: parseInt(retry),
+                            batch_id: reminderBatch.batchId,
+                            batch_label: reminderBatch.batchLabel
                         })
                     });
                     if (!resp.ok) {
@@ -959,7 +1275,7 @@ const initDashboardApp = () => {
             }
         })();
       } else {
-        appAlert(`🕒 Lote de ${numbers.length} recordatorios programado para: ${time}.`);
+        appAlert(`🕒 ${numbers.length} llamadas programadas para: ${time}.`);
         
         // Enviar a programar en el servidor
         (async () => {
@@ -977,7 +1293,9 @@ const initDashboardApp = () => {
                         greeting: greeting,
                         instructions: msg,
                         retry_interval: parseInt(retry),
-                        scheduled_for: time
+                        scheduled_for: time,
+                        batch_id: reminderBatch.batchId,
+                        batch_label: reminderBatch.batchLabel
                     })
                 });
             }
@@ -1052,11 +1370,89 @@ const initDashboardApp = () => {
     });
   }
 
+  function handleReminderFileImport(fileInput, phonesTextarea, domainsTextarea, updateCounterCallback) {
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      const extension = file.name.split('.').pop().toLowerCase();
+
+      reader.onload = async (evt) => {
+        try {
+          const arrayBuffer = evt.target.result;
+          const entries = [];
+
+          if (!window.phoneContexts) window.phoneContexts = {};
+
+          if (extension === 'docx' || extension === 'doc') {
+            const result = await mammoth.extractRawText({ arrayBuffer });
+            const lines = result.value.split(/\n/);
+            lines.forEach(line => {
+              const parts = line.split(/[,\t|]/).map(p => p.trim()).filter(Boolean);
+              const phone = String(parts[0] || '').replace(/[^0-9+]/g, '');
+              if (phone.length >= 8) {
+                const domain = parts.slice(1).join(' ').trim();
+                entries.push({ phone, domain });
+                if (domain) window.phoneContexts[phone] = { domain };
+              }
+            });
+          } else {
+            const data = new Uint8Array(arrayBuffer);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+            rows.forEach(row => {
+              const phone = String(row[0] || '').trim().replace(/[^0-9+]/g, '');
+              const domain = String(row[1] || '').trim();
+              if (phone.length >= 8) {
+                entries.push({ phone, domain });
+                if (domain) window.phoneContexts[phone] = { domain };
+              }
+            });
+          }
+
+          const unique = [];
+          const seen = new Set();
+          entries.forEach(({ phone, domain }) => {
+            const key = `${phone}__${domain}`;
+            if (seen.has(key)) return;
+            seen.add(key);
+            unique.push({ phone, domain });
+          });
+
+          if (unique.length > 0) {
+            const currentPhones = phonesTextarea.value.trim();
+            const currentDomains = domainsTextarea ? domainsTextarea.value.trim() : '';
+            const newPhones = unique.map(e => e.phone).join('\n');
+            const newDomains = unique.map(e => e.domain || '').join('\n');
+
+            phonesTextarea.value = currentPhones ? `${currentPhones}\n${newPhones}` : newPhones;
+            if (domainsTextarea) {
+              domainsTextarea.value = currentDomains ? `${currentDomains}\n${newDomains}` : newDomains;
+            }
+
+            if (updateCounterCallback) updateCounterCallback();
+            appAlert(`Se importaron ${unique.length} registros exitosamente de ${extension.toUpperCase()}.`);
+          } else {
+            appAlert('No se detectaron secuencias numéricas válidas en el archivo seleccionado.', true);
+          }
+        } catch (err) {
+          console.error("Error importando archivo:", err);
+          appAlert('Error al procesar el archivo. Revisa que el formato sea correcto.', true);
+        }
+        fileInput.value = '';
+      };
+
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
   const importCamp = document.getElementById('import-file-campaigns');
   if (importCamp) handleFileImport(importCamp, document.getElementById('phone-numbers'), null);
 
   const importRem = document.getElementById('import-file-reminders');
-  if (importRem) handleFileImport(importRem, document.getElementById('reminder-phones'), () => {
+  if (importRem) handleReminderFileImport(importRem, document.getElementById('reminder-phones'), document.getElementById('reminder-domains'), () => {
       document.getElementById('reminder-phones').dispatchEvent(new Event('input'));
   });
 
@@ -1252,22 +1648,57 @@ const initDashboardApp = () => {
       const resp = await fetch('/api/scheduled');
       const data = await resp.json();
       const container = document.getElementById('scheduled-list');
+      const stuckCountEl = document.getElementById('scheduled-stuck-count');
+      const processingCountEl = document.getElementById('scheduled-processing-count');
+      const pendingCountEl = document.getElementById('scheduled-pending-count');
       if (!container) return;
+
+      const now = Date.now();
+      let stuckCount = 0;
+      let processingCount = 0;
+      let pendingCount = 0;
+
+      data.forEach(s => {
+        const status = String(s.status || 'pending').toLowerCase();
+        const processingStartedAt = s.processing_started_at ? new Date(s.processing_started_at).getTime() : null;
+        const isStuck = status === 'processing' && (!processingStartedAt || (now - processingStartedAt) > 180000);
+        if (status === 'processing' && isStuck) stuckCount++;
+        else if (status === 'processing') processingCount++;
+        else if (status === 'pending' || status === 'failed') pendingCount++;
+      });
+
+      if (stuckCountEl) stuckCountEl.textContent = String(stuckCount);
+      if (processingCountEl) processingCountEl.textContent = String(processingCount);
+      if (pendingCountEl) pendingCountEl.textContent = String(pendingCount);
 
       if (!data.length) {
         container.innerHTML = '<div class="opacity-10 py-10 text-center uppercase text-[8px] font-bold tracking-widest">Sin programaciones</div>';
         return;
       }
 
-      container.innerHTML = data.map(s => `
+      container.innerHTML = data.map(s => {
+        const status = String(s.status || 'pending').toLowerCase();
+        const processingStartedAt = s.processing_started_at ? new Date(s.processing_started_at).getTime() : null;
+        const isStuck = status === 'processing' && (!processingStartedAt || (now - processingStartedAt) > 180000);
+        const statusLabel = status === 'processing' ? (isStuck ? 'Atascado' : 'Procesando') : (status === 'failed' ? 'Reintentando' : 'Pendiente');
+        const statusClass = status === 'processing'
+          ? (isStuck ? 'text-yellow-300 bg-yellow-500/10 border-yellow-500/30' : 'text-primary bg-primary/10 border-primary/30')
+          : (status === 'failed' ? 'text-orange-300 bg-orange-500/10 border-orange-500/30' : 'text-zinc-300 bg-zinc-700/30 border-zinc-600/30');
+        const attempts = parseInt(s.attempts || 0, 10);
+        const errorLine = s.last_error ? `<p class="text-[8px] text-orange-300/80 truncate">${escapeHtml(s.last_error)}</p>` : '';
+
+        return `
         <div class="p-3 rounded-lg bg-surface-container-lowest border border-zinc-800/30 flex justify-between items-center group">
-          <div class="min-w-0">
+          <div class="min-w-0 flex-1">
             <p class="text-[10px] font-bold text-on-surface truncate">${s.to_number}${s.domain ? ' · ' + escapeHtml(s.domain) : ''}</p>
-            <p class="text-[8px] text-zinc-500 uppercase tracking-widest">${new Date(s.scheduled_for).toLocaleString('es-ES', {hour:'2-digit', minute:'2-digit'})} (Int: ${s.retry_interval_hours}h)</p>
+            <p class="text-[8px] text-zinc-500 uppercase tracking-widest">${new Date(s.scheduled_for).toLocaleString('es-ES', {hour:'2-digit', minute:'2-digit'})} (Int: ${s.retry_interval_hours}h) · Intentos: ${attempts}</p>
+            ${errorLine}
           </div>
+          <span class="mr-2 text-[8px] font-bold uppercase tracking-widest px-2 py-1 rounded border ${statusClass}">${statusLabel}</span>
           <button onclick="cancelScheduled('${s.id}')" class="opacity-0 group-hover:opacity-100 material-symbols-outlined text-[12px] text-zinc-600 hover:text-error transition-all">cancel</button>
         </div>
-      `).join('');
+      `;
+      }).join('');
     } catch (e) {}
   }
 
@@ -1296,6 +1727,16 @@ const initDashboardApp = () => {
         updateBatchMonitor();
         loadScheduledCalls();
         appAlert('⛔ Operación detenida. Los recordatorios en cola han sido eliminados.');
+    }
+  });
+
+  document.getElementById('btn-recover-stuck')?.addEventListener('click', async () => {
+    try {
+      await fetch('/api/scheduled/recover-stuck', { method: 'POST' });
+      await loadScheduledCalls();
+      appAlert('🔄 Tareas atascadas recuperadas y devueltas a pendiente.');
+    } catch (e) {
+      appAlert('No se pudieron recuperar las tareas atascadas.', true);
     }
   });
 

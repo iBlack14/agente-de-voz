@@ -71,9 +71,9 @@ router.post('/telnyx', async (req, res) => {
           console.log(`[Webhook] 🔄 Bucle de recordatorio: Programando siguiente llamada para ${payload.to} en ${ctx.retry_interval}h (${nextAttempt})`);
           
           await query(
-              `INSERT INTO scheduled_calls (to_number, domain, greeting, instructions, scheduled_for, retry_interval_hours)
-               VALUES ($1, $2, $3, $4, $5, $6)`,
-              [payload.to, ctx.domain, ctx.customGreeting, ctx.customInstructions, nextAttempt, ctx.retry_interval]
+              `INSERT INTO scheduled_calls (to_number, batch_id, batch_label, domain, greeting, instructions, scheduled_for, retry_interval_hours)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+              [payload.to, ctx.batch_id || null, ctx.batch_label || null, ctx.domain, ctx.customGreeting, ctx.customInstructions, nextAttempt, ctx.retry_interval]
           );
       }
     }

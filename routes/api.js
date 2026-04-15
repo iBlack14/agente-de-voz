@@ -62,7 +62,7 @@ const { callQueue } = require('../services/telephony/queue.service');
 const { inflightOutbound } = require('../services/callState');
 
 router.post('/make-call', async (req, res) => {
-  const { number, domain, mode, greeting, instructions, retry_interval, scheduled_for } = req.body || {};
+  const { number, domain, mode, greeting, instructions, retry_interval, scheduled_for, batch_id, batch_label } = req.body || {};
   if (!number || !isValidE164(number)) return res.status(400).json({ error: 'Número inválido' });
 
   const ip = req.ip;
@@ -75,9 +75,9 @@ router.post('/make-call', async (req, res) => {
   if (scheduled_for) {
      const { query } = require('../services/db/postgres.service');
      await query(
-       `INSERT INTO scheduled_calls (to_number, domain, greeting, instructions, scheduled_for, retry_interval_hours)
-        VALUES ($1, $2, $3, $4, $5, $6)`,
-       [number, domain, greeting, instructions, scheduled_for, retry_interval || 0]
+       `INSERT INTO scheduled_calls (to_number, batch_id, batch_label, domain, greeting, instructions, scheduled_for, retry_interval_hours)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+       [number, batch_id || null, batch_label || null, domain, greeting, instructions, scheduled_for, retry_interval || 0]
      );
      return res.json({ success: true, message: `Llamada programada para ${scheduled_for}` });
   }
@@ -90,8 +90,21 @@ router.post('/make-call', async (req, res) => {
         const callId = result.data?.call_control_id;
         if (callId) {
           inflightOutbound.add(callId);
-          setCallContext(callId, { domain, mode, customGreeting: greeting, customInstructions: instructions, retry_interval });
-          await logCall({ callId, from: process.env.TELNYX_PHONE_NUMBER || '+5114682421', to: number, direction: 'outbound', startedAt: new Date().toISOString(), status: 'queued' });
+          setCallContext(callId, { domain, mode, customGreeting: greeting, customInstructions: instructions, retry_interval, batch_id, batch_label });
+          await logCall({
+            callId,
+            from: process.env.TELNYX_PHONE_NUMBER || '+5114682421',
+            to: number,
+            direction: 'outbound',
+            domain: domain || null,
+            mode: mode || null,
+            reminderGreeting: greeting || null,
+            reminderInstructions: instructions || null,
+            batchId: batch_id || null,
+            batchLabel: batch_label || null,
+            startedAt: new Date().toISOString(),
+            status: 'queued'
+          });
         }
       });
     } catch (err) {
@@ -148,8 +161,18 @@ router.post('/tts-preview', async (req, res) => {
 router.get('/scheduled', async (req, res) => {
   try {
     const { query } = require('../services/db/postgres.service');
-    const { rows } = await query(`SELECT * FROM scheduled_calls WHERE status IN ('pending', 'processing') ORDER BY scheduled_for ASC`);
+    const { rows } = await query(`SELECT * FROM scheduled_calls WHERE status IN ('pending', 'processing', 'failed') ORDER BY scheduled_for ASC LIMIT 300`);
     res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/scheduled/recover-stuck', async (req, res) => {
+  try {
+    const { recoverStuckScheduledCalls } = require('../services/telephony/scheduler.service');
+    await recoverStuckScheduledCalls(0); // recover all currently processing
+    res.json({ success: true, message: 'Tareas atascadas recuperadas.' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
