@@ -1173,9 +1173,11 @@ const initDashboardApp = () => {
   const btnProgramado = document.getElementById('btn-modo-programado');
   const reminderTimeContainer = document.getElementById('reminder-time-container');
   const reminderTimeInput = document.getElementById('reminder-time');
+  let reminderDeliveryMode = 'immediate';
 
   if (btnInmediato && btnProgramado) {
     btnInmediato.addEventListener('click', () => {
+      reminderDeliveryMode = 'immediate';
       btnInmediato.classList.replace('text-zinc-500', 'text-white');
       btnInmediato.classList.replace('hover:bg-zinc-800/50', 'bg-zinc-800');
       btnInmediato.classList.add('bg-zinc-800');
@@ -1189,6 +1191,7 @@ const initDashboardApp = () => {
     });
 
     btnProgramado.addEventListener('click', () => {
+      reminderDeliveryMode = 'scheduled';
       btnProgramado.classList.replace('text-zinc-500', 'text-white');
       btnProgramado.classList.replace('hover:bg-zinc-800/50', 'bg-zinc-800');
       btnProgramado.classList.add('bg-zinc-800');
@@ -1236,11 +1239,15 @@ const initDashboardApp = () => {
       });
 
       const time = document.getElementById('reminder-time').value || 'Inmediato';
+      const scheduledAt = reminderDeliveryMode === 'scheduled' ? (reminderTimeInput?.value || '') : '';
       const retry = document.getElementById('reminder-retry').value || '0';
       const msg = document.getElementById('reminder-msg').value;
       const greeting = document.getElementById('reminder-greeting').value;
 
       if (!numbers.length) return appAlert('Ingresa al menos un número válido manualmente o importándolo desde Excel/Word.', true);
+      if (reminderDeliveryMode === 'scheduled' && !scheduledAt) {
+        return appAlert('Selecciona fecha y hora para programar el envío.', true);
+      }
       const reminderBatch = createBatchMeta('Lote Recordatorio', numbers.length);
 
       // Crear elemento de lote en la cola
@@ -1254,7 +1261,7 @@ const initDashboardApp = () => {
                   </div>
                   <div>
                       <h3 class="text-xs font-bold text-on-surface">Llamadas a ${numbers.length} Destinatarios</h3>
-                      <p class="text-[10px] text-on-surface-variant opacity-60">${time}</p>
+                      <p class="text-[10px] text-on-surface-variant opacity-60">${reminderDeliveryMode === 'scheduled' ? scheduledAt : 'Inmediato'}</p>
                   </div>
               </div>
               <span class="text-[8px] uppercase font-bold text-secondary tracking-widest bg-secondary/10 px-2 py-1 rounded">En Cola</span>
@@ -1288,7 +1295,7 @@ const initDashboardApp = () => {
       reminderCount.textContent = '0 Destinos';
       
       // LÓGICA NEURAL DE DISPARO:
-      if (time === 'Inmediato') {
+      if (reminderDeliveryMode === 'immediate') {
         // Enviar llamadas realmente
         appAlert(`Llamadas iniciadas de inmediato para ${numbers.length} destinos.`);
         
@@ -1350,7 +1357,7 @@ const initDashboardApp = () => {
             }
         })();
       } else {
-        appAlert(`${numbers.length} llamadas programadas para: ${time}.`);
+        appAlert(`${numbers.length} llamadas programadas para: ${scheduledAt}.`);
         
         // Enviar a programar en el servidor
         (async () => {
@@ -1368,7 +1375,7 @@ const initDashboardApp = () => {
                         greeting: greeting,
                         instructions: msg,
                         retry_interval: parseInt(retry),
-                        scheduled_for: time,
+                        scheduled_for: scheduledAt,
                         batch_id: reminderBatch.batchId,
                         batch_label: reminderBatch.batchLabel
                     })
