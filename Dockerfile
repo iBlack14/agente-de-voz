@@ -20,8 +20,13 @@ RUN npm install --omit=dev
 # Copia el resto del código
 COPY . .
 
-# Expone el puerto que usa tu aplicación
-EXPOSE 3211
+# Expone el puerto esperado por el dashboard/health checks
+# (si cambias PORT en runtime, ajusta también el mapeo de puertos del host/panel)
+EXPOSE 3121
+
+# Healthcheck interno para evitar reinicios por configuración de puerto incorrecta
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:' + (process.env.PORT || 3121) + '/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
 
 # Script de inicio
 CMD ["node", "server.js"]

@@ -135,13 +135,13 @@ docker build -t viaai-voice .
 Ejecutar:
 
 ```bash
-docker run --env-file .env -p 3211:3211 -e PORT=3211 viaai-voice
+docker run --env-file .env -p 3121:3121 -e PORT=3121 viaai-voice
 ```
 
 Luego abrir:
 
 ```bash
-http://localhost:3211/login.html
+http://localhost:3121/login.html
 ```
 
 ## Estructura del proyecto

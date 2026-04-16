@@ -1,8 +1,8 @@
 <!-- Sidebar -->
-    <aside class="h-screen w-72 fixed left-0 top-0 z-50 bg-[#251232]/95 backdrop-blur-2xl border-r border-primary/20 flex flex-col py-8 shadow-[10px_0_40px_rgba(18,6,28,0.55)]">
+    <aside class="h-screen w-72 fixed left-0 top-0 z-50 bg-[#35001f]/95 backdrop-blur-2xl border-r border-primary/20 flex flex-col py-8 shadow-[10px_0_40px_rgba(35,0,20,0.55)]">
         <div class="px-8 mb-10 flex items-center gap-3">
             <div class="w-10 h-10 bg-gradient-to-br from-primary to-secondary-container rounded-lg flex items-center justify-center">
-                <span class="material-symbols-outlined text-[#050505]" style="font-variation-settings: 'FILL' 1;">hub</span>
+                <img src="assets/logo.png" alt="ViaAI Logo" class="w-7 h-7 object-contain">
             </div>
             <div>
                 <h1 class="text-xl font-bold text-[#d8b9ff]">ViaAI</h1>
@@ -47,7 +47,7 @@
 
     <main class="ml-72 min-h-screen relative z-10 flex flex-col no-scrollbar">
         <!-- TopNav -->
-        <header class="w-full sticky top-0 z-40 bg-[#1a0d28]/85 backdrop-blur-xl flex justify-between items-center px-12 py-5 border-b border-primary/15">
+        <header class="w-full sticky top-0 z-40 bg-[#2a0018]/88 backdrop-blur-xl flex justify-between items-center px-12 py-5 border-b border-primary/15">
             <h2 id="page-title" class="text-2xl font-black tracking-tight text-white">Panel Neural</h2>
             <div class="flex items-center gap-6">
                 <p id="clock" class="text-[10px] font-label text-zinc-500 uppercase tracking-widest"></p>
@@ -359,7 +359,7 @@
                 </section>
                 
                 <section class="glass-card rounded-3xl overflow-hidden">
-                    <div class="p-8 border-b border-primary/15 space-y-5 bg-[#281437]/55">
+                    <div class="p-8 border-b border-primary/15 space-y-5 bg-[#4a002b]/45">
                         <div class="flex justify-between items-center gap-4">
                             <h3 class="text-lg font-bold tracking-tight text-white">Logs de Transmisión</h3>
                             <p id="history-last-update" class="text-[10px] uppercase tracking-widest text-zinc-500">Actualizado: --</p>
@@ -479,7 +479,7 @@
                         </div>
 
                         <!-- Transcript feed en vivo -->
-                        <div id="live-transcript" class="bg-[#1c0f28]/90 rounded-2xl border border-primary/15 p-6 min-h-[400px] max-h-[500px] overflow-y-auto no-scrollbar space-y-4 relative">
+                        <div id="live-transcript" class="bg-[#35001f]/90 rounded-2xl border border-primary/15 p-6 min-h-[400px] max-h-[500px] overflow-y-auto no-scrollbar space-y-4 relative">
                             <div id="monitor-empty" class="absolute inset-0 flex flex-col items-center justify-center opacity-20">
                                 <span class="material-symbols-outlined text-5xl mb-3">headset_mic</span>
                                 <p class="text-[10px] font-bold uppercase tracking-widest">Selecciona una llamada activa para escuchar</p>
@@ -499,7 +499,7 @@
     </main>
 
     <!-- Logout Modal -->
-    <div id="logout-confirm-modal" class="modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#12071b]/95 backdrop-blur-md">
+    <div id="logout-confirm-modal" class="modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#230014]/95 backdrop-blur-md">
         <div class="glass-card max-w-sm w-full rounded-3xl p-8 text-center space-y-6">
             <div class="w-16 h-16 bg-error/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span class="material-symbols-outlined text-error text-3xl">power_settings_new</span>
@@ -514,9 +514,9 @@
     </div>
 
     <!-- Transcript Modal -->
-    <div id="transcript-modal" class="modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#12071b]/95 backdrop-blur-lg">
+    <div id="transcript-modal" class="modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#230014]/95 backdrop-blur-lg">
         <div class="glass-card max-w-2xl w-full rounded-3xl overflow-hidden flex flex-col max-h-[85vh]">
-            <div class="p-8 border-b border-primary/15 flex justify-between items-center bg-[#281437]/55">
+            <div class="p-8 border-b border-primary/15 flex justify-between items-center bg-[#4a002b]/45">
                 <div id="modal-meta" class="flex flex-wrap items-center gap-2 text-[10px] font-bold text-zinc-400 uppercase tracking-widest"></div>
                 <button id="modal-close" class="text-zinc-500 hover:text-white transition-colors"><span class="material-symbols-outlined">close</span></button>
             </div>
@@ -525,7 +525,7 @@
     </div>
 
     <!-- Image Full View Modal -->
-    <div id="image-modal" class="modal-overlay fixed inset-0 z-[110] flex items-center justify-center p-6 bg-[#12071b]/95 backdrop-blur-xl">
+    <div id="image-modal" class="modal-overlay fixed inset-0 z-[110] flex items-center justify-center p-6 bg-[#230014]/95 backdrop-blur-xl">
         <div class="relative group max-w-lg w-full scale-90 transition-transform duration-300" id="image-modal-content">
             <button id="image-modal-close" class="absolute -top-12 right-0 text-zinc-500 hover:text-white transition-colors">
                 <span class="material-symbols-outlined text-3xl">close</span>
@@ -537,7 +537,7 @@
     </div>
 
     <!-- New Identity Modal -->
-    <div id="new-identity-modal" class="modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#12071b]/95 backdrop-blur-lg">
+    <div id="new-identity-modal" class="modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#230014]/95 backdrop-blur-lg">
         <div class="glass-card max-w-sm w-full rounded-3xl p-8 space-y-6">
             <div class="flex justify-between items-center">
                 <h3 class="text-xl font-bold tracking-tight">Nuevo Nodo</h3>
@@ -557,7 +557,7 @@
     </div>
 
     <!-- Custom Alert Modal -->
-    <div id="custom-alert-modal" class="modal-overlay fixed inset-0 z-[120] flex items-center justify-center p-6 bg-[#12071b]/95 backdrop-blur-lg">
+    <div id="custom-alert-modal" class="modal-overlay fixed inset-0 z-[120] flex items-center justify-center p-6 bg-[#230014]/95 backdrop-blur-lg">
         <div class="glass-card max-w-sm w-full rounded-3xl p-8 text-center space-y-6 transform scale-95 transition-transform duration-300" id="custom-alert-content">
             <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span class="material-symbols-outlined text-primary text-3xl" id="custom-alert-icon">check_circle</span>
@@ -571,7 +571,7 @@
     </div>
 
     <!-- Custom Prompt Modal -->
-    <div id="custom-prompt-modal" class="modal-overlay fixed inset-0 z-[120] flex items-center justify-center p-6 bg-[#12071b]/95 backdrop-blur-lg">
+    <div id="custom-prompt-modal" class="modal-overlay fixed inset-0 z-[120] flex items-center justify-center p-6 bg-[#230014]/95 backdrop-blur-lg">
         <div class="glass-card max-w-md w-full rounded-3xl p-8 space-y-6 transform scale-95 transition-transform duration-300" id="custom-prompt-content">
             <div class="flex justify-between items-center mb-2">
                 <h3 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
@@ -591,7 +591,7 @@
     </div>
 
     <!-- Floating Voice Preview Player -->
-    <div id="voice-preview-bar" class="fixed bottom-0 left-0 right-0 z-[90] bg-[#241230]/95 backdrop-blur-xl border-t border-primary/20 p-4 flex items-center gap-4 translate-y-full transition-transform duration-300" style="margin-left: 16rem;">
+    <div id="voice-preview-bar" class="fixed bottom-0 left-0 right-0 z-[90] bg-[#35001f]/95 backdrop-blur-xl border-t border-primary/20 p-4 flex items-center gap-4 translate-y-full transition-transform duration-300" style="margin-left: 16rem;">
         <div class="flex items-center gap-3 flex-1">
             <div class="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center animate-pulse" id="preview-pulse">
                 <span class="material-symbols-outlined text-primary">graphic_eq</span>

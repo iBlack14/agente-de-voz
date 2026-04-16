@@ -540,18 +540,24 @@ const initDashboardApp = () => {
   }
 
   function isCallConnected(call) {
-    const connectedStatuses = new Set(['completed', 'ws_close', 'stop_event', 'terminated']);
+    const connectedStatuses = new Set(['completed', 'ws_close', 'stop_event', 'terminated', 'reminder_completed', 'hangup']);
     return connectedStatuses.has(String(call?.status || '').toLowerCase());
   }
 
   function classifyOutboundCall(call) {
     if (!isOutboundCall(call)) return 'skip';
     const duration = parseInt(call.durationSec ?? call.duration_sec, 10) || 0;
-    if (isCallConnected(call) && duration > 5) return 'answered';
-    if (isCallConnected(call) && duration <= 5) return 'unanswered';
+    const turnCount = parseInt(call.turnCount ?? call.turn_count, 10) || 0;
+    const transcriptTurns = Array.isArray(call.transcript) ? call.transcript.length : 0;
+
+    if (isCallConnected(call)) {
+      // Consider "answered" when there is real interaction evidence, even for short calls.
+      if (duration >= 1 || turnCount > 0 || transcriptTurns > 0) return 'answered';
+      return 'unanswered';
+    }
 
     const status = String(call.status || '').toLowerCase();
-    const failedStatuses = new Set(['failed', 'busy', 'no_answer', 'timeout', 'canceled', 'rejected']);
+    const failedStatuses = new Set(['failed', 'busy', 'no_answer', 'timeout', 'canceled', 'rejected', 'hangup_failed', 'failed_to_dial']);
     if (failedStatuses.has(status)) return 'unanswered';
 
     return 'pending';
