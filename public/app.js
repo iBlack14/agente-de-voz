@@ -386,8 +386,18 @@ const initDashboardApp = () => {
   });
 
   const reminderPromptSelect = document.getElementById('reminder-prompt-select');
+  const btnSaveReminder = document.getElementById('btn-save-reminder-msg');
+
+  const setReminderSaveButtonMode = () => {
+    if (!btnSaveReminder) return;
+    const isExisting = !!(reminderPromptSelect && reminderPromptSelect.value);
+    const label = isExisting ? 'Actualizar' : 'Guardar';
+    btnSaveReminder.innerHTML = `<span class="material-symbols-outlined text-[12px]">save</span> ${label}`;
+  };
+
   if (reminderPromptSelect) {
       reminderPromptSelect.addEventListener('change', async () => {
+          setReminderSaveButtonMode();
           if (!reminderPromptSelect.value) return;
           const p = currentReminderPrompts.find(p => p.id === reminderPromptSelect.value);
           if (p) {
@@ -403,41 +413,55 @@ const initDashboardApp = () => {
       });
   }
 
-  const btnSaveReminder = document.getElementById('btn-save-reminder-msg');
   if (btnSaveReminder) {
       btnSaveReminder.addEventListener('click', async () => {
           const greeting = document.getElementById('reminder-greeting').value.trim();
           const text = document.getElementById('reminder-msg').value.trim();
           if (!greeting) return appAlert('Debe existir al menos un Saludo Inicial antes de guardar el perfil.', true);
-          
-          let nameName = await appPrompt('Ingresa un título a nivel de matriz para localizar este guion AI (Ej. Promoción Renovación):', 'Promoción...');
-          if (!nameName || !nameName.trim()) return;
-          
-          btnSaveReminder.innerHTML = '...';
-          const newId = Date.now().toString();
-          
-          await fetch('/api/reminders', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                  id: newId,
+
+          const selectedId = reminderPromptSelect?.value || '';
+          const isUpdating = !!selectedId;
+          let payload;
+
+          if (isUpdating) {
+              const existing = currentReminderPrompts.find(p => p.id === selectedId);
+              if (!existing) return appAlert('No se encontró el guion seleccionado para actualizar.', true);
+              payload = {
+                  id: existing.id,
+                  name: existing.name,
+                  greeting: greeting,
+                  text: text
+              };
+          } else {
+              let nameName = await appPrompt('Ingresa un título a nivel de matriz para localizar este guion AI (Ej. Promoción Renovación):', 'Promoción...');
+              if (!nameName || !nameName.trim()) return;
+              payload = {
+                  id: Date.now().toString(),
                   name: nameName.trim(),
                   greeting: greeting,
                   text: text
-              })
+              };
+          }
+
+          btnSaveReminder.innerHTML = '...';
+
+          await fetch('/api/reminders', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
           });
-          
+
           await loadPrompts();
-          reminderPromptSelect.value = newId;
-          
+          if (reminderPromptSelect) reminderPromptSelect.value = payload.id;
+
           // Automáticamente activarlo
           await fetch('/api/reminders/active', {
                method: 'PUT', headers: { 'Content-Type': 'application/json' },
-               body: JSON.stringify({ id: newId })
+               body: JSON.stringify({ id: payload.id })
           });
-          
-          btnSaveReminder.innerHTML = '<span class="material-symbols-outlined text-[12px]">save</span> Guardar';
-          appAlert('✅ Guión AI almacenado magnéticamente en los registros!');
+          activeReminderId = payload.id;
+          setReminderSaveButtonMode();
+          appAlert(isUpdating ? '✅ Guión AI actualizado correctamente.' : '✅ Guión AI almacenado magnéticamente en los registros!');
       });
   }
 
@@ -510,7 +534,9 @@ const initDashboardApp = () => {
     });
   }
 
-  loadPrompts();
+  loadPrompts().then(() => {
+    setReminderSaveButtonMode();
+  });
 
   // ─── Call History ─────────────────────────────────
   const historyContainer = document.getElementById('history-container');
