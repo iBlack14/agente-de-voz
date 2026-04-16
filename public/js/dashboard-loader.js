@@ -8,6 +8,33 @@
       document.body.appendChild(script);
     });
 
+  const loadScriptWithFallback = async (sources) => {
+    let lastError = null;
+    for (const src of sources) {
+      try {
+        await loadScript(src);
+        return src;
+      } catch (err) {
+        lastError = err;
+      }
+    }
+    throw lastError || new Error('No se pudo cargar ningún script.');
+  };
+
+  const fetchMarkupWithFallback = async (paths) => {
+    let lastError = null;
+    for (const path of paths) {
+      try {
+        const response = await fetch(path, { cache: 'no-store', credentials: 'same-origin' });
+        if (!response.ok) throw new Error(`HTTP ${response.status} en ${path}`);
+        return await response.text();
+      } catch (err) {
+        lastError = err;
+      }
+    }
+    throw lastError || new Error('No se pudo cargar ningún markup.');
+  };
+
   const loadDashboard = async () => {
     const isSimple = localStorage.getItem('ui-mode') === 'simple';
     if (isSimple) return;
@@ -16,11 +43,21 @@
     if (!root) return;
 
     try {
-      const response = await fetch('/partials/dashboard-markup.html', { cache: 'no-store' });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      root.innerHTML = await response.text();
-      await loadScript('/app.js?v=6');
-      await loadScript('/js/profile-image-modal.js?v=1');
+      root.innerHTML = await fetchMarkupWithFallback([
+        '/partials/dashboard-markup.html',
+        'partials/dashboard-markup.html',
+        '/public/partials/dashboard-markup.html'
+      ]);
+      await loadScriptWithFallback([
+        '/app.js?v=7',
+        'app.js?v=7',
+        '/public/app.js?v=7'
+      ]);
+      await loadScriptWithFallback([
+        '/js/profile-image-modal.js?v=2',
+        'js/profile-image-modal.js?v=2',
+        '/public/js/profile-image-modal.js?v=2'
+      ]);
     } catch (error) {
       console.error('[DashboardLoader]', error);
       root.innerHTML = `
