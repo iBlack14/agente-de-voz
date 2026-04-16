@@ -19,10 +19,10 @@
 }
 
 .glass-card { 
-    background: linear-gradient(165deg, rgba(122, 0, 71, 0.38), rgba(82, 0, 47, 0.62));
-    backdrop-filter: blur(24px); 
-    border: 1px solid rgba(213, 126, 193, 0.25); 
-    box-shadow: 0 10px 36px rgba(35, 0, 20, 0.58), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    background: linear-gradient(165deg, rgba(122, 0, 71, 0.62), rgba(82, 0, 47, 0.84));
+    backdrop-filter: blur(10px) saturate(125%); 
+    border: 1px solid rgba(213, 126, 193, 0.34); 
+    box-shadow: 0 12px 28px rgba(35, 0, 20, 0.62), inset 0 1px 0 rgba(255, 255, 255, 0.06);
     transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
 }
 
@@ -40,6 +40,13 @@
 
 body {
     background: linear-gradient(180deg, #230014 0%, #2a0018 35%, #35001f 100%);
+}
+
+/* Sharper chrome for dashboard containers */
+aside,
+main > header,
+#voice-preview-bar {
+    backdrop-filter: blur(6px) saturate(120%) !important;
 }
 
 body.simple-ui {
@@ -160,7 +167,7 @@ main > header {
 textarea,
 input,
 select {
-    background-color: rgba(53, 0, 31, 0.82) !important;
+    background-color: rgba(53, 0, 31, 0.9) !important;
     border-color: rgba(213, 126, 193, 0.2) !important;
     transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 }
