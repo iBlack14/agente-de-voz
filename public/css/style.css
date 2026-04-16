@@ -236,14 +236,12 @@ button:active {
 
     main {
         margin-left: 16rem !important;
-    }
-
-    main {
-        max-width: 1500px;
+        width: calc(100vw - 16rem);
+        max-width: none;
     }
 
     main > header {
-        padding: 0.95rem 2rem !important;
+        padding: 0.95rem clamp(1rem, 2vw, 2rem) !important;
     }
 
     #page-title {
@@ -252,7 +250,7 @@ button:active {
     }
 
     main > div {
-        padding: 1.75rem 2rem 2rem !important;
+        padding: 1.75rem clamp(1rem, 2vw, 2rem) 2rem !important;
     }
 
     #tab-campaigns .grid,
