@@ -50,6 +50,22 @@ router.get('/calls', async (req, res) => {
   try { res.json(await readCallLog()); } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+router.delete('/calls/reset-all', async (req, res) => {
+  try {
+    const { query } = require('../services/db/postgres.service');
+    await query('BEGIN');
+    await query(`TRUNCATE TABLE call_transcripts, usage_logs, calls, scheduled_calls RESTART IDENTITY`);
+    await query('COMMIT');
+    res.json({ success: true, message: 'Datos operativos reiniciados correctamente.' });
+  } catch (err) {
+    try {
+      const { query } = require('../services/db/postgres.service');
+      await query('ROLLBACK');
+    } catch (_) {}
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/voices', async (req, res) => {
   try {
     const response = await axios.get('https://api.elevenlabs.io/v1/voices', { headers: { 'xi-api-key': process.env.ELEVENLABS_API_KEY } });

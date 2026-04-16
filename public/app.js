@@ -530,9 +530,12 @@ const initDashboardApp = () => {
   const historySearchInput = document.getElementById('history-search-input');
   const historyFilterSelect = document.getElementById('history-filter-select');
   const historyLastUpdate = document.getElementById('history-last-update');
+  const historyResetAllBtn = document.getElementById('history-reset-all-btn');
+  const historyResetConfirm = document.getElementById('history-reset-confirm');
 
   let callsData = [];
   let historyBatchMap = new Map();
+  const historyExpandedBatches = new Set();
   const historyView = { query: '', filter: 'all' };
 
   function isOutboundCall(call) {
@@ -645,6 +648,10 @@ const initDashboardApp = () => {
 
     const groups = buildHistoryBatchGroups();
     historyBatchMap = new Map(groups.map(g => [g.key, g]));
+    const groupKeys = new Set(groups.map(g => g.key));
+    Array.from(historyExpandedBatches).forEach(key => {
+      if (!groupKeys.has(key)) historyExpandedBatches.delete(key);
+    });
 
     if (!groups.length) {
       historyBatchContainer.innerHTML = `
@@ -665,10 +672,13 @@ const initDashboardApp = () => {
         const number = getRetryTargetNumber(call);
         if (!number || seenNumbers.has(number)) return;
         seenNumbers.add(number);
+        const callStatus = classifyOutboundCall(call);
         contacts.push({
           number,
           domain: (call.domain || '').trim(),
-          status: classifyOutboundCall(call)
+          status: callStatus,
+          callId: call.callId || '',
+          canOpenTranscript: callStatus !== 'pending' || (Array.isArray(call.transcript) && call.transcript.length > 0)
         });
       });
       const startedText = group.lastStartedAt
@@ -676,6 +686,7 @@ const initDashboardApp = () => {
         : '—';
       const label = group.label || `Lote ${startedText}`;
       const detailsId = `batch-contacts-${idx}`;
+      const isExpanded = historyExpandedBatches.has(group.key);
       const preview = contacts.slice(0, 3).map(c => c.number).join(' · ');
       const moreCount = contacts.length > 3 ? contacts.length - 3 : 0;
       const rows = contacts.length
@@ -690,7 +701,10 @@ const initDashboardApp = () => {
                 <p class="text-[11px] font-bold text-on-surface truncate">${escapeHtml(c.number)}</p>
                 <p class="text-[9px] text-zinc-400 truncate">${escapeHtml(c.domain || 'sin dominio')}</p>
               </div>
-              ${statusChip}
+              <div class="flex items-center gap-2">
+                ${c.canOpenTranscript ? `<button data-call-id="${escapeHtml(c.callId)}" class="history-open-transcript text-[8px] px-2 py-0.5 rounded-full bg-primary/15 border border-primary/30 text-primary uppercase tracking-widest hover:bg-primary/25 transition-colors">Ver conversación</button>` : ''}
+                ${statusChip}
+              </div>
             </li>`;
           }).join('')
         : '<p class="text-[9px] text-zinc-500 uppercase tracking-widest">Sin números legibles en este lote</p>';
@@ -728,9 +742,10 @@ const initDashboardApp = () => {
             <div class="min-w-0 flex-1">
               <button
                 data-target="${detailsId}"
+                data-batch-key="${escapeHtml(group.key)}"
                 class="history-toggle-numbers text-[9px] uppercase tracking-widest font-bold text-zinc-300 hover:text-primary transition-colors"
               >
-                Ver números
+                ${isExpanded ? 'Ocultar números' : 'Ver números'}
               </button>
               <p class="text-[9px] text-zinc-500 truncate mt-1">${escapeHtml(preview || 'sin números')}</p>
               ${moreCount > 0 ? `<p class="text-[8px] text-primary/80 uppercase tracking-widest mt-0.5">+${moreCount} más</p>` : ''}
@@ -743,7 +758,7 @@ const initDashboardApp = () => {
               Reintentar este lote
             </button>
           </div>
-          <div id="${detailsId}" class="hidden mt-3 rounded-xl border border-primary/15 bg-primary/5 p-3">
+          <div id="${detailsId}" class="${isExpanded ? '' : 'hidden'} mt-3 rounded-xl border border-primary/15 bg-primary/5 p-3">
             <p class="text-[9px] uppercase tracking-widest text-primary/90 font-bold mb-2">Números del lote</p>
             <ul class="space-y-2 max-h-48 overflow-y-auto no-scrollbar">${rows}</ul>
           </div>
@@ -763,11 +778,27 @@ const initDashboardApp = () => {
     historyBatchContainer.querySelectorAll('.history-toggle-numbers').forEach(btn => {
       btn.addEventListener('click', () => {
         const targetId = btn.dataset.target;
+        const batchKey = btn.dataset.batchKey;
         const panel = document.getElementById(targetId);
         if (!panel) return;
         const opening = panel.classList.contains('hidden');
         panel.classList.toggle('hidden');
+        if (batchKey) {
+          if (opening) historyExpandedBatches.add(batchKey);
+          else historyExpandedBatches.delete(batchKey);
+        }
         btn.textContent = opening ? 'Ocultar números' : 'Ver números';
+      });
+    });
+
+    historyBatchContainer.querySelectorAll('.history-open-transcript').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const callId = btn.dataset.callId;
+        if (!callId) return;
+        const call = callsData.find(c => c.callId === callId);
+        if (!call) return appAlert('No se encontró la conversación de esta llamada.', true);
+        showTranscript(call);
       });
     });
   }
@@ -1023,6 +1054,50 @@ const initDashboardApp = () => {
     historyFilterSelect.addEventListener('change', () => {
       historyView.filter = historyFilterSelect.value || 'all';
       renderHistoryRows(getHistoryFilteredData());
+    });
+  }
+
+  if (historyResetAllBtn) {
+    if (historyResetConfirm) {
+      historyResetAllBtn.disabled = !historyResetConfirm.checked;
+      historyResetConfirm.addEventListener('change', () => {
+        historyResetAllBtn.disabled = !historyResetConfirm.checked;
+      });
+    }
+
+    historyResetAllBtn.addEventListener('click', async () => {
+      const confirmText = await appPrompt(
+        'Esto borrará historial, transcripciones, lotes y reintentos programados. Escribe "RESETEAR" para confirmar:',
+        'RESETEAR'
+      );
+      if (confirmText !== 'RESETEAR') return;
+
+      historyResetAllBtn.disabled = true;
+      const originalLabel = historyResetAllBtn.textContent;
+      historyResetAllBtn.textContent = 'RESETEANDO...';
+      try {
+        const resp = await fetch('/api/calls/reset-all', { method: 'DELETE' });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data?.error || 'No se pudo resetear');
+        callsData = [];
+        historyBatchMap = new Map();
+        historyExpandedBatches.clear();
+        renderHistorySummary();
+        renderHistoryBatchCards();
+        renderHistoryRows([]);
+        appAlert('Reset completo realizado. Historial limpio.');
+        if (historyResetConfirm) {
+          historyResetConfirm.checked = false;
+          historyResetAllBtn.disabled = true;
+        }
+      } catch (e) {
+        appAlert(`Error al resetear: ${e.message}`, true);
+      } finally {
+        if (!historyResetConfirm || historyResetConfirm.checked) {
+          historyResetAllBtn.disabled = false;
+        }
+        historyResetAllBtn.textContent = originalLabel;
+      }
     });
   }
 

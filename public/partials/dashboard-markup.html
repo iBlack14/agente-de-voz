@@ -1,8 +1,8 @@
 <!-- Sidebar -->
     <aside class="h-screen w-72 fixed left-0 top-0 z-50 bg-[#35001f]/95 backdrop-blur-2xl border-r border-primary/20 flex flex-col py-8 shadow-[10px_0_40px_rgba(35,0,20,0.55)]">
         <div class="px-8 mb-10 flex items-center gap-3">
-            <div class="w-10 h-10 bg-gradient-to-br from-primary to-secondary-container rounded-lg flex items-center justify-center">
-                <img src="assets/logo.png" alt="ViaAI Logo" class="w-7 h-7 object-contain">
+            <div class="w-10 h-10 rounded-lg flex items-center justify-center">
+                <img src="assets/logo.png" alt="ViaAI Logo" class="w-8 h-8 object-contain drop-shadow-[0_0_10px_rgba(229,5,127,0.35)]">
             </div>
             <div>
                 <h1 class="text-xl font-bold text-[#d8b9ff]">ViaAI</h1>
@@ -362,7 +362,16 @@
                     <div class="p-8 border-b border-primary/15 space-y-5 bg-[#4a002b]/45">
                         <div class="flex justify-between items-center gap-4">
                             <h3 class="text-lg font-bold tracking-tight text-white">Logs de Transmisión</h3>
-                            <p id="history-last-update" class="text-[10px] uppercase tracking-widest text-zinc-500">Actualizado: --</p>
+                            <div class="flex items-center gap-3">
+                                <p id="history-last-update" class="text-[10px] uppercase tracking-widest text-zinc-500">Actualizado: --</p>
+                                <label class="flex items-center gap-2 text-[9px] uppercase tracking-widest text-zinc-400 font-bold">
+                                    <input id="history-reset-confirm" type="checkbox" class="accent-red-500 w-3.5 h-3.5">
+                                    Entiendo que no se puede deshacer
+                                </label>
+                                <button id="history-reset-all-btn" disabled class="px-3 py-2 rounded-lg bg-error/15 border border-error/30 text-error text-[9px] font-bold uppercase tracking-widest hover:bg-error/25 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-error/15">
+                                    Resetear Todo
+                                </button>
+                            </div>
                         </div>
                         <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
                             <input id="history-search-input" class="lg:col-span-2 w-full bg-surface-container-lowest border border-zinc-800/60 rounded-xl py-3 px-4 text-sm focus:ring-1 focus:ring-primary outline-none text-white placeholder:text-zinc-600" placeholder="Buscar por número, lote o estado...">
