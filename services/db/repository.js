@@ -1,4 +1,4 @@
-const { query } = require('./postgres.service');
+const { query, pool } = require('./postgres.service');
 
 /**
  * Handles all database interactions for call records and transcripts.
@@ -51,10 +51,20 @@ module.exports = {
       ]
     );
 
-    if (transcript) {
-      await query('DELETE FROM call_transcripts WHERE call_id = $1', [callId]);
-      for (const msg of transcript) {
-        await query(`INSERT INTO call_transcripts (call_id, role, text, at) VALUES ($1, $2, $3, $4)`, [callId, msg.role, msg.text, msg.at]);
+    if (transcript && transcript.length > 0) {
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        await client.query('DELETE FROM call_transcripts WHERE call_id = $1', [callId]);
+        for (const msg of transcript) {
+          await client.query(`INSERT INTO call_transcripts (call_id, role, text, at) VALUES ($1, $2, $3, $4)`, [callId, msg.role, msg.text, msg.at]);
+        }
+        await client.query('COMMIT');
+      } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+      } finally {
+        client.release();
       }
     }
   },

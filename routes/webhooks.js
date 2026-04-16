@@ -4,7 +4,7 @@ const { verifyTelnyxRequest } = require('../middleware/auth');
 const { answerCall, startRecording } = require('../services/telephony/telnyxClient');
 const { precomputeGreeting } = require('../services/voice/session.service');
 const { logCall } = require('../services/db/repository');
-const { processedCalls, inflightOutbound } = require('../services/callState');
+const { processedCalls, addProcessedCall, removeProcessedCall, addInflightOutbound, removeInflightOutbound } = require('../services/callState');
 
 /**
  * Main Webhook Entry point for Telnyx Events.
@@ -31,7 +31,7 @@ router.post('/telnyx', async (req, res) => {
     const shouldStartOutbound = type === 'call.answered';
 
     if ((shouldStartInbound || shouldStartOutbound) && !processedCalls.has(callId)) {
-      processedCalls.add(callId);
+      addProcessedCall(callId);
       console.log(`[Webhook] 🚀 Incoming Voice Flux (${type} | ${direction})`);
 
       logCall({
@@ -53,8 +53,8 @@ router.post('/telnyx', async (req, res) => {
     }
 
     if (type === 'call.hangup') {
-      processedCalls.delete(callId);
-      inflightOutbound.delete(callId);
+      removeProcessedCall(callId);
+      removeInflightOutbound(callId);
       // Registrar finalización
       const { query } = require('../services/db/postgres.service');
       const { rows: statusCheck } = await query('SELECT status FROM calls WHERE call_id = $1', [callId]);

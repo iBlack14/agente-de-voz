@@ -17,8 +17,9 @@ async function telnyxRequest(method, path, data = {}) {
     const errorData = err.response?.data;
     const isCallAlreadyEnded = errorData?.errors?.[0]?.code === '90018';
     
-    // Silence "Call has already ended" error as it is expected in many flows
-    if (!isCallAlreadyEnded) {
+    if (isCallAlreadyEnded) {
+      console.debug(`[Telnyx] Call already ended during ${method} ${path} (expected)`);
+    } else {
       console.error(`[Telnyx Client] Error in ${path}:`, errorData || err.message);
     }
     throw err;
@@ -37,8 +38,11 @@ module.exports = {
   }),
   hangupCall: (callId) => telnyxRequest('POST', `/calls/${callId}/actions/hangup`)
     .catch(e => {
-        if (e.response?.data?.errors?.[0]?.code !== '90018') {
+        const code = e.response?.data?.errors?.[0]?.code;
+        if (code !== '90018') {
             console.warn(`[Telephony] Could not hangup call ${callId}:`, e.message);
+        } else {
+            console.debug(`[Telephony] Call ${callId} already ended during hangup (expected)`);
         }
     }),
   answerCall: (callId) => telnyxRequest('POST', `/calls/${callId}/actions/answer`, {
@@ -48,16 +52,22 @@ module.exports = {
     stream_bidirectional_codec: 'PCMU',
     stream_bidirectional_sampling_rate: 8000
   }).catch(e => {
-      if (e.response?.data?.errors?.[0]?.code !== '90018') {
+      const code = e.response?.data?.errors?.[0]?.code;
+      if (code !== '90018') {
           console.warn(`[Telephony] Could not answer call ${callId}:`, e.message);
+      } else {
+          console.debug(`[Telephony] Call ${callId} already ended during answer (expected)`);
       }
   }),
   startRecording: (callId) => telnyxRequest('POST', `/calls/${callId}/actions/record_start`, {
     format: 'mp3',
     channels: 'dual'
   }).catch(e => {
-      if (e.response?.data?.errors?.[0]?.code !== '90018') {
+      const code = e.response?.data?.errors?.[0]?.code;
+      if (code !== '90018') {
           console.warn(`[Recording] Could not start for ${callId}:`, e.message);
+      } else {
+          console.debug(`[Recording] Call ${callId} already ended (expected)`);
       }
   })
 };

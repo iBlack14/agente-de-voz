@@ -1,13 +1,14 @@
 /**
  * Simple Async Task Queue to handle concurrency limits (Telnyx D1).
  */
-const { inflightOutbound } = require('../callState');
+const { inflightOutbound, isInflightOutboundStale, removeInflightOutbound } = require('../callState');
 
 class CallQueue {
   constructor(concurrency = 1) {
     this.concurrency = concurrency;
     this.running = 0;
     this.queue = [];
+    this.cleanupInterval = setInterval(() => this.cleanupStale(), 60000);
   }
 
   /**
@@ -20,13 +21,34 @@ class CallQueue {
     });
   }
 
+  cleanupStale() {
+    for (const callId of inflightOutbound.keys()) {
+      if (isInflightOutboundStale(callId)) {
+        removeInflightOutbound(callId);
+        console.log(`[Queue] Removed stale call from tracking: ${callId}`);
+      }
+    }
+  }
+
+  getActiveCallCount() {
+    let active = 0;
+    for (const callId of inflightOutbound.keys()) {
+      if (!isInflightOutboundStale(callId)) {
+        active++;
+      }
+    }
+    return active;
+  }
+
   async next() {
-    if (this.running >= this.concurrency || this.queue.length === 0) {
+    if (this.queue.length === 0) {
       return;
     }
+
+    const activeCalls = this.getActiveCallCount();
     
-    // Semáforo Inteligente: Ensure we don't exceed Telnyx channel limit of active outbounds
-    if (inflightOutbound.size + this.running >= this.concurrency) {
+    // Check BEFORE starting new task to avoid exceeding limit
+    if (activeCalls + this.running >= this.concurrency) {
       setTimeout(() => this.next(), 2000);
       return;
     }
@@ -41,8 +63,13 @@ class CallQueue {
       reject(error);
     } finally {
       this.running--;
-      // Small cooldown between tasks to let the channel fully release
       setTimeout(() => this.next(), 1000);
+    }
+  }
+
+  destroy() {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
     }
   }
 }

@@ -123,13 +123,11 @@ server.listen(PORT, async () => {
 
     // Clean up memory leaks for stuck calls (safety mechanism)
     setInterval(() => {
-      if (callState.inflightOutbound.size > 0) {
-        console.log(`[Cleaner] Checking for stale calls in memory: ${callState.inflightOutbound.size} pending`);
-        // If a call is in memory for more than 10 mins without a hangup, purge it
-        // This prevents the queue from getting stuck if webhooks fail
-        callState.inflightOutbound.clear(); 
-        callState.processedCalls.clear();
-        console.log(`[Cleaner] Memory flushed to ensure queue continuity.`);
+      const staleCount = [...callState.inflightOutbound.keys()].filter(callState.isInflightOutboundStale).length;
+      if (staleCount > 0) {
+        console.log(`[Cleaner] Checking for stale calls: ${callState.inflightOutbound.size} pending, ${staleCount} stale`);
+        callState.clearStaleCalls();
+        console.log(`[Cleaner] Cleared stale calls. Remaining: ${callState.inflightOutbound.size}`);
       }
     }, 300000); // Every 5 minutes
 

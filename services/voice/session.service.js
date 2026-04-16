@@ -10,6 +10,36 @@ const { broadcastToMonitors, registerActiveSession, unregisterActiveSession } = 
 
 const readyGreetings = new Map();
 
+const TIMEZONE_OFFSET = parseInt(process.env.TIMEZONE_OFFSET) || -5;
+const DOMAIN_PLACEHOLDERS = [
+  '{DOMAIN}', '{DOMINIO}', '{CLIENTE}', '{DATOS}',
+  'aqui ira el dominio', '......', '...',
+  '[dominio]', '(dominio)', '[datos]', '(datos)'
+];
+
+function getLocalTime() {
+  return new Date(new Date().getTime() + (new Date().getTimezoneOffset() * 60000) + (3600000 * TIMEZONE_OFFSET));
+}
+
+function getTimeGreeting() {
+  const now = getLocalTime();
+  const h = now.getHours();
+  return h >= 5 && h < 12 ? 'Buenos días' : (h >= 12 && h < 19 ? 'Buenas tardes' : 'Buenas noches');
+}
+
+function replacePlaceholders(text, domainData) {
+  let result = text
+    .replace(/Buenas \(\)/gi, getTimeGreeting())
+    .replace(/\(\)/g, getTimeGreeting());
+  
+  for (const placeholder of DOMAIN_PLACEHOLDERS) {
+    result = result.split(placeholder).join(domainData);
+    result = result.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), domainData);
+  }
+  
+  return result.trim();
+}
+
 /**
  * Orchestrates a complete voice AI session over WebSocket.
  */
@@ -155,36 +185,17 @@ function createSession(ws) {
       }
     }
 
-    // Lima Time Greeting & Domain placeholder
-    const now = new Date(new Date().getTime() + (new Date().getTimezoneOffset() * 60000) + (3600000 * -5));
-    const h = now.getHours();
-    const timeG = h >= 5 && h < 12 ? 'Buenos días' : (h >= 12 && h < 19 ? 'Buenas tardes' : 'Buenas noches');
     let domainData = context?.domain || 'su sitio web';
     
-    // Procesamiento especial para múltiples dominios y enfatizar (repita)
     if (domainData && domainData !== 'su sitio web') {
         const domains = domainData.split(/[,\s]+/).filter(d => d.trim().length > 0);
         if (domains.length > 0) {
             const list = domains.join(' y ');
-            // "si pone dominio repita" -> repetitive emphasis for clarity
             domainData = domains.length === 1 ? `${list}, repito, ${list}` : `${list}. Repito los dominios: ${list}`;
         }
     }
     
-    // Replace all known domain/data placeholders
-    greeting = greeting
-      .replace(/Buenas \(\)/gi, timeG)
-      .replace(/\(\)/g, timeG)
-      .replace(/\{DOMAIN\}/gi, domainData)
-      .replace(/\{DOMINIO\}/gi, domainData)
-      .replace(/\{CLIENTE\}/gi, domainData)
-      .replace(/\{DATOS\}/gi, domainData)
-      .replace(/aqui ira el dominio/gi, domainData)
-      .replace(/\.{3,}/g, domainData)              // ...... or ... as placeholder
-      .replace(/\[dominio\]/gi, domainData)         // [dominio]
-      .replace(/\(dominio\)/gi, domainData)         // (dominio)
-      .replace(/\[datos\]/gi, domainData)
-      .trim();
+    greeting = replacePlaceholders(greeting, domainData);
 
     conversationHistory.push({ role: 'assistant', content: greeting });
     meta.transcriptLog.push({ role: 'assistant', text: greeting, at: new Date().toISOString() });
@@ -216,10 +227,6 @@ async function precomputeGreeting(callId) {
         const context = getCallContext(callId);
         let greeting = context?.customGreeting ? `${context.customGreeting} ${context.customInstructions}`.trim() : (context?.mode === 'reminder' ? `${reminder.greeting} ${reminder.text}`.trim() : identity.greeting);
         
-        // Apply domain & time replacements BEFORE generating audio
-        const now = new Date(new Date().getTime() + (new Date().getTimezoneOffset() * 60000) + (3600000 * -5));
-        const h = now.getHours();
-        const timeG = h >= 5 && h < 12 ? 'Buenos días' : (h >= 12 && h < 19 ? 'Buenas tardes' : 'Buenas noches');
         let domainData = context?.domain || 'su sitio web';
         if (domainData && domainData !== 'su sitio web') {
             const domains = domainData.split(/[,\s]+/).filter(d => d.trim().length > 0);
@@ -229,19 +236,7 @@ async function precomputeGreeting(callId) {
             }
         }
         
-        greeting = greeting
-          .replace(/Buenas \(\)/gi, timeG)
-          .replace(/\(\)/g, timeG)
-          .replace(/\{DOMAIN\}/gi, domainData)
-          .replace(/\{DOMINIO\}/gi, domainData)
-          .replace(/\{CLIENTE\}/gi, domainData)
-          .replace(/\{DATOS\}/gi, domainData)
-          .replace(/aqui ira el dominio/gi, domainData)
-          .replace(/\.{3,}/g, domainData)
-          .replace(/\[dominio\]/gi, domainData)
-          .replace(/\(dominio\)/gi, domainData)
-          .replace(/\[datos\]/gi, domainData)
-          .trim();
+        greeting = replacePlaceholders(greeting, domainData);
 
         const stream = await textToSpeech(greeting, callId);
         if (stream) readyGreetings.set(callId, { stream, greeting });

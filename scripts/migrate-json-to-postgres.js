@@ -1,7 +1,7 @@
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
-const { query, pool } = require('../db');
+const { query, pool } = require('../services/db/postgres.service');
 
 const ROOT = path.join(__dirname, '..');
 const SCHEMA_FILE = path.join(ROOT, 'schema.sql');

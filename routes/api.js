@@ -59,7 +59,7 @@ router.get('/voices', async (req, res) => {
 });
 
 const { callQueue } = require('../services/telephony/queue.service');
-const { inflightOutbound } = require('../services/callState');
+const { addInflightOutbound } = require('../services/callState');
 
 router.post('/make-call', async (req, res) => {
   const { number, domain, mode, greeting, instructions, retry_interval, scheduled_for, batch_id, batch_label } = req.body || {};
@@ -89,7 +89,7 @@ router.post('/make-call', async (req, res) => {
         const result = await makeOutboundCall(number, domain, { mode, customGreeting: greeting, customInstructions: instructions });
         const callId = result.data?.call_control_id;
         if (callId) {
-          inflightOutbound.add(callId);
+          addInflightOutbound(callId);
           setCallContext(callId, { domain, mode, customGreeting: greeting, customInstructions: instructions, retry_interval, batch_id, batch_label });
           await logCall({
             callId,

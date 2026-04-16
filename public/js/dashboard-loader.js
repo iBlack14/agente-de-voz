@@ -9,20 +9,16 @@
     });
 
   const loadDashboard = async () => {
-    const root = document.getElementById('dashboard-root');
+    const isSimple = localStorage.getItem('ui-mode') === 'simple';
+    if (isSimple) return;
 
-    if (!root) {
-      return;
-    }
+    const root = document.getElementById('advanced-root');
+    if (!root) return;
 
     try {
       const response = await fetch('/partials/dashboard-markup.html', { cache: 'no-store' });
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       root.innerHTML = await response.text();
-
       await loadScript('/app.js?v=6');
       await loadScript('/js/profile-image-modal.js?v=1');
     } catch (error) {
@@ -33,10 +29,12 @@
             <h2 class="text-xl font-bold text-white mb-3">Error al cargar la interfaz</h2>
             <p class="text-zinc-400 text-sm">No se pudo cargar el dashboard. Recarga la pagina o revisa el servidor.</p>
           </div>
-        </div>
-      `;
+        </div>`;
     }
   };
+
+  const isSimple = localStorage.getItem('ui-mode') === 'simple';
+  if (isSimple || !document.getElementById('advanced-root')) return;
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', loadDashboard);

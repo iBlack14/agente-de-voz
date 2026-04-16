@@ -1,0 +1,126 @@
+<!-- Simplified Dashboard for Normal Users -->
+<div id="simple-dashboard" class="hidden">
+    <!-- Header Simple -->
+    <header class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-gray-800">ViaAI</h1>
+                    <p class="text-xs text-gray-500">Asistente de Llamadas</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <span id="simple-clock" class="text-sm text-gray-500"></span>
+                <button id="simple-logout" class="text-gray-500 hover:text-red-600 text-sm">
+                    Cerrar Sesión
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Simple -->
+    <main class="max-w-7xl mx-auto px-4 py-6">
+        <!-- Quick Stats -->
+        <div class="grid grid-cols-4 gap-4 mb-6">
+            <div class="bg-white rounded-lg shadow p-4">
+                <p class="text-xs text-gray-500 uppercase">Total Llamadas</p>
+                <p id="stat-total" class="text-2xl font-bold text-gray-800">0</p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-4">
+                <p class="text-xs text-gray-500 uppercase">Contestadas</p>
+                <p id="stat-answered" class="text-2xl font-bold text-green-600">0</p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-4">
+                <p class="text-xs text-gray-500 uppercase">Sin Contestar</p>
+                <p id="stat-missed" class="text-2xl font-bold text-red-600">0</p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-4">
+                <p class="text-xs text-gray-500 uppercase">En Curso</p>
+                <p id="stat-active" class="text-2xl font-bold text-blue-600">0</p>
+            </div>
+        </div>
+
+        <!-- Simple Tabs -->
+        <div class="bg-white rounded-lg shadow mb-6">
+            <div class="flex border-b">
+                <button class="simple-tab active px-6 py-3 text-sm font-medium text-blue-600 border-b-2 border-blue-600" data-tab="make-call">
+                    Hacer Llamada
+                </button>
+                <button class="simple-tab px-6 py-3 text-sm font-medium text-gray-500 hover:text-gray-700" data-tab="history">
+                    Historial
+                </button>
+                <button class="simple-tab px-6 py-3 text-sm font-medium text-gray-500 hover:text-gray-700" data-tab="settings">
+                    Configuración
+                </button>
+            </div>
+        </div>
+
+        <!-- TAB: Hacer Llamada -->
+        <div id="simple-make-call" class="simple-tab-content active">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-lg font-semibold text-gray-800 mb-4">Nueva Llamada</h2>
+                <form id="simple-call-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Número de Teléfono</label>
+                        <input id="simple-number" type="tel" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="+51 999 888 777" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Mensaje (opcional)</label>
+                        <textarea id="simple-message" rows="3" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="¿En qué puedo ayudarte?"></textarea>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 text-white font-medium py-3 rounded-lg hover:bg-blue-700 transition">
+                        Iniciar Llamada
+                    </button>
+                </form>
+            </div>
+
+            <!-- Lista de llamadas en proceso -->
+            <div class="mt-6">
+                <h3 class="text-sm font-semibold text-gray-600 mb-3">Llamadas en Proceso</h3>
+                <div id="simple-call-list" class="space-y-2">
+                    <p class="text-gray-400 text-sm">No hay llamadas activas</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: Historial -->
+        <div id="simple-history" class="simple-tab-content hidden">
+            <div class="bg-white rounded-lg shadow">
+                <div class="p-4 border-b flex justify-between items-center">
+                    <h2 class="text-lg font-semibold text-gray-800">Historial de Llamadas</h2>
+                    <button id="simple-refresh-history" class="text-blue-600 text-sm hover:underline">Actualizar</button>
+                </div>
+                <div id="simple-history-list" class="divide-y max-h-96 overflow-y-auto">
+                    <p class="p-8 text-center text-gray-400">Sin llamadas registradas</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: Configuración -->
+        <div id="simple-settings" class="simple-tab-content hidden">
+            <div class="bg-white rounded-lg shadow p-6 space-y-6">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4">Mensaje de Bienvenida</h2>
+                    <textarea id="simple-greeting" rows="2" class="w-full border border-gray-300 rounded-lg px-4 py-2" placeholder="¡Hola! ¿En qué puedo ayudarte?"></textarea>
+                </div>
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4">Instrucciones del Agente</h2>
+                    <textarea id="simple-instructions" rows="4" class="w-full border border-gray-300 rounded-lg px-4 py-2" placeholder="Eres un asistente amigable..."></textarea>
+                </div>
+                <button id="simple-save-settings" class="bg-blue-600 text-white font-medium py-2 px-6 rounded-lg hover:bg-blue-700">
+                    Guardar Cambios
+                </button>
+            </div>
+        </div>
+    </main>
+</div>
+
+<style>
+.simple-tab.active { color: #2563eb; border-b-2 border-blue-600; }
+.simple-tab-content.hidden { display: none; }
+</style>

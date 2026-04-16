@@ -3,7 +3,7 @@ const { makeOutboundCall } = require('./telnyxClient');
 const { setCallContext } = require('./context.service');
 const { logCall } = require('../db/repository');
 const { callQueue } = require('./queue.service');
-const { inflightOutbound } = require('../callState');
+const { addInflightOutbound } = require('../callState');
 
 /**
  * Periodically checks for scheduled calls and triggers them if due.
@@ -61,7 +61,7 @@ async function processScheduledCalls() {
                     
                     const callId = result.data?.call_control_id;
                     if (callId) {
-                        inflightOutbound.add(callId);
+                        addInflightOutbound(callId);
                         setCallContext(callId, { 
                             domain: task.domain, 
                             mode: 'reminder', 

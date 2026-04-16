@@ -522,11 +522,18 @@ const initDashboardApp = () => {
   const historyAnsweredCount = document.getElementById('history-answered-count');
   const historyUnansweredCount = document.getElementById('history-unanswered-count');
   const historyOutboundTotal = document.getElementById('history-outbound-total');
+  const historyAnswerRate = document.getElementById('history-answer-rate');
+  const historyTotalDuration = document.getElementById('history-total-duration');
+  const historyAvgDuration = document.getElementById('history-avg-duration');
   const historyRetryBtn = document.getElementById('history-retry-all-unanswered');
   const historyBatchContainer = document.getElementById('history-batch-container');
+  const historySearchInput = document.getElementById('history-search-input');
+  const historyFilterSelect = document.getElementById('history-filter-select');
+  const historyLastUpdate = document.getElementById('history-last-update');
 
   let callsData = [];
   let historyBatchMap = new Map();
+  const historyView = { query: '', filter: 'all' };
 
   function isOutboundCall(call) {
     return call?.direction === 'outbound' || call?.direction === 'outgoing';
@@ -583,10 +590,19 @@ const initDashboardApp = () => {
     const outboundCalls = callsData.filter(isOutboundCall);
     const answered = outboundCalls.filter(c => classifyOutboundCall(c) === 'answered').length;
     const unansweredCalls = outboundCalls.filter(c => classifyOutboundCall(c) === 'unanswered');
+    const answeredCalls = outboundCalls.filter(c => classifyOutboundCall(c) === 'answered');
+    const totalDurationSec = outboundCalls.reduce((acc, call) => acc + (parseInt(call.durationSec ?? call.duration_sec, 10) || 0), 0);
+    const avgDurationSec = answeredCalls.length
+      ? Math.round(answeredCalls.reduce((acc, call) => acc + (parseInt(call.durationSec ?? call.duration_sec, 10) || 0), 0) / answeredCalls.length)
+      : 0;
+    const answerRate = outboundCalls.length ? Math.round((answered / outboundCalls.length) * 100) : 0;
 
     if (historyOutboundTotal) historyOutboundTotal.textContent = String(outboundCalls.length);
     if (historyAnsweredCount) historyAnsweredCount.textContent = String(answered);
     if (historyUnansweredCount) historyUnansweredCount.textContent = String(unansweredCalls.length);
+    if (historyAnswerRate) historyAnswerRate.textContent = `${answerRate}%`;
+    if (historyTotalDuration) historyTotalDuration.textContent = formatDuration(totalDurationSec);
+    if (historyAvgDuration) historyAvgDuration.textContent = formatDuration(avgDurationSec);
   }
 
   function buildHistoryBatchGroups() {
@@ -635,6 +651,8 @@ const initDashboardApp = () => {
     historyBatchContainer.innerHTML = groups.map((group, idx) => {
       const answered = group.calls.filter(c => classifyOutboundCall(c) === 'answered').length;
       const unansweredCalls = group.calls.filter(c => classifyOutboundCall(c) === 'unanswered');
+      const pendingCount = group.calls.filter(c => classifyOutboundCall(c) === 'pending').length;
+      const successRate = group.calls.length ? Math.round((answered / group.calls.length) * 100) : 0;
       const contacts = [];
       const seenNumbers = new Set();
       group.calls.forEach(call => {
@@ -689,6 +707,15 @@ const initDashboardApp = () => {
             <div class="rounded-xl bg-error/10 border border-error/20 p-3">
               <p class="text-[8px] uppercase tracking-widest text-error">No contestadas</p>
               <p class="text-xl font-black text-error">${unansweredCalls.length}</p>
+            </div>
+          </div>
+          <div class="mt-3">
+            <div class="flex items-center justify-between text-[9px] uppercase tracking-widest">
+              <span class="text-zinc-400">Efectividad del lote</span>
+              <span class="text-primary font-bold">${successRate}% · Pendientes ${pendingCount}</span>
+            </div>
+            <div class="h-1.5 bg-zinc-800/60 rounded-full overflow-hidden mt-2">
+              <div class="h-full bg-primary" style="width:${successRate}%"></div>
             </div>
           </div>
           <div class="mt-4 flex items-center justify-between gap-3">
@@ -869,79 +896,106 @@ const initDashboardApp = () => {
     modal.classList.add('visible');
   }
 
+  function getHistoryFilteredData() {
+    const query = (historyView.query || '').trim().toLowerCase();
+    return callsData.filter(call => {
+      const cls = classifyOutboundCall(call);
+      const isOut = isOutboundCall(call);
+      const status = String(call.status || '').toLowerCase();
+
+      let matchesFilter = true;
+      if (historyView.filter === 'outbound') matchesFilter = isOut;
+      if (historyView.filter === 'answered') matchesFilter = cls === 'answered';
+      if (historyView.filter === 'unanswered') matchesFilter = cls === 'unanswered';
+      if (historyView.filter === 'active') matchesFilter = status === 'active' || cls === 'pending';
+      if (!matchesFilter) return false;
+
+      if (!query) return true;
+      const haystack = [
+        call.from, call.to, call.status, call.batchLabel, call.batchId, call.direction, call.domain
+      ].map(v => String(v || '').toLowerCase()).join(' ');
+      return haystack.includes(query);
+    });
+  }
+
+  function renderHistoryRows(rows) {
+    if (!rows.length) {
+      historyEmpty.style.display = 'block';
+      historyContainer.innerHTML = '';
+      return;
+    }
+
+    historyEmpty.style.display = 'none';
+    historyContainer.innerHTML = rows.map((c, i) => {
+      const ourNumber = '+5114682421';
+      const isOut = c.direction === 'outbound' || c.direction === 'outgoing' || (c.from === ourNumber && (c.direction === 'unknown' || !c.direction));
+      const dirIcon = isOut ? 'call_made' : 'call_received';
+      const dirColor = isOut ? 'text-blue-400' : 'text-purple-400';
+      const dirLabel = isOut ? 'Saliente' : 'Entrante';
+      
+      const cleanNum = (n) => (!n || n === 'N/A') ? null : n;
+      const primaryNumber = isOut ? (cleanNum(c.to) || 'Destinatario') : (cleanNum(c.from) || 'Llamada Entrante');
+      const secondaryNumber = isOut ? (cleanNum(c.from) || 'Sistema') : (cleanNum(c.to) || 'Sistema');
+      const started = c.startedAt
+        ? new Date(c.startedAt).toLocaleString('es-ES', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' })
+        : '—';
+      const dur = c.durationSec != null ? formatDuration(c.durationSec) : '—';
+      
+      let statusCls = 'bg-red-500';
+      let statusTxt = 'Fallida';
+      if (c.status === 'completed' || c.status === 'ws_close' || c.status === 'stop_event') {
+        statusCls = 'bg-green-500';
+        statusTxt = 'Completada';
+      } else if (c.status === 'active') {
+        statusCls = 'bg-primary animate-pulse';
+        statusTxt = 'En Curso';
+      }
+
+      return `
+        <div data-row-idx="${i}" class="grid grid-cols-12 items-center px-6 py-5 rounded-2xl bg-surface-container-low/40 border border-outline-variant/10 hover:border-primary/20 hover:bg-surface-container-high/40 transition-all cursor-pointer group">
+          <div class="col-span-1">
+            <span class="material-symbols-outlined ${dirColor} text-lg">${dirIcon}</span>
+          </div>
+          <div class="col-span-4 lg:col-span-3">
+             <div class="flex items-center gap-2 flex-wrap">
+               <p class="text-xs font-bold font-label text-on-surface">${escapeHtml(primaryNumber)}</p>
+               <span class="text-[7px] px-1 py-0.5 rounded border border-current ${dirColor} opacity-70">${dirLabel.toUpperCase()}</span>
+               ${c.batchLabel ? `<span class="text-[7px] px-1 py-0.5 rounded bg-primary/10 border border-primary/30 text-primary uppercase tracking-widest">${escapeHtml(c.batchLabel)}</span>` : ''}
+             </div>
+             <p class="text-[9px] uppercase tracking-widest text-on-surface-variant opacity-60">${escapeHtml(secondaryNumber)}</p>
+          </div>
+          <div class="col-span-3 lg:col-span-2 text-center text-[11px] font-medium text-on-surface-variant font-body">${escapeHtml(started)}</div>
+          <div class="col-span-2 text-center text-sm font-bold text-on-surface">${escapeHtml(dur)}</div>
+          <div class="col-span-2 text-center text-xs font-medium text-primary/80">${escapeHtml(c.turnCount || 0)} turnos</div>
+          <div class="col-span-12 lg:col-span-2 mt-2 lg:mt-0 text-right flex justify-end items-center gap-4">
+              ${c.recordingUrl ? `<span class="material-symbols-outlined text-primary text-sm animate-pulse">mic</span>` : ''}
+              <div class="flex items-center gap-2">
+                  <span class="w-1.5 h-1.5 rounded-full ${statusCls}"></span>
+                  <span class="text-[10px] font-bold uppercase tracking-widest opacity-80">${escapeHtml(statusTxt)}</span>
+              </div>
+          </div>
+        </div>`;
+    }).join('');
+
+    historyContainer.querySelectorAll('[data-row-idx]').forEach(row => {
+      row.addEventListener('click', () => {
+        const idx = parseInt(row.dataset.rowIdx, 10);
+        if (rows[idx]) showTranscript(rows[idx]);
+      });
+    });
+  }
+
   async function loadCallHistory(preloadedData = null) {
     try {
       callsData = preloadedData || await (await fetch('/api/calls')).json();
       renderHistorySummary();
       renderHistoryBatchCards();
-      if (!callsData.length) {
-        historyEmpty.style.display = 'block';
-        historyContainer.innerHTML = '';
-        if (historyBatchContainer) historyBatchContainer.innerHTML = '';
-        return;
+      if (historyLastUpdate) {
+        historyLastUpdate.textContent = `Actualizado: ${new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
       }
 
-      historyEmpty.style.display = 'none';
-      historyContainer.innerHTML = callsData.map((c, i) => {
-        const ourNumber = '+5114682421';
-        const isOut = c.direction === 'outbound' || c.direction === 'outgoing' || (c.from === ourNumber && (c.direction === 'unknown' || !c.direction));
-        const dirIcon = isOut ? 'call_made' : 'call_received';
-        const dirColor = isOut ? 'text-blue-400' : 'text-purple-400';
-        const dirLabel = isOut ? 'Saliente' : 'Entrante';
-        
-        // El número principal debe ser el de la otra persona
-        const cleanNum = (n) => (!n || n === 'N/A') ? null : n;
-        const primaryNumber = isOut ? (cleanNum(c.to) || 'Destinatario') : (cleanNum(c.from) || 'Llamada Entrante');
-        const secondaryNumber = isOut ? (cleanNum(c.from) || 'Sistema') : (cleanNum(c.to) || 'Sistema');
-
-        const started = c.startedAt
-          ? new Date(c.startedAt).toLocaleString('es-ES', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' })
-          : '—';
-
-        const dur = c.durationSec != null ? formatDuration(c.durationSec) : '—';
-        
-        let statusCls = 'bg-red-500';
-        let statusTxt = 'Fallida';
-        if (c.status === 'completed' || c.status === 'ws_close' || c.status === 'stop_event') {
-          statusCls = 'bg-green-500';
-          statusTxt = 'Completada';
-        } else if (c.status === 'active') {
-          statusCls = 'bg-primary animate-pulse';
-          statusTxt = 'En Curso';
-        }
-
-        return `
-          <div data-idx="${i}" class="grid grid-cols-12 items-center px-6 py-5 rounded-2xl bg-surface-container-low/40 border border-outline-variant/10 hover:border-primary/20 hover:bg-surface-container-high/40 transition-all cursor-pointer group">
-            <div class="col-span-1">
-              <span class="material-symbols-outlined ${dirColor} text-lg">${dirIcon}</span>
-            </div>
-            <div class="col-span-3">
-               <div class="flex items-center gap-2">
-                 <p class="text-xs font-bold font-label text-on-surface">${escapeHtml(primaryNumber)}</p>
-                 <span class="text-[7px] px-1 py-0.5 rounded border border-current ${dirColor} opacity-70">${dirLabel.toUpperCase()}</span>
-                 ${c.batchLabel ? `<span class="text-[7px] px-1 py-0.5 rounded bg-primary/10 border border-primary/30 text-primary uppercase tracking-widest">${escapeHtml(c.batchLabel)}</span>` : ''}
-               </div>
-               <p class="text-[9px] uppercase tracking-widest text-on-surface-variant opacity-60">${escapeHtml(secondaryNumber)}</p>
-            </div>
-            <div class="col-span-2 text-center text-[11px] font-medium text-on-surface-variant font-body">${escapeHtml(started)}</div>
-            <div class="col-span-2 text-center text-sm font-bold text-on-surface">${escapeHtml(dur)}</div>
-            <div class="col-span-2 text-center text-xs font-medium text-primary/80">${escapeHtml(c.turnCount || 0)} turnos</div>
-            <div class="col-span-2 text-right flex justify-end items-center gap-4">
-                ${c.recordingUrl ? `<span class="material-symbols-outlined text-primary text-sm animate-pulse">mic</span>` : ''}
-                <div class="flex items-center gap-2">
-                    <span class="w-1.5 h-1.5 rounded-full ${statusCls}"></span>
-                    <span class="text-[10px] font-bold uppercase tracking-widest opacity-80">${escapeHtml(statusTxt)}</span>
-                </div>
-            </div>
-          </div>`;
-      }).join('');
-
-      historyContainer.querySelectorAll('[data-idx]').forEach(row => {
-        row.addEventListener('click', () => {
-          const idx = parseInt(row.dataset.idx);
-          if (callsData[idx]) showTranscript(callsData[idx]);
-        });
-      });
+      const filtered = getHistoryFilteredData();
+      renderHistoryRows(filtered);
     } catch (e) { console.error('Error cargando historial:', e); }
   }
 
@@ -949,6 +1003,20 @@ const initDashboardApp = () => {
     historyRetryBtn.addEventListener('click', async () => {
       const unansweredCalls = callsData.filter(c => classifyOutboundCall(c) === 'unanswered');
       await retryUnansweredCalls(unansweredCalls, historyRetryBtn, 'Reintento General');
+    });
+  }
+
+  if (historySearchInput) {
+    historySearchInput.addEventListener('input', () => {
+      historyView.query = historySearchInput.value || '';
+      renderHistoryRows(getHistoryFilteredData());
+    });
+  }
+
+  if (historyFilterSelect) {
+    historyFilterSelect.addEventListener('change', () => {
+      historyView.filter = historyFilterSelect.value || 'all';
+      renderHistoryRows(getHistoryFilteredData());
     });
   }
 
@@ -1092,6 +1160,7 @@ const initDashboardApp = () => {
   const reminderDomains = document.getElementById('reminder-domains');
   const reminderCount = document.getElementById('reminder-count');
   const reminderQueue = document.getElementById('reminder-queue');
+  const reminderSubmitBtn = document.getElementById('reminder-submit-btn');
 
   // Toggle Programado/Inmediato
   const btnInmediato = document.getElementById('btn-modo-inmediato');
@@ -1133,7 +1202,7 @@ const initDashboardApp = () => {
         .split('\n')
         .map(n => (n || '').trim().replace(/[^0-9+]/g, ''))
         .filter(n => n.length >= 8).length;
-      reminderCount.textContent = `${count} Números`;
+      reminderCount.textContent = `${count} Destinos`;
     });
   }
 
@@ -1165,7 +1234,7 @@ const initDashboardApp = () => {
       const msg = document.getElementById('reminder-msg').value;
       const greeting = document.getElementById('reminder-greeting').value;
 
-      if (!numbers.length) return appAlert('Ingresa al menos un destino telefónico de manera manual o mediante Excel.', true);
+      if (!numbers.length) return appAlert('Ingresa al menos un número válido manualmente o importándolo desde Excel/Word.', true);
       const reminderBatch = createBatchMeta('Lote Recordatorio', numbers.length);
 
       // Crear elemento de lote en la cola
@@ -1210,17 +1279,17 @@ const initDashboardApp = () => {
 
       // Reset
       reminderForm.reset();
-      reminderCount.textContent = '0 Números';
+      reminderCount.textContent = '0 Destinos';
       
       // LÓGICA NEURAL DE DISPARO:
       if (time === 'Inmediato') {
         // Enviar llamadas realmente
-        appAlert(`🚀 Llamadas iniciadas YA MISMO a ${numbers.length} destinos.`);
+        appAlert(`Llamadas iniciadas de inmediato para ${numbers.length} destinos.`);
         
         // Disparar asincronicamente en segundo plano
         (async () => {
-            const submitBtn = reminderForm.querySelector('button[type="submit"]');
-            if(submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'PREPARANDO MATRIZ AI...'; }
+            const submitBtn = reminderSubmitBtn || reminderForm.querySelector('button[type="submit"]');
+            if(submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Preparando envío...'; }
             
             // Garantizar que si hubo edición en caliente, el prompt actual se reescriba en DB
             if (activeReminderId && msg && greeting) {
@@ -1233,7 +1302,7 @@ const initDashboardApp = () => {
                  }
             }
 
-            if(submitBtn) { submitBtn.textContent = 'PROCESANDO...'; }
+            if(submitBtn) { submitBtn.textContent = 'Enviando llamadas...'; }
             
             for (const num of numbers) {
                try {
@@ -1267,7 +1336,7 @@ const initDashboardApp = () => {
                } catch(e) { console.error('Error al iniciar recordatorio', e); }
             }
             
-            if(submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'ACTIVAR LOTE'; }
+            if(submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Iniciar Recordatorios'; }
             const badge = item.querySelector('span.text-secondary');
             if (badge) {
                 badge.className = 'text-[8px] uppercase font-bold text-green-400 tracking-widest bg-green-500/10 px-2 py-1 rounded';
@@ -1275,12 +1344,12 @@ const initDashboardApp = () => {
             }
         })();
       } else {
-        appAlert(`🕒 ${numbers.length} llamadas programadas para: ${time}.`);
+        appAlert(`${numbers.length} llamadas programadas para: ${time}.`);
         
         // Enviar a programar en el servidor
         (async () => {
-            const submitBtn = reminderForm.querySelector('button[type="submit"]');
-            if(submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'PROGRAMANDO...'; }
+            const submitBtn = reminderSubmitBtn || reminderForm.querySelector('button[type="submit"]');
+            if(submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Programando llamadas...'; }
             
             for (const num of numbers) {
                 await fetch('/api/make-call', {
@@ -1299,7 +1368,7 @@ const initDashboardApp = () => {
                     })
                 });
             }
-            if(submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'ACTIVAR LOTE NEURAL'; }
+            if(submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Iniciar Recordatorios'; }
         })();
       }
     });
