@@ -517,6 +517,11 @@ const initDashboardApp = () => {
               
               if (!res.ok) {
                   const errorData = await res.json();
+                  if (errorData.code === 'AUTH_EXPIRED') {
+                      appAlert('Expiró tu sesión. Serás redirigido al login en 3 segundos...', true);
+                      setTimeout(() => window.location.href = '/login.html', 3000);
+                      throw new Error('Sesión expirada');
+                  }
                   throw new Error(errorData.error || 'Fallo interno al guardar en base de datos');
               }
 

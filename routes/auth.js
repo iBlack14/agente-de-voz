@@ -47,6 +47,7 @@ const restrictAccess = (req, res, next) => {
   if (token) authSessions.delete(token);
 
   if (req.path === '/' || req.path === '/index.html') return res.redirect('/login.html');
+  if (req.path.startsWith('/api')) return res.status(401).json({ error: 'Tu sesión ha expirado por seguridad o reinicio de servidor.', code: 'AUTH_EXPIRED' });
   res.status(401).send('Acceso denegado');
 };
 
