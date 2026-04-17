@@ -62,6 +62,7 @@ function createSession(ws) {
     if (!sessionActive) return;
     sessionActive = false;
     unregisterActiveSession(callId);
+    try { require('../callState').removeInflightOutbound(callId); } catch(e){}
     broadcastToMonitors(callId, { type: 'session_end', reason });
     const endedAt = new Date().toISOString();
     const durationSec = Math.round((new Date(endedAt) - new Date(meta.startedAt)) / 1000);
@@ -155,7 +156,7 @@ function createSession(ws) {
           for await (const chunk of stream) {
               if (abortController.signal.aborted) break;
               if (ws.readyState === WebSocket.OPEN) {
-                  ws.send(JSON.stringify({ event: 'media', media: { payload: chunk.toString('base64') } }));
+                  ws.send(JSON.stringify({ event: 'media', stream_id: streamId, media: { payload: chunk.toString('base64') } }));
                   bytesSent += chunk.length;
               }
               await new Promise(r => setImmediate(r));
