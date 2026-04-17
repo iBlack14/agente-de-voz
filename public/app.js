@@ -10,6 +10,34 @@ const initDashboardApp = () => {
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
+  const formatDuration = (sec) => {
+    if (sec == null || isNaN(sec)) return '—';
+    if (sec < 60) return `${sec}s`;
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m}m ${s < 10 ? '0' + s : s}s`;
+  };
+
+  // Mensajes predefinidos para recordatorios
+  let reminderTemplates = {
+    uso_correos: {
+      greeting: "",
+      text: "Buenas () Estimado cliente,\n\npara garantizar un uso correcto de sus correos corporativos, les recomendamos descargar periodicamente toda su informacion importante a sus computadoras. Esta accion preventiva es vital para evitar perdidas de datos ante cualquier fallo inesperado en los backups. Atentamente, VIA COMUNICATIVA, 'Publicidad que marca tu exito'."
+    },
+    informacion_pendientes: {
+      greeting: "",
+      text: "Estimado cliente,\n\nestamos en la etapa final del proyecto de su desarrollo web ... Para culminar exitosamente el proyecto, solicitamos amablemente el envio de la informacion pendiente. Puede comunicarse directamente con el area de soporte de VIA COMUNICATIVA a los numeros 936613758 o 924461828. Esperamos su pronta respuesta para culminar el servicio exitosamente. Estamos listos para lanzar su proyecto al mercado hoy mismo. Quedamos atentos."
+    },
+    llamada_ofertas: {
+      greeting: "",
+      text: "Estimado cliente,\n\nimpulsa tu empresa aumentando la rentabilidad y utilidades con nuestras paginas web profesionales, reestructuraciones y sistemas ERP empresariales. Te entregamos soluciones tecnologicas de excelencia, disenadas para automatizar procesos y escalar tus ventas rapidamente, manteniendo una inversion accesible. Moderniza tu presencia digital y asegura resultados comerciales. Somos VIA COMUNICATIVA - Agencia de Marketing y Publicidad. Puedes comunicarte al: 936613758."
+    },
+    respuesta_cotizacion: {
+      greeting: "",
+      text: "Buenos Dias, Estimado cliente,\n\nle enviamos una cotizacion para el desarrollo de su servicio web, esperamos su verificacion tecnica y estamos atentos a una respuesta sobre el servicio. Nos contactaremos a la brevedad desde el numero principal de nuestra empresa. 936613758. VIA COMUNICATIVA, 'Publicidad que marca tu exito'."
+    },
+    mensaje_personalizado: { greeting: "", text: "" }
+  };
 
   // ─── Custom UI Overrides ──────────────────────────────
   window.appAlert = function(msg, isError = false) {
@@ -85,8 +113,7 @@ const initDashboardApp = () => {
   };
 
   // ─── Tabs Navigation ──────────────────────────────
-  const navItems = document.querySelectorAll('.nav-item');
-  const tabs = document.querySelectorAll('.tab-content');
+  const sidebarNav = document.getElementById('sidebar-nav');
   const pageTitle = document.getElementById('page-title');
   const tabTitles = { 
     campaigns: 'Campañas de Voz', 
@@ -98,6 +125,11 @@ const initDashboardApp = () => {
   };
 
   function switchTab(tabId) {
+    const navItems = document.querySelectorAll('.nav-item');
+    const tabs = document.querySelectorAll('.tab-content');
+    
+    console.log(`[ViaAI] Switching to tab: ${tabId}`);
+
     navItems.forEach(btn => {
       btn.classList.remove('active');
       if (btn.dataset.tab === tabId) btn.classList.add('active');
@@ -107,17 +139,24 @@ const initDashboardApp = () => {
       tab.classList.remove('active');
       if (tab.id === `tab-${tabId}`) tab.classList.add('active');
     });
-    pageTitle.textContent = tabTitles[tabId] || 'Neural Dashboard';
+    
+    if (pageTitle) pageTitle.textContent = tabTitles[tabId] || 'Neural Dashboard';
+    
+    // Trigger data loading
+    if (tabId === 'history') loadCallHistory();
+    if (tabId === 'stats') updateConsumptionOverview();
+    if (tabId === 'monitor') typeof loadActiveCalls === 'function' && loadActiveCalls();
   }
 
-    navItems.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const tabId = btn.dataset.tab;
-      switchTab(tabId);
-      if (tabId === 'history') loadCallHistory();
-      if (tabId === 'stats') updateConsumptionOverview();
+  // Delegated listener for sidebar navigation
+  if (sidebarNav) {
+    sidebarNav.addEventListener('click', (e) => {
+      const btn = e.target.closest('.nav-item');
+      if (btn && btn.dataset.tab) {
+        switchTab(btn.dataset.tab);
+      }
     });
-  });
+  }
 
   // ─── Logout Premium UI ─────────────────────────────
   const logoutBtn = document.getElementById('logout-btn');
@@ -126,12 +165,21 @@ const initDashboardApp = () => {
   const logoutCancel = document.getElementById('logout-cancel');
 
   if (logoutBtn) {
-    logoutBtn.addEventListener('click', () => logoutModal.classList.add('visible'));
-    logoutCancel.addEventListener('click', () => logoutModal.classList.remove('visible'));
+    logoutBtn.addEventListener('click', () => {
+        if (logoutModal) logoutModal.classList.add('visible');
+    });
+  }
+  if (logoutCancel) {
+    logoutCancel.addEventListener('click', () => {
+        if (logoutModal) logoutModal.classList.remove('visible');
+    });
+  }
+  if (logoutModal) {
     logoutModal.addEventListener('click', (e) => { 
       if (e.target === logoutModal) logoutModal.classList.remove('visible'); 
     });
-
+  }
+  if (logoutConfirm) {
     logoutConfirm.addEventListener('click', async () => {
       logoutConfirm.textContent = '...';
       await fetch('/api/logout', { method: 'POST' });
@@ -346,13 +394,16 @@ const initDashboardApp = () => {
       const remData = await (await fetch('/api/reminders')).json();
       currentReminderPrompts = remData.prompts;
       activeReminderId = remData.activeId;
-      const reminderPromptSelect = document.getElementById('reminder-prompt-select');
-      if (reminderPromptSelect) {
+      const tmplSelect = document.getElementById('reminder-message-template');
+      if (tmplSelect) {
           const options = currentReminderPrompts.map(p =>
             `<option value="${p.id}">${escapeHtml(p.name.toUpperCase())}</option>`
           ).join('');
-          reminderPromptSelect.innerHTML = '<option value="">-- CARGAR GUIÓN GUARDADO --</option>' + options;
-          reminderPromptSelect.value = ""; // Forzar que inicie en blanco
+          let oldVal = tmplSelect.value;
+          tmplSelect.innerHTML = '<option value="">-- SELECCIONAR PLANTILLA --</option>' + options + '<option value="mensaje_personalizado">MENSAJE PERSONALIZADO</option>';
+          tmplSelect.value = oldVal || activeReminderId || "mensaje_personalizado";
+          // Actualizar caché de plantillas para que coincida con DB
+          reminderTemplates = currentReminderPrompts.reduce((acc, p) => { acc[p.id] = p; return acc; }, { mensaje_personalizado: { greeting: '', text: '' } });
       }
     } catch (e) { console.error('Error cargando reminders:', e); }
   }
@@ -385,42 +436,32 @@ const initDashboardApp = () => {
     } catch { savePromptBtn.textContent = 'ERROR'; }
   });
 
-  const reminderPromptSelect = document.getElementById('reminder-prompt-select');
+  const reminderMessageTemplate = document.getElementById('reminder-message-template');
   const btnSaveReminder = document.getElementById('btn-save-reminder-msg');
 
   const setReminderSaveButtonMode = () => {
     if (!btnSaveReminder) return;
-    const isExisting = !!(reminderPromptSelect && reminderPromptSelect.value);
+    const val = reminderMessageTemplate?.value;
+    const isExisting = val && val !== 'mensaje_personalizado';
     const label = isExisting ? 'Actualizar' : 'Guardar';
     btnSaveReminder.innerHTML = `<span class="material-symbols-outlined text-[12px]">save</span> ${label}`;
   };
 
-  if (reminderPromptSelect) {
-      reminderPromptSelect.addEventListener('change', async () => {
+  if (reminderMessageTemplate) {
+      // El evento de cambio ya se maneja en initDashboardApp, pero podemos acoplar el modo del botón aquí:
+      reminderMessageTemplate.addEventListener('change', () => {
           setReminderSaveButtonMode();
-          if (!reminderPromptSelect.value) return;
-          const p = currentReminderPrompts.find(p => p.id === reminderPromptSelect.value);
-          if (p) {
-               document.getElementById('reminder-greeting').value = p.greeting || '¡Hola!';
-               document.getElementById('reminder-msg').value = p.text || '';
-               // Ciberseguridad/Neural: Forzar a nivel global este prompt
-               await fetch('/api/reminders/active', {
-                   method: 'PUT', headers: { 'Content-Type': 'application/json' },
-                   body: JSON.stringify({ id: p.id })
-               });
-               activeReminderId = p.id; // local state update
-          }
       });
   }
 
   if (btnSaveReminder) {
       btnSaveReminder.addEventListener('click', async () => {
-          const greeting = document.getElementById('reminder-greeting').value.trim();
+          const greeting = '';
           const text = document.getElementById('reminder-msg').value.trim();
-          if (!greeting) return appAlert('Debe existir al menos un Saludo Inicial antes de guardar el perfil.', true);
+          if (!text) return appAlert('Debe existir al menos un mensaje antes de guardar la plantilla.', true);
 
-          const selectedId = reminderPromptSelect?.value || '';
-          const isUpdating = !!selectedId;
+          const selectedId = reminderMessageTemplate?.value || '';
+          const isUpdating = selectedId && selectedId !== 'mensaje_personalizado';
           let payload;
 
           if (isUpdating) {
@@ -452,7 +493,7 @@ const initDashboardApp = () => {
           });
 
           await loadPrompts();
-          if (reminderPromptSelect) reminderPromptSelect.value = payload.id;
+          if (reminderMessageTemplate) reminderMessageTemplate.value = payload.id;
 
           // Automáticamente activarlo
           await fetch('/api/reminders/active', {
@@ -518,8 +559,8 @@ const initDashboardApp = () => {
   const deleteReminderBtn = document.getElementById('delete-reminder-btn');
   if (deleteReminderBtn) {
     deleteReminderBtn.addEventListener('click', async () => {
-      const select = document.getElementById('reminder-prompt-select');
-      if (!select || !select.value) return appAlert('Selecciona un guion guardado para eliminar.', true);
+      const select = document.getElementById('reminder-message-template');
+      if (!select || !select.value || select.value === 'mensaje_personalizado') return appAlert('Selecciona un guion para eliminar.', true);
       
       const confirm = await appPrompt('Escribe "ELIMINAR" para confirmar la purga de este guion de recordatorio:', 'ELIMINAR');
       if (confirm !== 'ELIMINAR') return;
@@ -527,8 +568,8 @@ const initDashboardApp = () => {
       try {
         await fetch(`/api/reminders/${select.value}`, { method: 'DELETE' });
         appAlert('Guion de recordatorio purgado exitosamente.');
-        document.getElementById('reminder-greeting').value = '';
         document.getElementById('reminder-msg').value = '';
+        select.value = 'mensaje_personalizado';
         await loadPrompts();
       } catch (e) { appAlert('Error al purgar guion.', true); }
     });
@@ -641,28 +682,53 @@ const initDashboardApp = () => {
   }
 
   function buildHistoryBatchGroups() {
-    const groups = new Map();
+    const parentMap = new Map();
     const outboundCalls = callsData.filter(isOutboundCall);
 
     outboundCalls.forEach(call => {
-      const fallbackKey = `legacy-${call.callId || call.startedAt || Math.random()}`;
-      const key = call.batchId || fallbackKey;
-      if (!groups.has(key)) {
-        groups.set(key, {
-          key,
-          label: call.batchLabel || (call.batchId ? `Lote ${call.batchId.slice(-6)}` : ''),
-          calls: [],
+      const bId = call.batchId || '';
+      let rootId = bId;
+      let iterationLabel = 'Original';
+      
+      // Detact if it's a retry batch using our new naming convention
+      if (bId.startsWith('retry:')) {
+        const parts = bId.split(':');
+        if (parts.length >= 3) {
+          rootId = parts[1];
+          iterationLabel = 'Reintento';
+        }
+      }
+
+      const rootKey = rootId || `legacy-${call.callId || call.startedAt}`;
+      
+      if (!parentMap.has(rootKey)) {
+        parentMap.set(rootKey, {
+          rootKey,
+          label: (call.batchLabel || '').replace(/Reintento\s.*/i, '').trim() || 'Lote Sin Nombre',
+          iterations: new Map(), // Map of batchId -> iterationData
           lastStartedAt: call.startedAt || null
         });
       }
-      const g = groups.get(key);
-      g.calls.push(call);
-      if (call.startedAt && (!g.lastStartedAt || new Date(call.startedAt) > new Date(g.lastStartedAt))) {
-        g.lastStartedAt = call.startedAt;
+      
+      const group = parentMap.get(rootKey);
+      if (!group.iterations.has(bId)) {
+        group.iterations.set(bId, {
+          batchId: bId,
+          label: iterationLabel,
+          calls: [],
+          startedAt: call.startedAt
+        });
+      }
+      
+      const iter = group.iterations.get(bId);
+      iter.calls.push(call);
+      
+      if (call.startedAt && (!group.lastStartedAt || new Date(call.startedAt) > new Date(group.lastStartedAt))) {
+        group.lastStartedAt = call.startedAt;
       }
     });
 
-    return Array.from(groups.values()).sort((a, b) => {
+    return Array.from(parentMap.values()).sort((a, b) => {
       const aDate = a.lastStartedAt ? new Date(a.lastStartedAt).getTime() : 0;
       const bDate = b.lastStartedAt ? new Date(b.lastStartedAt).getTime() : 0;
       return bDate - aDate;
@@ -688,116 +754,107 @@ const initDashboardApp = () => {
     }
 
     historyBatchContainer.innerHTML = groups.map((group, idx) => {
-      const answered = group.calls.filter(c => classifyOutboundCall(c) === 'answered').length;
-      const unansweredCalls = group.calls.filter(c => classifyOutboundCall(c) === 'unanswered');
-      const pendingCount = group.calls.filter(c => classifyOutboundCall(c) === 'pending').length;
-      const successRate = group.calls.length ? Math.round((answered / group.calls.length) * 100) : 0;
-      const contacts = [];
-      const seenNumbers = new Set();
-      group.calls.forEach(call => {
-        const number = getRetryTargetNumber(call);
-        if (!number || seenNumbers.has(number)) return;
-        seenNumbers.add(number);
-        const callStatus = classifyOutboundCall(call);
-        contacts.push({
-          number,
-          domain: (call.domain || '').trim(),
-          status: callStatus,
-          callId: call.callId || '',
-          canOpenTranscript: callStatus !== 'pending' || (Array.isArray(call.transcript) && call.transcript.length > 0)
-        });
-      });
+      const allCallsInGroup = Array.from(group.iterations.values()).flatMap(i => i.calls);
+      const totalInBatch = allCallsInGroup.length;
+      
+      // Sort iterations by date
+      const iterations = Array.from(group.iterations.values()).sort((a,b) => new Date(a.startedAt) - new Date(b.startedAt));
+      
       const startedText = group.lastStartedAt
         ? new Date(group.lastStartedAt).toLocaleString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
         : '—';
-      const label = group.label || `Lote ${startedText}`;
-      const detailsId = `batch-contacts-${idx}`;
-      const isExpanded = historyExpandedBatches.has(group.key);
-      const preview = contacts.slice(0, 3).map(c => c.number).join(' · ');
-      const moreCount = contacts.length > 3 ? contacts.length - 3 : 0;
-      const rows = contacts.length
-        ? contacts.map(c => {
-            const statusChip = c.status === 'answered'
-              ? '<span class="text-[8px] px-2 py-0.5 rounded-full bg-emerald-400/15 text-emerald-300 uppercase tracking-widest">Contestada</span>'
-              : (c.status === 'unanswered'
-                ? '<span class="text-[8px] px-2 py-0.5 rounded-full bg-error/15 text-error uppercase tracking-widest">No cont.</span>'
-                : '<span class="text-[8px] px-2 py-0.5 rounded-full bg-zinc-700/40 text-zinc-300 uppercase tracking-widest">Pendiente</span>');
-            return `<li class="flex items-center justify-between gap-3 rounded-lg bg-surface-container-lowest/60 border border-primary/10 px-3 py-2">
-              <div class="min-w-0">
-                <p class="text-[11px] font-bold text-on-surface truncate">${escapeHtml(c.number)}</p>
-                <p class="text-[9px] text-zinc-400 truncate">${escapeHtml(c.domain || 'sin dominio')}</p>
-              </div>
-              <div class="flex items-center gap-2">
-                ${c.canOpenTranscript ? `<button data-call-id="${escapeHtml(c.callId)}" class="history-open-transcript text-[8px] px-2 py-0.5 rounded-full bg-primary/15 border border-primary/30 text-primary uppercase tracking-widest hover:bg-primary/25 transition-colors">Ver conversación</button>` : ''}
-                ${statusChip}
-              </div>
-            </li>`;
-          }).join('')
-        : '<p class="text-[9px] text-zinc-500 uppercase tracking-widest">Sin números legibles en este lote</p>';
 
+      // HTML for Iteration Boxes (The "Cuadros" the user asked for)
+      const iterationBoxesHtml = iterations.map((iter, iterIdx) => {
+          const answered = iter.calls.filter(c => classifyOutboundCall(c) === 'answered').length;
+          const unanswered = iter.calls.filter(c => classifyOutboundCall(c) === 'unanswered').length;
+          const iterColor = iterIdx === 0 ? 'primary' : 'indigo-400';
+          const title = iterIdx === 0 ? 'Original' : `Reintento ${iterIdx}`;
+          
+          return `
+            <div class="space-y-3">
+              <div class="flex items-center gap-2">
+                 <span class="text-[8px] font-black uppercase tracking-widest text-slate-500">${title}</span>
+                 <div class="h-px flex-1 bg-white/5"></div>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div class="rounded-xl border border-emerald-500/10 bg-emerald-500/5 p-4 flex flex-col items-center">
+                  <span class="text-[8px] font-bold text-emerald-500 uppercase tracking-widest mb-1">Contestó</span>
+                  <span class="text-2xl font-black text-emerald-400">${answered}</span>
+                </div>
+                <div class="rounded-xl border border-rose-500/10 bg-rose-500/5 p-4 flex flex-col items-center">
+                  <span class="text-[8px] font-bold text-rose-500 uppercase tracking-widest mb-1">No Contestó</span>
+                  <span class="text-2xl font-black text-rose-400">${unanswered}</span>
+                </div>
+              </div>
+            </div>
+          `;
+      }).join('');
+
+      const unansweredToRetry = iterations[iterations.length - 1].calls.filter(c => classifyOutboundCall(c) === 'unanswered');
+
+      const detailsId = `batch-contacts-${idx}`;
+      const isExpanded = historyExpandedBatches.has(group.rootKey);
+      
       return `
-        <article class="rounded-2xl border border-zinc-800/40 bg-surface-container-low/50 p-5">
-          <div class="flex items-start justify-between gap-3">
+        <article class="glass-card shadow-2xl relative overflow-hidden group">
+          <div class="flex items-start justify-between gap-4 mb-8">
             <div>
-              <p class="text-[9px] uppercase tracking-widest text-zinc-500 font-bold">Lote</p>
-              <h4 class="text-sm font-black text-white">${escapeHtml(label)}</h4>
-              <p class="text-[9px] text-zinc-500 mt-1">${escapeHtml(startedText)}</p>
+              <p class="text-[8px] uppercase tracking-[0.3em] text-slate-500 font-bold mb-1">Identificador de Lote</p>
+              <h4 class="text-lg font-black text-white tracking-tight">${escapeHtml(group.label)}</h4>
+              <p class="text-[9px] text-slate-500 mt-1">${escapeHtml(startedText)} · ${totalInBatch} Transmisiones Totales</p>
             </div>
-            <span class="text-[8px] uppercase tracking-widest text-zinc-400 bg-zinc-800/70 px-2 py-1 rounded-full">${group.calls.length} llamadas</span>
-          </div>
-          <div class="grid grid-cols-2 gap-3 mt-4">
-            <div class="rounded-xl bg-emerald-400/10 border border-emerald-400/20 p-3">
-              <p class="text-[8px] uppercase tracking-widest text-emerald-300">Contestadas</p>
-              <p class="text-xl font-black text-emerald-400">${answered}</p>
-            </div>
-            <div class="rounded-xl bg-error/10 border border-error/20 p-3">
-              <p class="text-[8px] uppercase tracking-widest text-error">No contestadas</p>
-              <p class="text-xl font-black text-error">${unansweredCalls.length}</p>
+            <div class="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+              <span class="material-symbols-outlined text-lg">layers</span>
             </div>
           </div>
-          <div class="mt-3">
-            <div class="flex items-center justify-between text-[9px] uppercase tracking-widest">
-              <span class="text-zinc-400">Efectividad del lote</span>
-              <span class="text-primary font-bold">${successRate}% · Pendientes ${pendingCount}</span>
-            </div>
-            <div class="h-1.5 bg-zinc-800/60 rounded-full overflow-hidden mt-2">
-              <div class="h-full bg-primary" style="width:${successRate}%"></div>
-            </div>
+
+          <div class="space-y-8">
+            ${iterationBoxesHtml}
           </div>
-          <div class="mt-4 flex items-center justify-between gap-3">
-            <div class="min-w-0 flex-1">
-              <button
-                data-target="${detailsId}"
-                data-batch-key="${escapeHtml(group.key)}"
-                class="history-toggle-numbers text-[9px] uppercase tracking-widest font-bold text-zinc-300 hover:text-primary transition-colors"
-              >
-                ${isExpanded ? 'Ocultar números' : 'Ver números'}
-              </button>
-              <p class="text-[9px] text-zinc-500 truncate mt-1">${escapeHtml(preview || 'sin números')}</p>
-              ${moreCount > 0 ? `<p class="text-[8px] text-primary/80 uppercase tracking-widest mt-0.5">+${moreCount} más</p>` : ''}
-            </div>
+
+          <div class="mt-10 pt-6 border-t border-white/5 flex items-center justify-between gap-4">
             <button
-              data-batch-key="${escapeHtml(group.key)}"
-              class="history-retry-batch px-4 py-2 rounded-lg bg-primary/15 border border-primary/30 text-primary text-[9px] font-bold uppercase tracking-widest hover:bg-primary/25 transition-all ${unansweredCalls.length ? '' : 'opacity-40 cursor-not-allowed'}"
-              ${unansweredCalls.length ? '' : 'disabled'}
+                data-target="${detailsId}"
+                data-batch-key="${escapeHtml(group.rootKey)}"
+                class="history-toggle-numbers text-[9px] uppercase tracking-widest font-black text-slate-400 hover:text-white transition-colors"
+              >
+                ${isExpanded ? 'Ocultar Destinos' : 'Ver Destinos'}
+            </button>
+
+            <button
+              data-batch-key="${escapeHtml(iterations[iterations.length - 1].batchId)}"
+              data-root-key="${escapeHtml(group.rootKey)}"
+              class="history-retry-batch px-6 py-3 rounded-xl bg-primary text-slate-950 text-[10px] font-black uppercase tracking-widest hover:scale-[0.98] transition-all shadow-xl shadow-primary/20 ${unansweredToRetry.length ? '' : 'opacity-20 cursor-not-allowed'}"
+              ${unansweredToRetry.length ? '' : 'disabled'}
             >
-              Reintentar este lote
+              Reintentar No Contestadas
             </button>
           </div>
-          <div id="${detailsId}" class="${isExpanded ? '' : 'hidden'} mt-3 rounded-xl border border-primary/15 bg-primary/5 p-3">
-            <p class="text-[9px] uppercase tracking-widest text-primary/90 font-bold mb-2">Números del lote</p>
-            <ul class="space-y-2 max-h-48 overflow-y-auto no-scrollbar">${rows}</ul>
+
+          <div id="${detailsId}" class="${isExpanded ? '' : 'hidden'} mt-6 space-y-2 animate-in fade-in slide-in-from-top-2">
+             <p class="text-[8px] uppercase tracking-widest text-slate-500 font-bold mb-3">Lista Maestra del Lote</p>
+             <ul class="space-y-2 max-h-60 overflow-y-auto no-scrollbar">
+                ${allCallsInGroup.map(c => `
+                  <li class="flex items-center justify-between p-3 rounded-xl bg-slate-900/50 border border-white/5">
+                    <span class="text-[10px] font-bold text-white">${c.to}</span>
+                    <span class="text-[8px] font-black uppercase tracking-widest ${classifyOutboundCall(c) === 'answered' ? 'text-emerald-500' : 'text-rose-500'}">${classifyOutboundCall(c) === 'answered' ? 'OK' : 'FAIL'}</span>
+                  </li>
+                `).join('')}
+             </ul>
           </div>
         </article>`;
     }).join('');
 
     historyBatchContainer.querySelectorAll('.history-retry-batch').forEach(btn => {
       btn.addEventListener('click', async () => {
-        const key = btn.dataset.batchKey;
-        const group = historyBatchMap.get(key);
-        if (!group) return;
-        const unanswered = group.calls.filter(c => classifyOutboundCall(c) === 'unanswered');
-        await retryUnansweredCalls(unanswered, btn, `Reintento ${group.label}`);
+        const key = btn.dataset.batchKey; // Last iteration key
+        const rootKey = btn.dataset.rootKey;
+        const allCalls = callsData.filter(isOutboundCall);
+        const lastIterationCalls = allCalls.filter(c => c.batchId === key);
+        const unanswered = lastIterationCalls.filter(c => classifyOutboundCall(c) === 'unanswered');
+        
+        await retryUnansweredCalls(unanswered, btn, 'Reintento', rootKey);
       });
     });
 
@@ -829,7 +886,7 @@ const initDashboardApp = () => {
     });
   }
 
-  async function retryUnansweredCalls(unansweredCalls, buttonEl, batchLabelBase = 'Reintento') {
+  async function retryUnansweredCalls(unansweredCalls, buttonEl, batchLabelBase = 'Reintento', parentBatchId = null) {
     const entries = buildRetryEntries(unansweredCalls);
     if (!entries.length) {
       appAlert('No hay llamadas no contestadas para reintentar.');
@@ -855,7 +912,9 @@ const initDashboardApp = () => {
       buttonEl.textContent = 'REINTENTANDO...';
     }
 
-    const retryBatchId = `retry-${Date.now()}`;
+    // New format: retry:[parentBatchId]:[timestamp]
+    const rootId = parentBatchId || unansweredCalls[0]?.batchId || `legacy-${Date.now()}`;
+    const retryBatchId = `retry:${rootId}:${Date.now()}`;
     const retryBatchLabel = `${batchLabelBase} (${new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })})`;
 
     let ok = 0;
@@ -926,24 +985,29 @@ const initDashboardApp = () => {
     const transcript = call.transcript || [];
     if (!transcript.length) {
       modalBody.innerHTML = `
-        <div class="flex flex-col items-center justify-center py-20 opacity-20">
-          <span class="material-symbols-outlined text-5xl mb-2">comments_disabled</span>
-          <p class="text-xs font-bold uppercase tracking-widest">Sin transcripción</p>
+        <div class="flex flex-col items-center justify-center py-20 opacity-20 text-slate-500">
+          <span class="material-symbols-outlined text-6xl mb-4">chat_bubble_outline</span>
+          <p class="text-[10px] font-bold uppercase tracking-[0.3em]">Sin registro de audio/texto</p>
         </div>`;
     } else {
-      modalBody.innerHTML = transcript.map(msg => {
-        const isUser = msg.role === 'user';
-        const label = isUser ? 'Humano' : 'Inteligencia';
-        const cls = isUser ? 'bg-white/10 ml-auto rounded-tr-none' : 'bg-primary/20 mr-auto rounded-tl-none';
-        return `
-          <div class="max-w-[85%] ${isUser ? 'ml-auto' : ''}">
-            <div class="text-[9px] uppercase tracking-[0.1em] font-bold text-on-surface-variant mb-1 ${isUser ? 'text-right' : 'text-left'}">${label}</div>
-            <div class="p-4 rounded-2xl text-sm leading-relaxed text-on-surface ${cls}">
-              ${escapeHtml(msg.text)}
-            </div>
-          </div>
-        `;
-      }).join('');
+      modalBody.innerHTML = `
+        <div class="space-y-6 px-2">
+          ${transcript.map(msg => {
+            const isUser = msg.role === 'user';
+            const label = isUser ? 'Humano' : 'ViaAI Matrix';
+            const bgColor = isUser ? 'bg-slate-900 border-white/5' : 'bg-primary/10 border-primary/20';
+            const labelColor = isUser ? 'text-slate-500' : 'text-primary';
+            return `
+              <div class="flex flex-col ${isUser ? 'items-end' : 'items-start'}">
+                <span class="text-[9px] font-black uppercase tracking-widest ${labelColor} mb-2 px-1">${label}</span>
+                <div class="${bgColor} border p-5 rounded-2xl text-[13px] leading-relaxed text-white max-w-[90%] shadow-lg">
+                  ${escapeHtml(msg.text)}
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
     }
     
     // Inject audio player if exists
@@ -992,8 +1056,8 @@ const initDashboardApp = () => {
     historyContainer.innerHTML = rows.map((c, i) => {
       const ourNumber = '+5114682421';
       const isOut = c.direction === 'outbound' || c.direction === 'outgoing' || (c.from === ourNumber && (c.direction === 'unknown' || !c.direction));
-      const dirIcon = isOut ? 'call_made' : 'call_received';
-      const dirColor = isOut ? 'text-blue-400' : 'text-purple-400';
+      const dirIcon = isOut ? 'north_east' : 'south_west';
+      const dirColor = isOut ? 'text-primary' : 'text-indigo-400';
       const dirLabel = isOut ? 'Saliente' : 'Entrante';
       
       const cleanNum = (n) => (!n || n === 'N/A') ? null : n;
@@ -1004,37 +1068,52 @@ const initDashboardApp = () => {
         : '—';
       const dur = c.durationSec != null ? formatDuration(c.durationSec) : '—';
       
-      let statusCls = 'bg-red-500';
+      let statusCls = 'bg-rose-500';
       let statusTxt = 'Fallida';
+      let borderCls = 'border-rose-500/10';
+      
       if (c.status === 'completed' || c.status === 'ws_close' || c.status === 'stop_event') {
-        statusCls = 'bg-green-500';
-        statusTxt = 'Completada';
+        statusCls = 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]';
+        statusTxt = 'Contestada';
+        borderCls = 'border-emerald-500/10';
       } else if (c.status === 'active') {
-        statusCls = 'bg-primary animate-pulse';
+        statusCls = 'bg-primary animate-pulse shadow-[0_0_10px_var(--primary-glow)]';
         statusTxt = 'En Curso';
+        borderCls = 'border-primary/20';
       }
 
       return `
-        <div data-row-idx="${i}" class="grid grid-cols-12 items-center px-6 py-5 rounded-2xl bg-surface-container-low/40 border border-outline-variant/10 hover:border-primary/20 hover:bg-surface-container-high/40 transition-all cursor-pointer group">
-          <div class="col-span-1">
-            <span class="material-symbols-outlined ${dirColor} text-lg">${dirIcon}</span>
+        <div data-row-idx="${i}" class="group flex items-center gap-6 px-6 py-4 rounded-2xl bg-white/[0.02] border ${borderCls} hover:bg-white/[0.05] hover:border-white/10 transition-all cursor-pointer">
+          <div class="flex-shrink-0 w-10 h-10 rounded-xl bg-slate-900 border border-white/5 flex items-center justify-center">
+            <span class="material-symbols-outlined ${dirColor} text-lg font-bold">${dirIcon}</span>
           </div>
-          <div class="col-span-4 lg:col-span-3">
-             <div class="flex items-center gap-2 flex-wrap">
-               <p class="text-xs font-bold font-label text-on-surface">${escapeHtml(primaryNumber)}</p>
-               <span class="text-[7px] px-1 py-0.5 rounded border border-current ${dirColor} opacity-70">${dirLabel.toUpperCase()}</span>
-               ${c.batchLabel ? `<span class="text-[7px] px-1 py-0.5 rounded bg-primary/10 border border-primary/30 text-primary uppercase tracking-widest">${escapeHtml(c.batchLabel)}</span>` : ''}
+          
+          <div class="flex-1 min-w-0">
+             <div class="flex items-center gap-2 mb-1">
+               <p class="text-xs font-black text-white truncate">${escapeHtml(primaryNumber)}</p>
+               ${c.batchLabel ? `<span class="text-[7px] px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-primary uppercase font-black tracking-widest">${escapeHtml(c.batchLabel)}</span>` : ''}
              </div>
-             <p class="text-[9px] uppercase tracking-widest text-on-surface-variant opacity-60">${escapeHtml(secondaryNumber)}</p>
+             <p class="text-[9px] uppercase tracking-widest text-slate-500 font-bold">${dirLabel} · ${escapeHtml(secondaryNumber)}</p>
           </div>
-          <div class="col-span-3 lg:col-span-2 text-center text-[11px] font-medium text-on-surface-variant font-body">${escapeHtml(started)}</div>
-          <div class="col-span-2 text-center text-sm font-bold text-on-surface">${escapeHtml(dur)}</div>
-          <div class="col-span-2 text-center text-xs font-medium text-primary/80">${escapeHtml(c.turnCount || 0)} turnos</div>
-          <div class="col-span-12 lg:col-span-2 mt-2 lg:mt-0 text-right flex justify-end items-center gap-4">
-              ${c.recordingUrl ? `<span class="material-symbols-outlined text-primary text-sm animate-pulse">mic</span>` : ''}
+
+          <div class="hidden md:flex flex-col items-end gap-1 px-4">
+            <p class="text-[10px] font-bold text-white">${escapeHtml(started)}</p>
+            <p class="text-[8px] uppercase tracking-widest text-slate-500 font-bold">Iniciada</p>
+          </div>
+
+          <div class="hidden md:flex flex-col items-center border-l border-white/5 px-8">
+            <p class="text-xs font-black text-white">${escapeHtml(dur)}</p>
+            <p class="text-[8px] uppercase tracking-widest text-slate-500 font-bold">Duración</p>
+          </div>
+
+          <div class="flex flex-col items-end gap-2 min-w-[100px]">
               <div class="flex items-center gap-2">
-                  <span class="w-1.5 h-1.5 rounded-full ${statusCls}"></span>
-                  <span class="text-[10px] font-bold uppercase tracking-widest opacity-80">${escapeHtml(statusTxt)}</span>
+                  <span class="text-[9px] font-black uppercase tracking-widest ${statusTxt === 'Fallida' ? 'text-rose-500' : (statusTxt === 'En Curso' ? 'text-primary' : 'text-emerald-500')}">${escapeHtml(statusTxt)}</span>
+                  <span class="w-2 h-2 rounded-full ${statusCls}"></span>
+              </div>
+              <div class="flex items-center gap-2">
+                ${c.recordingUrl ? `<span class="material-symbols-outlined text-primary text-xs">mic</span>` : ''}
+                <p class="text-[9px] font-bold text-slate-500">${escapeHtml(c.turnCount || 0)} Turnos</p>
               </div>
           </div>
         </div>`;
@@ -1127,12 +1206,6 @@ const initDashboardApp = () => {
     });
   }
 
-  function formatDuration(sec) {
-    if (sec < 60) return `${sec}s`;
-    const m = Math.floor(sec / 60);
-    const s = sec % 60;
-    return `${m}m ${s}s`;
-  }
 
   let currentBatch = { active: false, ids: [], stats: { answered: 0, failed: 0, total: 0 }, numbers: {}, startTime: null };
 
@@ -1339,11 +1412,11 @@ const initDashboardApp = () => {
           }
       });
 
-      const time = document.getElementById('reminder-time').value || 'Inmediato';
+      const time = document.getElementById('reminder-time')?.value || 'Inmediato';
       const scheduledAt = reminderDeliveryMode === 'scheduled' ? (reminderTimeInput?.value || '') : '';
-      const retry = document.getElementById('reminder-retry').value || '0';
+      const retry = document.getElementById('reminder-retry')?.value || '0';
       const msg = document.getElementById('reminder-msg').value;
-      const greeting = document.getElementById('reminder-greeting').value;
+      const greeting = document.getElementById('reminder-greeting')?.value || '';
 
       if (!numbers.length) return appAlert('Ingresa al menos un número válido manualmente o importándolo desde Excel/Word.', true);
       if (reminderDeliveryMode === 'scheduled' && !scheduledAt) {
@@ -1929,6 +2002,38 @@ const initDashboardApp = () => {
     origSwitchTab(tabId);
     if (tabId === 'monitor') loadActiveCalls();
   };
+
+    const templateSelect = document.getElementById('reminder-message-template');
+    if (templateSelect) {
+      console.log('[ViaAI] Reminder template system initialized');
+      
+      const updateFields = (tplId) => {
+        const messageTextarea = document.getElementById('reminder-msg') || document.getElementById('reminder-message');
+        
+        if (tplId && reminderTemplates[tplId]) {
+          const tpl = reminderTemplates[tplId];
+          const combinedMsg = `${tpl.greeting || ""}\n\n${tpl.text || ""}`.trim();
+          if (messageTextarea) messageTextarea.value = combinedMsg;
+          console.log(`[ViaAI] Fields updated for template: ${tplId}`);
+        } else if (tplId === 'mensaje_personalizado') {
+          if (messageTextarea) messageTextarea.value = '';
+          console.log('[ViaAI] Fields cleared for custom message');
+        }
+      };
+
+      templateSelect.addEventListener('change', (e) => {
+        console.log('[ViaAI] Template dropdown changed manually to:', e.target.value);
+        updateFields(e.target.value);
+      });
+
+      // Forzar carga inicial
+      setTimeout(() => {
+        if (templateSelect.value) {
+          console.log('[ViaAI] Forcing initial template load for:', templateSelect.value);
+          updateFields(templateSelect.value);
+        }
+      }, 250);
+    }
 };
 
 if (document.readyState === 'loading') {
@@ -1936,3 +2041,4 @@ if (document.readyState === 'loading') {
 } else {
   initDashboardApp();
 }
+

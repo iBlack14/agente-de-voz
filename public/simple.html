@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>ViaBox | Modo Simple</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet"/>
+    <script src="js/tailwind.config.js"></script>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+    <!-- Toggle Button -->
+    <div class="fixed top-4 right-4 z-[90]">
+        <button id="ui-mode-toggle" class="text-xs bg-gray-800 text-white px-3 py-1.5 rounded-full hover:bg-gray-700 transition">
+            Cambiar a Modo Avanzado
+        </button>
+    </div>
+
+    <!-- Simple Mode Content -->
+    <header class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                    <img src="assets/logo.png" alt="VisaAI Logo" class="w-7 h-7 object-contain">
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-gray-800">ViaBox</h1>
+                    <p class="text-xs text-gray-500">Asistente de Llamadas</p>
+                </div>
+            </div>
+            <button id="simple-logout" class="text-gray-500 hover:text-red-600 text-sm">Cerrar Sesión</button>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-6">
+        <!-- Stats -->
+        <div class="grid grid-cols-4 gap-4 mb-6">
+            <div class="bg-white rounded-lg shadow p-4">
+                <p class="text-xs text-gray-500 uppercase">Total</p>
+                <p id="stat-total" class="text-2xl font-bold">0</p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-4">
+                <p class="text-xs text-gray-500 uppercase">Contestadas</p>
+                <p id="stat-answered" class="text-2xl font-bold text-green-600">0</p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-4">
+                <p class="text-xs text-gray-500 uppercase">Sin Contestar</p>
+                <p id="stat-missed" class="text-2xl font-bold text-red-600">0</p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-4">
+                <p class="text-xs text-gray-500 uppercase">En Curso</p>
+                <p id="stat-active" class="text-2xl font-bold text-blue-600">0</p>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="bg-white rounded-lg shadow mb-6">
+            <div class="flex border-b">
+                <button class="simple-tab active px-6 py-3 text-sm font-medium text-blue-600 border-b-2 border-blue-600" data-tab="make-call">Hacer Llamada</button>
+                <button class="simple-tab px-6 py-3 text-sm font-medium text-gray-500" data-tab="history">Historial</button>
+                <button class="simple-tab px-6 py-3 text-sm font-medium text-gray-500" data-tab="settings">Configuración</button>
+            </div>
+        </div>
+
+        <!-- Tab: Hacer Llamada -->
+        <div id="simple-make-call" class="simple-tab-content">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-lg font-semibold text-gray-800 mb-4">Nueva Llamada</h2>
+                <form id="simple-call-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Número de Teléfono</label>
+                        <input id="simple-number" type="tel" class="w-full border border-gray-300 rounded-lg px-4 py-2" placeholder="+51 999 888 777" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Mensaje (opcional)</label>
+                        <textarea id="simple-message" rows="3" class="w-full border border-gray-300 rounded-lg px-4 py-2" placeholder="¿En qué puedo ayudarte?"></textarea>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 text-white font-medium py-3 rounded-lg hover:bg-blue-700">Iniciar Llamada</button>
+                </form>
+            </div>
+            <div class="mt-6">
+                <h3 class="text-sm font-semibold text-gray-600 mb-3">Llamadas Activas</h3>
+                <div id="simple-call-list" class="space-y-2">
+                    <p class="text-gray-400 text-sm">No hay llamadas activas</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Historial -->
+        <div id="simple-history" class="simple-tab-content hidden">
+            <div class="bg-white rounded-lg shadow">
+                <div class="p-4 border-b flex justify-between items-center">
+                    <h2 class="text-lg font-semibold text-gray-800">Historial</h2>
+                    <button id="simple-refresh-history" class="text-blue-600 text-sm hover:underline">Actualizar</button>
+                </div>
+                <div id="simple-history-list" class="divide-y max-h-96 overflow-y-auto">
+                    <p class="p-8 text-center text-gray-400">Sin llamadas</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Configuración -->
+        <div id="simple-settings" class="simple-tab-content hidden">
+            <div class="bg-white rounded-lg shadow p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Mensaje de Bienvenida</label>
+                    <textarea id="simple-greeting" rows="2" class="w-full border border-gray-300 rounded-lg px-4 py-2" placeholder="¡Hola! ¿En qué puedo ayudarte?"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Instrucciones del Agente</label>
+                    <textarea id="simple-instructions" rows="4" class="w-full border border-gray-300 rounded-lg px-4 py-2" placeholder="Eres un asistente amigable..."></textarea>
+                </div>
+                <button id="simple-save-settings" class="bg-blue-600 text-white font-medium py-2 px-6 rounded-lg hover:bg-blue-700">Guardar Cambios</button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Simple Dashboard Logic
+        document.addEventListener('DOMContentLoaded', () => {
+            const toggleBtn = document.getElementById('ui-mode-toggle');
+            
+            toggleBtn.addEventListener('click', () => {
+                localStorage.setItem('ui-mode', 'advanced');
+                window.location.href = '/advanced.html';
+            });
+
+            // Simple Tabs
+            document.querySelectorAll('.simple-tab').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.simple-tab').forEach(b => {
+                        b.classList.remove('active', 'text-blue-600', 'border-b-2', 'border-blue-600');
+                        b.classList.add('text-gray-500');
+                    });
+                    btn.classList.add('active', 'text-blue-600', 'border-b-2', 'border-blue-600');
+                    btn.classList.remove('text-gray-500');
+                    
+                    document.querySelectorAll('.simple-tab-content').forEach(c => c.classList.add('hidden'));
+                    document.getElementById('simple-' + btn.dataset.tab).classList.remove('hidden');
+                });
+            });
+
+            // Simple Call Form
+            document.getElementById('simple-call-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const number = document.getElementById('simple-number').value;
+                const message = document.getElementById('simple-message').value;
+                
+                try {
+                    const resp = await fetch('/api/make-call', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ number, instructions: message })
+                    });
+                    const data = await resp.json();
+                    if (data.success) {
+                        alert('Llamada iniciada correctamente');
+                        document.getElementById('simple-number').value = '';
+                        loadSimpleHistory();
+                    } else {
+                        alert('Error: ' + (data.message || data.error));
+                    }
+                } catch (err) {
+                    alert('Error de conexión');
+                }
+            });
+
+            // Simple History
+            async function loadSimpleHistory() {
+                try {
+                    const resp = await fetch('/api/calls');
+                    const calls = await resp.json();
+                    
+                    const list = document.getElementById('simple-history-list');
+                    if (!calls.length) {
+                        list.innerHTML = '<p class="p-8 text-center text-gray-400">Sin llamadas</p>';
+                        return;
+                    }
+                    
+                    list.innerHTML = calls.slice(0, 50).map(c => {
+                        const status = c.status === 'completed' ? 'Completada' : c.status === 'active' ? 'En Curso' : 'Fallida';
+                        const statusColor = c.status === 'completed' ? 'text-green-600' : c.status === 'active' ? 'text-blue-600' : 'text-red-600';
+                        const date = c.started_at ? new Date(c.started_at).toLocaleString('es-ES') : '—';
+                        return `<div class="p-4 hover:bg-gray-50 cursor-pointer">
+                            <div class="flex justify-between items-center">
+                                <span class="font-medium">${c.to_number || c.to || '—'}</span>
+                                <span class="text-xs ${statusColor}">${status}</span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">${date}</p>
+                        </div>`;
+                    }).join('');
+                    
+                    // Stats
+                    const total = calls.length;
+                    const answered = calls.filter(c => c.status === 'completed').length;
+                    const missed = total - answered;
+                    const active = calls.filter(c => c.status === 'active').length;
+                    
+                    document.getElementById('stat-total').textContent = total;
+                    document.getElementById('stat-answered').textContent = answered;
+                    document.getElementById('stat-missed').textContent = missed;
+                    document.getElementById('stat-active').textContent = active;
+                } catch (e) {}
+            }
+
+            // Save Settings
+            document.getElementById('simple-save-settings').addEventListener('click', async () => {
+                const greeting = document.getElementById('simple-greeting').value;
+                const text = document.getElementById('simple-instructions').value;
+                
+                try {
+                    await fetch('/api/prompts', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            id: '1', 
+                            name: 'default', 
+                            greeting, 
+                            text 
+                        })
+                    });
+                    alert('Configuración guardada');
+                } catch (e) {
+                    alert('Error al guardar');
+                }
+            });
+
+            // Load Settings
+            fetch('/api/prompts').then(r => r.json()).then(data => {
+                if (data.prompts?.[0]) {
+                    document.getElementById('simple-greeting').value = data.prompts[0].greeting || '';
+                    document.getElementById('simple-instructions').value = data.prompts[0].text || '';
+                }
+            });
+
+            // Logout
+            document.getElementById('simple-logout')?.addEventListener('click', async () => {
+                await fetch('/api/logout', { method: 'POST' });
+                window.location.href = '/login.html';
+            });
+
+            // Refresh
+            document.getElementById('simple-refresh-history')?.addEventListener('click', loadSimpleHistory);
+
+            // Initial Load
+            loadSimpleHistory();
+            
+            // Auto refresh
+            setInterval(loadSimpleHistory, 5000);
+        });
+    </script>
+</body>
+</html>

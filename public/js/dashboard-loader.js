@@ -36,9 +36,6 @@
   };
 
   const loadDashboard = async () => {
-    const isSimple = localStorage.getItem('ui-mode') === 'simple';
-    if (isSimple) return;
-
     const root = document.getElementById('advanced-root');
     if (!root) return;
 
@@ -49,14 +46,14 @@
         '/public/partials/dashboard-markup.html'
       ]);
       await loadScriptWithFallback([
-        '/app.js?v=7',
-        'app.js?v=7',
-        '/public/app.js?v=7'
+        '/app.js?v=10',
+        'app.js?v=10',
+        '/public/app.js?v=10'
       ]);
       await loadScriptWithFallback([
-        '/js/profile-image-modal.js?v=2',
-        'js/profile-image-modal.js?v=2',
-        '/public/js/profile-image-modal.js?v=2'
+        '/js/profile-image-modal.js?v=10',
+        'js/profile-image-modal.js?v=10',
+        '/public/js/profile-image-modal.js?v=10'
       ]);
     } catch (error) {
       console.error('[DashboardLoader]', error);
@@ -70,8 +67,7 @@
     }
   };
 
-  const isSimple = localStorage.getItem('ui-mode') === 'simple';
-  if (isSimple || !document.getElementById('advanced-root')) return;
+  if (!document.getElementById('advanced-root')) return;
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', loadDashboard);

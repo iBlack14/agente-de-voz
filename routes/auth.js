@@ -32,9 +32,9 @@ router.post('/logout', (req, res) => {
 
 // Middleware to protect routes
 const restrictAccess = (req, res, next) => {
-  const publicPaths = ['/login.html', '/api/login', '/webhook/telnyx', '/health'];
+  const publicPaths = ['/login.html', '/api/login', '/webhook/telnyx', '/health', '/simple.html', '/advanced.html', '/index.html', '/partials/'];
   const isPublic = publicPaths.some(p => req.path.startsWith(p));
-  const isStatic = req.path.match(/\.(css|js|png|jpg|jpeg|gif|svg|ico)$/i);
+  const isStatic = req.path.match(/\.(css|js|png|jpg|jpeg|gif|svg|ico|html)$/i);
   const isWS = req.headers.upgrade === 'websocket';
   
   if (isPublic || isStatic || isWS) return next();
