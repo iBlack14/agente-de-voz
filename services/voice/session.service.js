@@ -178,7 +178,7 @@ function createSession(ws) {
     if (preStream) {
       greeting = preStream.greeting; preLoadedStream = preStream.stream; readyGreetings.delete(callId);
     } else {
-      if (context?.customGreeting) {
+      if (context?.customGreeting || context?.customInstructions) {
           greeting = `${context.customGreeting || ''} ${context.customInstructions || ''}`.trim();
       } else {
           const [identity, reminder] = await Promise.all([getActivePrompt(), getActiveReminderPrompt()]);
@@ -226,7 +226,7 @@ async function precomputeGreeting(callId) {
     try {
         const [identity, reminder] = await Promise.all([getActivePrompt(), getActiveReminderPrompt()]);
         const context = getCallContext(callId);
-        let greeting = context?.customGreeting ? `${context.customGreeting} ${context.customInstructions}`.trim() : (context?.mode === 'reminder' ? `${reminder.greeting} ${reminder.text}`.trim() : identity.greeting);
+        let greeting = (context?.customGreeting || context?.customInstructions) ? `${context?.customGreeting || ''} ${context?.customInstructions || ''}`.trim() : (context?.mode === 'reminder' ? `${reminder.greeting} ${reminder.text}`.trim() : identity.greeting);
         
         let domainData = context?.domain || 'su sitio web';
         if (domainData && domainData !== 'su sitio web') {

@@ -220,9 +220,19 @@ const initDashboardApp = () => {
   const createBatchMeta = (prefix, total) => {
     const stamp = Date.now();
     const hhmm = new Date(stamp).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    const shortId = stamp.toString().slice(-4);
+    
+    // Premium naming
+    let premiumLabel = '';
+    if (prefix.toLowerCase().includes('recordatorio')) {
+        premiumLabel = `Campaña Automática [Vol. ${total}] | ID-${shortId}`;
+    } else {
+        premiumLabel = `${prefix} [Vol. ${total}] | ID-${shortId}`;
+    }
+
     return {
-      batchId: `${prefix.toLowerCase()}-${stamp}`,
-      batchLabel: `${prefix} (${total}) · ${hhmm}`
+      batchId: `batch-${shortId}-${stamp}`,
+      batchLabel: premiumLabel
     };
   };
 
@@ -923,7 +933,7 @@ const initDashboardApp = () => {
     // New format: retry:[parentBatchId]:[timestamp]
     const rootId = parentBatchId || unansweredCalls[0]?.batchId || `legacy-${Date.now()}`;
     const retryBatchId = `retry:${rootId}:${Date.now()}`;
-    const retryBatchLabel = `${batchLabelBase} (${new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })})`;
+    const retryBatchLabel = `Iteración: ${batchLabelBase} | Vol. ${entries.length} | ID-${Date.now().toString().slice(-4)}`;
 
     // Registrar el sub-lote en BD
     await fetch('/api/batches', {
