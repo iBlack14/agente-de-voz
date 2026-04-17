@@ -858,65 +858,99 @@ const initDashboardApp = () => {
             ${iterationBoxesHtml}
           </div>
 
-          <div class="mt-10 pt-6 border-t border-white/5 flex items-center justify-between gap-4">
+          <div class="mt-8 pt-6 border-t border-white/5">
             <button
-                data-target="${detailsId}"
-                data-batch-key="${escapeHtml(group.rootKey)}"
-                class="history-toggle-numbers text-[9px] uppercase tracking-widest font-black text-slate-400 hover:text-white transition-colors"
+                data-batch-json="${escapeHtml(JSON.stringify({ 
+                   label: group.label, 
+                   rootKey: group.rootKey, 
+                   lastIterationKey: iterations[iterations.length - 1].batchId,
+                   totalAnswered: iterations.reduce((acc, iter) => acc + iter.calls.filter(c => classifyOutboundCall(c) === 'answered').length, 0),
+                   totalFailed: iterations.reduce((acc, iter) => acc + iter.calls.filter(c => classifyOutboundCall(c) === 'unanswered').length, 0)
+                }))}"
+                class="history-open-modal w-full py-4 rounded-xl bg-white/5 hover:bg-white/10 text-white text-[10px] uppercase font-black tracking-widest transition-all flex items-center justify-center gap-2 border border-white/10"
               >
-                ${isExpanded ? 'Ocultar Destinos' : 'Ver Destinos'}
+                <span class="material-symbols-outlined text-[14px]">tune</span>
+                ABRIR CENTRO DE CONTROL
             </button>
-
-            <button
-              data-batch-key="${escapeHtml(iterations[iterations.length - 1].batchId)}"
-              data-root-key="${escapeHtml(group.rootKey)}"
-              class="history-retry-batch px-6 py-3 rounded-xl bg-primary text-slate-950 text-[10px] font-black uppercase tracking-widest hover:scale-[0.98] transition-all shadow-xl shadow-primary/20 ${unansweredToRetry.length ? '' : 'opacity-20 cursor-not-allowed'}"
-              ${unansweredToRetry.length ? '' : 'disabled'}
-            >
-              Reintentar No Contestadas
-            </button>
-          </div>
-
-          <div id="${detailsId}" class="${isExpanded ? '' : 'hidden'} mt-6 space-y-2 animate-in fade-in slide-in-from-top-2">
-             <p class="text-[8px] uppercase tracking-widest text-slate-500 font-bold mb-3">Lista Maestra del Lote</p>
-             <ul class="space-y-2 max-h-60 overflow-y-auto no-scrollbar">
-                ${allCallsInGroup.map(c => `
-                  <li class="flex items-center justify-between p-3 rounded-xl bg-slate-900/50 border border-white/5">
-                    <span class="text-[10px] font-bold text-white">${c.to}</span>
-                    <span class="text-[8px] font-black uppercase tracking-widest ${classifyOutboundCall(c) === 'answered' ? 'text-emerald-500' : 'text-rose-500'}">${classifyOutboundCall(c) === 'answered' ? 'OK' : 'FAIL'}</span>
-                  </li>
-                `).join('')}
-             </ul>
           </div>
         </article>`;
     }).join('');
 
-    historyBatchContainer.querySelectorAll('.history-retry-batch').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const key = btn.dataset.batchKey; // Last iteration key
-        const rootKey = btn.dataset.rootKey;
-        const allCalls = callsData.filter(isOutboundCall);
-        const lastIterationCalls = allCalls.filter(c => c.batchId === key);
-        const unanswered = lastIterationCalls.filter(c => classifyOutboundCall(c) === 'unanswered');
+    historyBatchContainer.querySelectorAll('.history-open-modal').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const payload = JSON.parse(btn.dataset.batchJson);
+        const modal = document.getElementById('batch-details-modal');
         
-        await retryUnansweredCalls(unanswered, btn, 'Reintento', rootKey);
+        // Cargar Cabeceras
+        document.getElementById('modal-batch-title').textContent = payload.label.replace(/\(\d+\)\s*·\s*\d{2}:\d{2}/, '').trim();
+        document.getElementById('modal-answered-total').textContent = payload.totalAnswered;
+        document.getElementById('modal-failed-total').textContent = payload.totalFailed;
+        
+        // Procesar llamadas
+        const allCalls = callsData.filter(isOutboundCall);
+        const familyCalls = allCalls.filter(c => c.batchId && (c.batchId === payload.rootKey || c.batchId.includes(`:${payload.rootKey}:`)));
+        const answeredCalls = familyCalls.filter(c => classifyOutboundCall(c) === 'answered');
+        
+        // Para los fallidos, solo queremos los pendientes de la ULTIMA iteración
+        const lastIterationCalls = allCalls.filter(c => c.batchId === payload.lastIterationKey);
+        const unansweredToRetry = lastIterationCalls.filter(c => classifyOutboundCall(c) === 'unanswered');
+
+        // Construir listas HTML
+        const listAnswered = document.getElementById('modal-list-answered');
+        const listFailed = document.getElementById('modal-list-failed');
+        
+        listAnswered.innerHTML = answeredCalls.map(c => `
+          <div class="flex items-center justify-between p-4 rounded-2xl bg-white/[0.02] border border-emerald-500/10">
+              <div>
+                  <p class="text-xs font-black text-white">${c.to}</p>
+                  <p class="text-[10px] text-emerald-500/80 mt-1">${c.durationSec ? c.durationSec + 's en línea' : 'Contactado'}</p>
+              </div>
+              <span class="material-symbols-outlined text-emerald-400">task_alt</span>
+          </div>
+        `).join('') || '<p class="text-zinc-500 text-xs italic">Aún no hay conexiones exitosas registradas en esta campaña.</p>';
+
+        listFailed.innerHTML = unansweredToRetry.map(c => `
+          <div class="flex items-center justify-between p-4 rounded-2xl bg-white/[0.02] border border-rose-500/10">
+              <div>
+                  <p class="text-xs font-black text-white">${c.to}</p>
+                  <p class="text-[10px] text-rose-500/80 mt-1">${c.status === 'failed' ? 'Telecom. Offline' : 'No Respondió'}</p>
+              </div>
+              <span class="material-symbols-outlined text-rose-400">error</span>
+          </div>
+        `).join('') || '<p class="text-zinc-500 text-xs italic">No hay números listos para ser reintentados en esta cascada.</p>';
+
+        // TABS Logic inside Modal
+        const btnF = document.getElementById('tab-btn-failed');
+        const btnA = document.getElementById('tab-btn-answered');
+        btnF.onclick = () => { listFailed.classList.remove('hidden'); listAnswered.classList.add('hidden'); btnF.classList.replace('border-transparent', 'border-rose-500'); btnF.classList.replace('text-zinc-500', 'text-rose-400'); btnA.classList.replace('border-emerald-500', 'border-transparent'); btnA.classList.replace('text-emerald-400', 'text-zinc-500'); };
+        btnA.onclick = () => { listAnswered.classList.remove('hidden'); listFailed.classList.add('hidden'); btnA.classList.replace('border-transparent', 'border-emerald-500'); btnA.classList.replace('text-zinc-500', 'text-emerald-400'); btnF.classList.replace('border-rose-500', 'border-transparent'); btnF.classList.replace('text-rose-400', 'text-zinc-500'); };
+        
+        // Reset defaults
+        btnF.onclick();
+
+        // Footer Action Button
+        const retryBtn = document.getElementById('modal-retry-btn');
+        document.getElementById('modal-retry-count').textContent = unansweredToRetry.length;
+        if (unansweredToRetry.length > 0) {
+            retryBtn.disabled = false;
+            retryBtn.classList.remove('opacity-30', 'cursor-not-allowed', 'grayscale');
+            retryBtn.onclick = async () => {
+                modal.classList.replace('flex', 'hidden');
+                await retryUnansweredCalls(unansweredToRetry, retryBtn, 'Reintento', payload.rootKey);
+            };
+        } else {
+            retryBtn.disabled = true;
+            retryBtn.classList.add('opacity-30', 'cursor-not-allowed', 'grayscale');
+            retryBtn.onclick = null;
+        }
+
+        // Show window
+        modal.classList.replace('hidden', 'flex');
       });
     });
 
-    historyBatchContainer.querySelectorAll('.history-toggle-numbers').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const targetId = btn.dataset.target;
-        const batchKey = btn.dataset.batchKey;
-        const panel = document.getElementById(targetId);
-        if (!panel) return;
-        const opening = panel.classList.contains('hidden');
-        panel.classList.toggle('hidden');
-        if (batchKey) {
-          if (opening) historyExpandedBatches.add(batchKey);
-          else historyExpandedBatches.delete(batchKey);
-        }
-        btn.textContent = opening ? 'Ocultar números' : 'Ver números';
-      });
+    document.getElementById('close-batch-modal')?.addEventListener('click', () => {
+        document.getElementById('batch-details-modal').classList.replace('flex', 'hidden');
     });
 
     historyBatchContainer.querySelectorAll('.history-open-transcript').forEach(btn => {
