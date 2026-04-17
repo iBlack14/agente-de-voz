@@ -936,7 +936,7 @@ const initDashboardApp = () => {
               retryBtn.disabled = false;
               retryBtn.classList.remove('opacity-30', 'cursor-not-allowed', 'grayscale');
               retryBtn.onclick = async () => {
-                  modal.classList.add('hidden'); modal.classList.remove('flex');
+                  modal.classList.remove('visible');
                   await retryUnansweredCalls(unansweredToRetry, retryBtn, 'Reintento', payload.rootKey);
               };
           } else {
@@ -945,24 +945,23 @@ const initDashboardApp = () => {
               retryBtn.onclick = null;
           }
 
-          // Show window using safe toggle
-          modal.classList.remove('hidden');
-          modal.classList.add('flex');
+          // Show window using the global .visible class from index.css
+          modal.classList.add('visible');
           
         } catch (error) {
           console.error("Error procesando Modal de Centro de Control:", error);
-          appAlert('Error al abrir el centro de control: ' + error.message, true);
+          appAlert('Error al intentar abrir el panel: ' + error.message, true);
         }
       });
     });
 
-    // Delegamos el listener de cierre seguro sin arriesgarnos a repetirlo
+    // Delegamos el listener de cierre usando la clase oficial .visible
     const modalCloser = document.getElementById('close-batch-modal');
     if (modalCloser && !modalCloser.dataset.hooked) {
         modalCloser.dataset.hooked = 'true';
         modalCloser.addEventListener('click', () => {
             const m = document.getElementById('batch-details-modal');
-            m.classList.add('hidden'); m.classList.remove('flex');
+            m.classList.remove('visible');
         });
     }
 
