@@ -139,8 +139,7 @@ async function migrateReminderPrompts() {
   await query(
     `INSERT INTO app_settings (key, value, updated_at)
      VALUES ('active_reminder_prompt_id', $1, NOW())
-     ON CONFLICT (key) DO UPDATE
-     SET value = EXCLUDED.value, updated_at = NOW()`,
+     ON CONFLICT (key) DO NOTHING`,
     [activeReminderId]
   );
 

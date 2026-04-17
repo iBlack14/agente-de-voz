@@ -469,6 +469,10 @@ const initDashboardApp = () => {
       // El evento de cambio ya se maneja en initDashboardApp, pero podemos acoplar el modo del botón aquí:
       reminderMessageTemplate.addEventListener('change', () => {
           setReminderSaveButtonMode();
+          if (reminderMessageTemplate.value === 'mensaje_personalizado') {
+              const draft = localStorage.getItem('via_reminder_draft');
+              if (draft) document.getElementById('reminder-msg').value = draft;
+          }
       });
   }
 
@@ -504,23 +508,34 @@ const initDashboardApp = () => {
 
           btnSaveReminder.innerHTML = '...';
 
-          await fetch('/api/reminders', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload)
-          });
+          try {
+              const res = await fetch('/api/reminders', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(payload)
+              });
+              
+              if (!res.ok) {
+                  const errorData = await res.json();
+                  throw new Error(errorData.error || 'Fallo interno al guardar en base de datos');
+              }
 
-          await loadPrompts();
-          if (reminderMessageTemplate) reminderMessageTemplate.value = payload.id;
+              await loadPrompts();
+              if (reminderMessageTemplate) reminderMessageTemplate.value = payload.id;
 
-          // Automáticamente activarlo
-          await fetch('/api/reminders/active', {
-               method: 'PUT', headers: { 'Content-Type': 'application/json' },
-               body: JSON.stringify({ id: payload.id })
-          });
-          activeReminderId = payload.id;
-          setReminderSaveButtonMode();
-          appAlert(isUpdating ? '✅ Guión AI actualizado correctamente.' : '✅ Guión AI almacenado magnéticamente en los registros!');
+              // Automáticamente activarlo
+              await fetch('/api/reminders/active', {
+                   method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                   body: JSON.stringify({ id: payload.id })
+              });
+              activeReminderId = payload.id;
+              setReminderSaveButtonMode();
+              appAlert(isUpdating ? '✅ Guión AI actualizado en la Base de Datos.' : '✅ Guión AI almacenado magnéticamente en los registros!');
+          } catch (error) {
+              console.error(error);
+              btnSaveReminder.innerHTML = `<span class="material-symbols-outlined text-[12px]">save</span> ${isUpdating ? 'Actualizar' : 'Guardar'}`;
+              return appAlert(`Error crítico al guardar en Base de Datos: ${error.message}`, true);
+          }
       });
   }
 
@@ -1415,6 +1430,21 @@ const initDashboardApp = () => {
       reminderTimeInput.focus();
     });
   }
+
+  // Auto-guardado en LocalStorage para evitar pérdida de guiones no oficiales
+  const reminderMsgEl = document.getElementById('reminder-msg');
+  if (reminderMsgEl) {
+      const savedDraft = localStorage.getItem('via_reminder_draft');
+      if (savedDraft && (!reminderMsgEl.value || reminderMsgEl.value.trim() === '')) {
+          reminderMsgEl.value = savedDraft;
+      }
+      reminderMsgEl.addEventListener('input', () => {
+          if (document.getElementById('reminder-message-template')?.value === 'mensaje_personalizado') {
+              localStorage.setItem('via_reminder_draft', reminderMsgEl.value);
+          }
+      });
+  }
+
 
   if (reminderPhones) {
     reminderPhones.addEventListener('input', () => {
