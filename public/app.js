@@ -818,12 +818,19 @@ const initDashboardApp = () => {
         <article class="glass-card shadow-2xl relative overflow-hidden group">
           <div class="flex items-start justify-between gap-4 mb-8">
             <div>
-              <p class="text-[8px] uppercase tracking-[0.3em] text-slate-500 font-bold mb-1">Identificador de Lote</p>
-              <h4 class="text-lg font-black text-white tracking-tight">${escapeHtml(group.label)}</h4>
-              <p class="text-[9px] text-slate-500 mt-1">${escapeHtml(startedText)} · ${totalInBatch} Transmisiones Totales</p>
+              <div class="flex items-center gap-2 mb-1.5">
+                  <div class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
+                  <p class="text-[9px] uppercase tracking-[0.2em] text-emerald-500 font-bold">Actividad de Campaña</p>
+              </div>
+              <h4 class="text-xl font-black text-white tracking-tight">${escapeHtml(group.label.replace(/\(\d+\)\s*·\s*\d{2}:\d{2}/, '').trim())}</h4>
+              <p class="text-[10px] text-slate-400 mt-1 flex items-center gap-2">
+                <span class="material-symbols-outlined text-[12px]">calendar_month</span> ${escapeHtml(startedText)} 
+                <span class="w-1 h-1 rounded-full bg-slate-600"></span>
+                <span class="material-symbols-outlined text-[12px]">groups</span> ${totalInBatch} Destinos
+              </p>
             </div>
-            <div class="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
-              <span class="material-symbols-outlined text-lg">layers</span>
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shadow-lg shadow-indigo-500/10">
+              <span class="material-symbols-outlined text-xl">campaign</span>
             </div>
           </div>
 
@@ -1567,7 +1574,7 @@ const initDashboardApp = () => {
                } catch(e) { console.error('Error al iniciar recordatorio', e); }
             }
             
-            if(submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Iniciar Recordatorios'; }
+            if(submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'LLAMAR'; }
             const badge = item.querySelector('span.text-secondary');
             if (badge) {
                 badge.className = 'text-[8px] uppercase font-bold text-green-400 tracking-widest bg-green-500/10 px-2 py-1 rounded';
@@ -1599,7 +1606,7 @@ const initDashboardApp = () => {
                     })
                 });
             }
-            if(submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Iniciar Recordatorios'; }
+            if(submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'LLAMAR'; }
         })();
       }
     });
