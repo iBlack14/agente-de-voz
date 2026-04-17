@@ -36,6 +36,14 @@ const initDashboardApp = () => {
       greeting: "",
       text: "Buenos Dias, Estimado cliente,\n\nle enviamos una cotizacion para el desarrollo de su servicio web, esperamos su verificacion tecnica y estamos atentos a una respuesta sobre el servicio. Nos contactaremos a la brevedad desde el numero principal de nuestra empresa. 936613758. VIA COMUNICATIVA, 'Publicidad que marca tu exito'."
     },
+    renovacion_servicios: {
+      greeting: "",
+      text: "Buenas () Estimado Clientes, somos de la Agencia de Publicidad VIA COMUNICATIVA. Tenemos a cargo su servicio web dominio... Esta proximo a vencer, se le recomienda realizar el pago por renovacion de s/.250.00 al haber cumplido ya un ano con nosotros, evitar cortes e interrupciones y pagos por reposicion de servicio. Quedamos Atentos."
+    },
+    actualizacion_datos: {
+      greeting: "",
+      text: "Somos la agencia de marketing y publicidad. Via Comunicativa,  Como parte de una mejora continua, estamos realizando actualizaciones y optimizaciones en su sitio web ......, sin costo alguno, incluyendo ajustes visuales, contenido y estructura. Para adjuntar cambios o enviar solicitudes de modificacion, pueden comunicarse directamente al numero: 924461828 Quedamos atentos a sus indicaciones. Saludos cordiales."
+    },
     mensaje_personalizado: { greeting: "", text: "" }
   };
 
@@ -917,6 +925,18 @@ const initDashboardApp = () => {
     const retryBatchId = `retry:${rootId}:${Date.now()}`;
     const retryBatchLabel = `${batchLabelBase} (${new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })})`;
 
+    // Registrar el sub-lote en BD
+    await fetch('/api/batches', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+            id: retryBatchId,
+            parent_batch_id: parentBatchId || unansweredCalls[0]?.batchId || null,
+            name: retryBatchLabel,
+            template_used: 'Reintento Dinámico',
+            total_destinations: entries.length
+        })
+    }).catch(e=>console.error('Error saving retry batch state:', e));
+
     let ok = 0;
     let fail = 0;
     for (const entry of entries) {
@@ -1490,6 +1510,20 @@ const initDashboardApp = () => {
             }
 
             if(submitBtn) { submitBtn.textContent = 'Enviando llamadas...'; }
+            
+            // Registrar Lote
+            await fetch('/api/batches', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    id: reminderBatch.batchId,
+                    parent_batch_id: window.pendingRetryParentId || null,
+                    name: reminderBatch.batchLabel,
+                    template_used: activeReminderId,
+                    total_destinations: numbers.length
+                })
+            }).catch(e=>console.error('Error saving batch state:', e));
+            
+            window.pendingRetryParentId = null; // Reset for next batch
             
             for (const num of numbers) {
                try {

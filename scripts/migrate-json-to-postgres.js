@@ -85,6 +85,18 @@ async function migrateReminderPrompts() {
       name: 'RESPUESTA DE COTIZACIÓN',
       greeting: '',
       text: 'Buenos Dias, Estimado cliente,\n\nle enviamos una cotizacion para el desarrollo de su servicio web, esperamos su verificacion tecnica y estamos atentos a una respuesta sobre el servicio. Nos contactaremos a la brevedad desde el numero principal de nuestra empresa. 936613758. VIA COMUNICATIVA, "Publicidad que marca tu exito".'
+    },
+    {
+      id: 'renovacion_servicios',
+      name: 'RENOVACIÓN DE SERVICIOS',
+      greeting: '',
+      text: 'Buenas () Estimado Clientes, somos de la Agencia de Publicidad VIA COMUNICATIVA. Tenemos a cargo su servicio web dominio... Esta proximo a vencer, se le recomienda realizar el pago por renovacion de s/.250.00 al haber cumplido ya un ano con nosotros, evitar cortes e interrupciones y pagos por reposicion de servicio. Quedamos Atentos.'
+    },
+    {
+      id: 'actualizacion_datos',
+      name: 'ACTUALIZACIÓN DE DATOS',
+      greeting: '',
+      text: 'Somos la agencia de marketing y publicidad. Via Comunicativa,  Como parte de una mejora continua, estamos realizando actualizaciones y optimizaciones en su sitio web ......, sin costo alguno, incluyendo ajustes visuales, contenido y estructura. Para adjuntar cambios o enviar solicitudes de modificacion, pueden comunicarse directamente al numero: 924461828 Quedamos atentos a sus indicaciones. Saludos cordiales.'
     }
   ];
 

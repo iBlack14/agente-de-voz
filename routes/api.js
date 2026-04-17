@@ -132,6 +132,58 @@ router.post('/make-call', async (req, res) => {
 });
 
 
+// --- BATCH MANAGEMENT ---
+router.post('/batches', async (req, res) => {
+  try {
+    const { id, parent_batch_id, name, template_used, total_destinations } = req.body;
+    const { query } = require('../services/db/postgres.service');
+    await query(
+      `INSERT INTO call_batches (id, parent_batch_id, name, template_used, total_destinations) 
+       VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING`,
+      [id, parent_batch_id || null, name, template_used || null, total_destinations]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/batches', async (req, res) => {
+  try {
+    const { query } = require('../services/db/postgres.service');
+    const { rows } = await query(`
+      SELECT b.id, b.parent_batch_id, b.name, b.template_used, b.total_destinations, b.created_at,
+             COUNT(c.call_id) FILTER (WHERE c.status='completed' OR c.status='answered') AS answered_count,
+             COUNT(c.call_id) FILTER (WHERE c.status NOT IN ('completed', 'answered', 'queued', 'in-progress', 'ringing', 'pending', 'scheduled')) AS failed_count,
+             COUNT(c.call_id) FILTER (WHERE c.status IN ('queued', 'in-progress', 'ringing', 'pending', 'scheduled')) AS active_count
+      FROM call_batches b
+      LEFT JOIN calls c ON b.id = c.batch_id
+      GROUP BY b.id
+      ORDER BY b.created_at DESC
+      LIMIT 100
+    `);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/batches/:id/failed', async (req, res) => {
+  try {
+    const { query } = require('../services/db/postgres.service');
+    const { rows } = await query(`
+      SELECT to_number, domain 
+      FROM calls 
+      WHERE batch_id = $1 
+      AND status NOT IN ('completed', 'answered', 'queued', 'in-progress', 'ringing', 'pending', 'scheduled')
+      GROUP BY to_number, domain
+    `, [req.params.id]);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/stats', async (req, res) => {
   try {
     const { getUsageStats } = require('../services/db/repository');

@@ -22,6 +22,14 @@ CREATE TABLE IF NOT EXISTS app_settings (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS call_batches (
+    id TEXT PRIMARY KEY,
+    parent_batch_id TEXT REFERENCES call_batches(id) ON DELETE SET NULL,
+    name TEXT NOT NULL,
+    total_destinations INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS calls (
   call_id TEXT PRIMARY KEY,
   direction TEXT,
