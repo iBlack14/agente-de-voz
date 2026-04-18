@@ -73,7 +73,11 @@ module.exports = {
    * Reads call history with associated transcripts.
    */
   readCallLog: async () => {
-    const { rows: calls } = await query(`SELECT * FROM calls ORDER BY COALESCE(started_at, created_at) DESC LIMIT 200`);
+    const historyLimit = Math.max(200, parseInt(process.env.CALL_HISTORY_LIMIT || '5000', 10) || 5000);
+    const { rows: calls } = await query(
+      `SELECT * FROM calls ORDER BY COALESCE(started_at, created_at) DESC LIMIT $1`,
+      [historyLimit]
+    );
     if (!calls.length) return [];
 
     const ids = calls.map(c => c.call_id);

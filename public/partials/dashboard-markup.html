@@ -27,6 +27,10 @@
                 <span class="material-symbols-outlined text-xl">history</span>
                 <span class="text-[10px] font-bold uppercase tracking-widest">Historial</span>
             </button>
+            <button class="nav-item w-full py-4 px-8 flex items-center gap-4 transition-all text-slate-400 hover:text-white" data-tab="retrybook">
+                <span class="material-symbols-outlined text-xl">book_5</span>
+                <span class="text-[10px] font-bold uppercase tracking-widest">Control</span>
+            </button>
             <button class="nav-item w-full py-4 px-8 flex items-center gap-4 transition-all text-slate-400 hover:text-white" data-tab="stats">
                 <span class="material-symbols-outlined text-xl">monitoring</span>
                 <span class="text-[10px] font-bold uppercase tracking-widest">Consumo</span>
@@ -393,6 +397,71 @@
                 </div>
             </div>
 
+            <!-- TAB: CONTROL DE REINTENTOS -->
+            <div id="tab-retrybook" class="tab-content space-y-8">
+                <section class="glass-card border-indigo-500/20 bg-indigo-500/5">
+                    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                        <div>
+                            <p class="text-[9px] font-bold text-indigo-300 uppercase tracking-[0.25em] mb-2">Libro de Reintentos</p>
+                            <h3 class="text-2xl font-extrabold tracking-tight text-white">Lectura de Cascada por Lote</h3>
+                            <p id="retrybook-flow" class="text-sm text-slate-300 mt-3">Sin datos de lotes.</p>
+                        </div>
+                        <div class="min-w-[280px]">
+                            <label class="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-2">Seleccionar Lote</label>
+                            <select id="retrybook-root-select" class="w-full bg-slate-950/50 border border-white/10 rounded-2xl py-3 px-4 text-xs text-white focus:border-primary outline-none"></select>
+                            <p id="retrybook-last-update" class="text-[9px] text-slate-500 uppercase tracking-widest mt-2">Update: --</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="glass-card"><p class="text-[9px] text-slate-500 uppercase tracking-widest mb-2">Intentos Acumulados</p><h4 id="rb-total-attempts" class="text-3xl font-black text-white">0</h4></div>
+                    <div class="glass-card border-emerald-500/20 bg-emerald-500/5"><p class="text-[9px] text-slate-500 uppercase tracking-widest mb-2">Contestaron</p><h4 id="rb-total-answered" class="text-3xl font-black text-emerald-400">0</h4></div>
+                    <div class="glass-card border-rose-500/20 bg-rose-500/5"><p class="text-[9px] text-slate-500 uppercase tracking-widest mb-2">Pendientes Finales</p><h4 id="rb-total-pending" class="text-3xl font-black text-rose-400">0</h4></div>
+                    <div class="glass-card"><p class="text-[9px] text-slate-500 uppercase tracking-widest mb-2">Iteraciones</p><h4 id="rb-iterations-count" class="text-3xl font-black text-indigo-300">0</h4></div>
+                </section>
+
+                <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <div class="lg:col-span-8 glass-card p-0 overflow-hidden">
+                        <div class="px-6 py-4 border-b border-white/5 bg-slate-900/40">
+                            <h4 class="text-sm font-extrabold text-white">Detalle por Iteración</h4>
+                            <p class="text-[10px] text-slate-500 mt-1">Haz click en una fila para ver quién no contestó y reintentar solo ese grupo.</p>
+                        </div>
+                        <div class="max-h-[460px] overflow-y-auto no-scrollbar">
+                            <table class="w-full text-left">
+                                <thead class="bg-slate-900/40 sticky top-0">
+                                    <tr class="text-[9px] uppercase tracking-widest text-slate-500">
+                                        <th class="px-6 py-3">Iteración</th>
+                                        <th class="px-6 py-3">Llamados</th>
+                                        <th class="px-6 py-3">Contestó</th>
+                                        <th class="px-6 py-3">No Contestó</th>
+                                        <th class="px-6 py-3">Tasa</th>
+                                        <th class="px-6 py-3">Hora</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rb-table-body" class="text-sm"></tbody>
+                            </table>
+                        </div>
+                        <div class="border-t border-white/5 p-6 bg-slate-900/20 space-y-4">
+                            <div class="flex flex-wrap items-center justify-between gap-3">
+                                <p id="rb-selected-iter-title" class="text-xs font-bold text-slate-300">Selecciona una iteración</p>
+                                <button id="rb-retry-selected-btn" class="px-4 py-2 rounded-xl bg-indigo-600/80 hover:bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+                                    Reintentar no contestados (<span id="rb-retry-selected-count">0</span>)
+                                </button>
+                            </div>
+                            <div id="rb-unanswered-list" class="max-h-[240px] overflow-y-auto no-scrollbar space-y-2">
+                                <p class="text-xs text-slate-500">No hay selección.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="lg:col-span-4 glass-card">
+                        <h4 class="text-sm font-extrabold text-white mb-5">Dominios Más Frecuentes</h4>
+                        <div id="rb-domain-list" class="space-y-2 max-h-[420px] overflow-y-auto no-scrollbar"></div>
+                    </div>
+                </section>
+            </div>
+
             <!-- TAB: CONSUMO -->
             <div id="tab-stats" class="tab-content space-y-12">
                 <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -608,6 +677,15 @@
                         </div>
                         <span class="material-symbols-outlined text-4xl text-rose-500/20">cancel</span>
                     </div>
+                </div>
+
+                <!-- Resumen de flujo + detalle por iteración -->
+                <div class="space-y-4">
+                    <div id="modal-flow-summary" class="rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-4 text-[11px] font-bold tracking-wide text-indigo-200">
+                        Flujo de campaña
+                    </div>
+                    <div id="modal-iterations-detail" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+                    <div id="modal-iteration-selector" class="flex flex-wrap gap-2"></div>
                 </div>
 
                 <!-- Tabs -->

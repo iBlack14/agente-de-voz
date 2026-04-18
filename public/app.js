@@ -128,6 +128,7 @@ const initDashboardApp = () => {
     prompts: 'Identidad del Agente', 
     reminders: 'Gestión de Recordatorios',
     history: 'Historial de Transmisiones',
+    retrybook: 'Control de Reintentos',
     stats: 'Consumo Neural',
     monitor: 'Monitor en Vivo'
   };
@@ -152,6 +153,7 @@ const initDashboardApp = () => {
     
     // Trigger data loading
     if (tabId === 'history') loadCallHistory();
+    if (tabId === 'retrybook') loadCallHistory();
     if (tabId === 'stats') updateConsumptionOverview();
     if (tabId === 'monitor') typeof loadActiveCalls === 'function' && loadActiveCalls();
   }
@@ -333,7 +335,7 @@ const initDashboardApp = () => {
 
       // Actualizar UI del historial y estadísticas
       updateStats(liveData);
-      if (document.getElementById('tab-history').classList.contains('active')) {
+      if (document.getElementById('tab-history').classList.contains('active') || document.getElementById('tab-retrybook').classList.contains('active')) {
          loadCallHistory(liveData); 
       }
       if (document.getElementById('tab-stats').classList.contains('active')) {
@@ -637,11 +639,28 @@ const initDashboardApp = () => {
   const historyLastUpdate = document.getElementById('history-last-update');
   const historyResetAllBtn = document.getElementById('history-reset-all-btn');
   const historyResetConfirm = document.getElementById('history-reset-confirm');
+  const retryBookRootSelect = document.getElementById('retrybook-root-select');
+  const retryBookFlow = document.getElementById('retrybook-flow');
+  const retryBookLastUpdate = document.getElementById('retrybook-last-update');
+  const rbTotalAttempts = document.getElementById('rb-total-attempts');
+  const rbTotalAnswered = document.getElementById('rb-total-answered');
+  const rbTotalPending = document.getElementById('rb-total-pending');
+  const rbIterationsCount = document.getElementById('rb-iterations-count');
+  const rbTableBody = document.getElementById('rb-table-body');
+  const rbDomainList = document.getElementById('rb-domain-list');
+  const rbSelectedIterTitle = document.getElementById('rb-selected-iter-title');
+  const rbUnansweredList = document.getElementById('rb-unanswered-list');
+  const rbRetrySelectedBtn = document.getElementById('rb-retry-selected-btn');
+  const rbRetrySelectedCount = document.getElementById('rb-retry-selected-count');
 
   let callsData = [];
   let historyBatchMap = new Map();
   const historyExpandedBatches = new Set();
   const historyView = { query: '', filter: 'all' };
+  let retryBookSelectedRoot = '';
+  let retryBookRowsCache = [];
+  let retryBookSelectedIterIndex = -1;
+
 
   function isOutboundCall(call) {
     return call?.direction === 'outbound' || call?.direction === 'outgoing';
@@ -723,10 +742,23 @@ const initDashboardApp = () => {
     const parentMap = new Map();
     const outboundCalls = callsData.filter(isOutboundCall);
 
+    const normalizeBatchLabel = (rawLabel) => {
+      const raw = String(rawLabel || '').trim();
+      if (!raw) return '';
+      // Remove common retry prefixes while preserving the root campaign name.
+      return raw
+        .replace(/^Reintento\s*\d*\s*[·\-|:]?\s*/i, '')
+        .replace(/^Iteración:\s*Reintento\s*[|·\-:]\s*/i, '')
+        .replace(/\|\s*Vol\..*$/i, '')
+        .replace(/\|\s*ID-\d+.*$/i, '')
+        .trim();
+    };
+
     outboundCalls.forEach(call => {
       const bId = call.batchId || '';
       let rootId = bId;
       let iterationLabel = 'Original';
+      let iterationNumber = 0;
       
       // Detact if it's a retry batch using our new naming convention
       if (bId.startsWith('retry:')) {
@@ -734,25 +766,38 @@ const initDashboardApp = () => {
         if (parts.length >= 3) {
           rootId = parts[1];
           iterationLabel = 'Reintento';
+          // Format expected: retry:{root}:{iter}:{timestamp}
+          // Older format fallback: retry:{root}:{timestamp}
+          if (parts.length >= 4 && /^\d+$/.test(parts[2])) {
+            iterationNumber = parseInt(parts[2], 10);
+          } else {
+            iterationNumber = null;
+          }
         }
       }
 
       const rootKey = rootId || `legacy-${call.callId || call.startedAt}`;
+      const candidateLabel = normalizeBatchLabel(call.batchLabel);
       
       if (!parentMap.has(rootKey)) {
         parentMap.set(rootKey, {
           rootKey,
-          label: (call.batchLabel || '').replace(/Reintento\s.*/i, '').trim() || 'Lote Sin Nombre',
+          label: candidateLabel || '',
           iterations: new Map(), // Map of batchId -> iterationData
           lastStartedAt: call.startedAt || null
         });
       }
       
       const group = parentMap.get(rootKey);
+      // Prefer a meaningful non-empty root label over generic/empty values.
+      if (candidateLabel && (!group.label || group.label === 'Lote Sin Nombre' || bId === rootId)) {
+        group.label = candidateLabel;
+      }
       if (!group.iterations.has(bId)) {
         group.iterations.set(bId, {
           batchId: bId,
           label: iterationLabel,
+          iterationNumber,
           calls: [],
           startedAt: call.startedAt
         });
@@ -764,6 +809,10 @@ const initDashboardApp = () => {
       if (call.startedAt && (!group.lastStartedAt || new Date(call.startedAt) > new Date(group.lastStartedAt))) {
         group.lastStartedAt = call.startedAt;
       }
+    });
+
+    parentMap.forEach((group) => {
+      if (!group.label) group.label = 'Lote Sin Nombre';
     });
 
     return Array.from(parentMap.values()).sort((a, b) => {
@@ -792,42 +841,44 @@ const initDashboardApp = () => {
     }
 
     historyBatchContainer.innerHTML = groups.map((group, idx) => {
-      const allCallsInGroup = Array.from(group.iterations.values()).flatMap(i => i.calls);
-      const totalInBatch = allCallsInGroup.length;
-      
       // Sort iterations by date
-      const iterations = Array.from(group.iterations.values()).sort((a,b) => new Date(a.startedAt) - new Date(b.startedAt));
+      const iterations = Array.from(group.iterations.values()).sort((a, b) => {
+        const aHasNum = Number.isInteger(a.iterationNumber);
+        const bHasNum = Number.isInteger(b.iterationNumber);
+        if (aHasNum && bHasNum) return a.iterationNumber - b.iterationNumber;
+        if (aHasNum) return -1;
+        if (bHasNum) return 1;
+        return new Date(a.startedAt || 0) - new Date(b.startedAt || 0);
+      });
+      const originalIteration = iterations[0] || { calls: [] };
+      const originalAnswered = originalIteration.calls.filter(c => classifyOutboundCall(c) === 'answered').length;
+      const originalUnanswered = originalIteration.calls.filter(c => classifyOutboundCall(c) === 'unanswered').length;
+      const baseDestinations = originalIteration.calls.length;
+      const retriesCount = Math.max(0, iterations.length - 1);
       
       const startedText = group.lastStartedAt
         ? new Date(group.lastStartedAt).toLocaleString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
         : '—';
 
-      // HTML for Iteration Boxes (The "Cuadros" the user asked for)
-      const iterationBoxesHtml = iterations.map((iter, iterIdx) => {
-          const answered = iter.calls.filter(c => classifyOutboundCall(c) === 'answered').length;
-          const unanswered = iter.calls.filter(c => classifyOutboundCall(c) === 'unanswered').length;
-          const iterColor = iterIdx === 0 ? 'primary' : 'indigo-400';
-          const title = iterIdx === 0 ? 'Original' : `Reintento ${iterIdx}`;
-          
-          return `
-            <div class="space-y-3">
-              <div class="flex items-center gap-2">
-                 <span class="text-[8px] font-black uppercase tracking-widest text-slate-500">${title}</span>
-                 <div class="h-px flex-1 bg-white/5"></div>
-              </div>
-              <div class="grid grid-cols-2 gap-3">
-                <div class="rounded-xl border border-emerald-500/10 bg-emerald-500/5 p-4 flex flex-col items-center">
-                  <span class="text-[8px] font-bold text-emerald-500 uppercase tracking-widest mb-1">Contestó</span>
-                  <span class="text-2xl font-black text-emerald-400">${answered}</span>
-                </div>
-                <div class="rounded-xl border border-rose-500/10 bg-rose-500/5 p-4 flex flex-col items-center">
-                  <span class="text-[8px] font-bold text-rose-500 uppercase tracking-widest mb-1">No Contestó</span>
-                  <span class="text-2xl font-black text-rose-400">${unanswered}</span>
-                </div>
-              </div>
+      // Card shows only "Original". Full retries are shown in "Control" tab.
+      const iterationBoxesHtml = `
+        <div class="space-y-3">
+          <div class="flex items-center gap-2">
+             <span class="text-[8px] font-black uppercase tracking-widest text-slate-500">Original</span>
+             <div class="h-px flex-1 bg-white/5"></div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="rounded-xl border border-emerald-500/10 bg-emerald-500/5 p-4 flex flex-col items-center">
+              <span class="text-[8px] font-bold text-emerald-500 uppercase tracking-widest mb-1">Contestó</span>
+              <span class="text-2xl font-black text-emerald-400">${originalAnswered}</span>
             </div>
-          `;
-      }).join('');
+            <div class="rounded-xl border border-rose-500/10 bg-rose-500/5 p-4 flex flex-col items-center">
+              <span class="text-[8px] font-bold text-rose-500 uppercase tracking-widest mb-1">No Contestó</span>
+              <span class="text-2xl font-black text-rose-400">${originalUnanswered}</span>
+            </div>
+          </div>
+        </div>
+      `;
 
       const unansweredToRetry = iterations[iterations.length - 1].calls.filter(c => classifyOutboundCall(c) === 'unanswered');
 
@@ -846,7 +897,9 @@ const initDashboardApp = () => {
               <p class="text-[10px] text-slate-400 mt-1 flex items-center gap-2">
                 <span class="material-symbols-outlined text-[12px]">calendar_month</span> ${escapeHtml(startedText)} 
                 <span class="w-1 h-1 rounded-full bg-slate-600"></span>
-                <span class="material-symbols-outlined text-[12px]">groups</span> ${totalInBatch} Destinos
+                <span class="material-symbols-outlined text-[12px]">groups</span> ${baseDestinations} Destinos
+                <span class="w-1 h-1 rounded-full bg-slate-600"></span>
+                <span class="material-symbols-outlined text-[12px]">restart_alt</span> ${retriesCount} Reintentos
               </p>
             </div>
             <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shadow-lg shadow-indigo-500/10">
@@ -864,6 +917,16 @@ const initDashboardApp = () => {
                    label: group.label, 
                    rootKey: group.rootKey, 
                    lastIterationKey: iterations[iterations.length - 1].batchId,
+                   iterations: iterations.map((iter, iterIdx) => ({
+                     batchId: iter.batchId,
+                     title: iter.iterationNumber === 0
+                       ? 'Original'
+                       : (Number.isInteger(iter.iterationNumber) ? `Reintento ${iter.iterationNumber}` : `Reintento ${iterIdx}`),
+                     answered: iter.calls.filter(c => classifyOutboundCall(c) === 'answered').length,
+                     unanswered: iter.calls.filter(c => classifyOutboundCall(c) === 'unanswered').length,
+                     total: iter.calls.length,
+                     startedAt: iter.startedAt || null
+                   })),
                    totalAnswered: iterations.reduce((acc, iter) => acc + iter.calls.filter(c => classifyOutboundCall(c) === 'answered').length, 0),
                    totalFailed: iterations.reduce((acc, iter) => acc + iter.calls.filter(c => classifyOutboundCall(c) === 'unanswered').length, 0)
                 }))}"
@@ -881,6 +944,17 @@ const initDashboardApp = () => {
         try {
           const rawData = btn.dataset.batchJson;
           const payload = JSON.parse(rawData);
+
+          // Preferred UX: open the dedicated "Control de Reintentos" tab
+          // and preselect the clicked lote for better analysis.
+          const retryBookTab = document.getElementById('tab-retrybook');
+          if (retryBookTab) {
+            retryBookSelectedRoot = payload.rootKey || '';
+            switchTab('retrybook');
+            renderRetryBook();
+            return;
+          }
+
           const modal = document.getElementById('batch-details-modal');
           if (!modal) return appAlert('Error crítico: No se encontró el componente Modal en el HTML.', true);
           
@@ -888,39 +962,136 @@ const initDashboardApp = () => {
           document.getElementById('modal-batch-title').textContent = (payload.label || 'Lote').replace(/\(\d+\)\s*·\s*\d{2}:\d{2}/, '').trim();
           document.getElementById('modal-answered-total').textContent = payload.totalAnswered || 0;
           document.getElementById('modal-failed-total').textContent = payload.totalFailed || 0;
+
+          const flowSummary = document.getElementById('modal-flow-summary');
+          const iterationsDetail = document.getElementById('modal-iterations-detail');
+          const iterationSelector = document.getElementById('modal-iteration-selector');
           
           // Procesar llamadas
           const allCalls = callsData.filter(isOutboundCall);
           const familyCalls = allCalls.filter(c => c.batchId && (c.batchId === payload.rootKey || c.batchId.includes(`:${payload.rootKey}:`)));
-          const answeredCalls = familyCalls.filter(c => classifyOutboundCall(c) === 'answered');
           
           // Para los fallidos, solo queremos los pendientes de la ULTIMA iteración
           const lastIterationCalls = allCalls.filter(c => c.batchId === payload.lastIterationKey);
           const unansweredToRetry = lastIterationCalls.filter(c => classifyOutboundCall(c) === 'unanswered');
 
+          const iterationMeta = Array.isArray(payload.iterations) ? payload.iterations : [];
+          if (flowSummary) {
+            const initial = iterationMeta[0] || null;
+            const retryAnswered = iterationMeta.slice(1).reduce((acc, it) => acc + (it.answered || 0), 0);
+            const totalAnswered = iterationMeta.reduce((acc, it) => acc + (it.answered || 0), 0);
+            if (initial) {
+              flowSummary.textContent = `${initial.total} llamados iniciales -> ${initial.answered} contestaron | Reintentos: +${retryAnswered} contestaron | Total final: ${totalAnswered}`;
+            } else {
+              flowSummary.textContent = `Total campaña: ${familyCalls.length} llamados | Contestaron: ${payload.totalAnswered || 0} | Fallidos: ${payload.totalFailed || 0}`;
+            }
+          }
+
+          if (iterationsDetail) {
+            iterationsDetail.innerHTML = iterationMeta.map((it) => {
+              const stamp = it.startedAt
+                ? new Date(it.startedAt).toLocaleString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+                : '—';
+              return `
+                <div class="rounded-2xl border border-white/10 bg-white/[0.02] p-4 space-y-3">
+                  <div class="flex items-center justify-between">
+                    <p class="text-[10px] uppercase tracking-[0.2em] text-slate-400 font-black">${escapeHtml(it.title || 'Iteración')}</p>
+                    <p class="text-[10px] text-slate-500 font-bold">${escapeHtml(stamp)}</p>
+                  </div>
+                  <div class="grid grid-cols-3 gap-2 text-center">
+                    <div class="rounded-xl bg-slate-900/60 border border-white/10 p-2">
+                      <p class="text-[8px] uppercase tracking-widest text-slate-500 font-bold">Total</p>
+                      <p class="text-lg font-black text-white">${it.total || 0}</p>
+                    </div>
+                    <div class="rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-2">
+                      <p class="text-[8px] uppercase tracking-widest text-emerald-500 font-bold">Contestó</p>
+                      <p class="text-lg font-black text-emerald-400">${it.answered || 0}</p>
+                    </div>
+                    <div class="rounded-xl bg-rose-500/10 border border-rose-500/20 p-2">
+                      <p class="text-[8px] uppercase tracking-widest text-rose-500 font-bold">No Contestó</p>
+                      <p class="text-lg font-black text-rose-400">${it.unanswered || 0}</p>
+                    </div>
+                  </div>
+                </div>
+              `;
+            }).join('') || '<p class="text-zinc-500 text-xs italic">Sin iteraciones detectadas.</p>';
+          }
+
           // Construir listas HTML
           const listAnswered = document.getElementById('modal-list-answered');
           const listFailed = document.getElementById('modal-list-failed');
-          
-          listAnswered.innerHTML = answeredCalls.map(c => `
-            <div class="flex items-center justify-between p-4 rounded-2xl bg-white/[0.02] border border-emerald-500/10">
-                <div>
-                    <p class="text-xs font-black text-white">${c.to || 'Desconocido'}</p>
-                    <p class="text-[10px] text-emerald-500/80 mt-1">${c.durationSec ? c.durationSec + 's en línea' : 'Contactado'}</p>
-                </div>
-                <span class="material-symbols-outlined text-emerald-400">task_alt</span>
-            </div>
-          `).join('') || '<p class="text-zinc-500 text-xs italic">Aún no hay conexiones exitosas registradas en esta campaña.</p>';
 
-          listFailed.innerHTML = unansweredToRetry.map(c => `
-            <div class="flex items-center justify-between p-4 rounded-2xl bg-white/[0.02] border border-rose-500/10">
-                <div>
-                    <p class="text-xs font-black text-white">${c.to || 'Desconocido'}</p>
-                    <p class="text-[10px] text-rose-500/80 mt-1">${c.status === 'failed' ? 'Telecom. Offline' : 'No Respondió'}</p>
-                </div>
-                <span class="material-symbols-outlined text-rose-400">error</span>
-            </div>
-          `).join('') || '<p class="text-zinc-500 text-xs italic">No hay números listos para ser reintentados en esta cascada.</p>';
+          const formatDomain = (c) => {
+            const domain = String(c.domain || '').trim();
+            return domain ? `Dominio: ${escapeHtml(domain)}` : 'Sin dominio';
+          };
+
+          const renderCallLists = (batchIdFilter = null) => {
+            const scoped = batchIdFilter
+              ? familyCalls.filter(c => c.batchId === batchIdFilter)
+              : familyCalls;
+
+            const answeredScoped = scoped.filter(c => classifyOutboundCall(c) === 'answered');
+            const failedScoped = scoped.filter(c => classifyOutboundCall(c) === 'unanswered');
+
+            listAnswered.innerHTML = answeredScoped.map(c => `
+              <div class="flex items-center justify-between p-4 rounded-2xl bg-white/[0.02] border border-emerald-500/10">
+                  <div>
+                      <p class="text-xs font-black text-white">${c.to || 'Desconocido'}</p>
+                      <p class="text-[10px] text-emerald-500/80 mt-1">${c.durationSec ? c.durationSec + 's en línea' : 'Contactado'}</p>
+                      <p class="text-[10px] text-slate-500 mt-1">${formatDomain(c)}</p>
+                  </div>
+                  <span class="material-symbols-outlined text-emerald-400">task_alt</span>
+              </div>
+            `).join('') || '<p class="text-zinc-500 text-xs italic">Sin contactos exitosos en la iteración seleccionada.</p>';
+
+            listFailed.innerHTML = failedScoped.map(c => `
+              <div class="flex items-center justify-between p-4 rounded-2xl bg-white/[0.02] border border-rose-500/10">
+                  <div>
+                      <p class="text-xs font-black text-white">${c.to || 'Desconocido'}</p>
+                      <p class="text-[10px] text-rose-500/80 mt-1">${c.status === 'failed' ? 'Telecom. Offline' : 'No Respondió'}</p>
+                      <p class="text-[10px] text-slate-500 mt-1">${formatDomain(c)}</p>
+                  </div>
+                  <span class="material-symbols-outlined text-rose-400">error</span>
+              </div>
+            `).join('') || '<p class="text-zinc-500 text-xs italic">Sin fallidos en la iteración seleccionada.</p>';
+          };
+
+          const selectorButtons = [];
+          if (iterationSelector) {
+            const selectorData = [{ label: 'Todos', batchId: null }, ...iterationMeta.map(it => ({ label: it.title || 'Iteración', batchId: it.batchId }))];
+            iterationSelector.innerHTML = selectorData.map((item, idx) => `
+              <button
+                data-iter-batch="${item.batchId || '__all__'}"
+                class="modal-iter-chip px-3 py-2 rounded-xl border text-[10px] uppercase tracking-widest font-black transition-all ${idx === 0 ? 'border-indigo-400/50 text-indigo-300 bg-indigo-500/10' : 'border-white/10 text-zinc-400 hover:text-white hover:border-white/20'}"
+              >
+                ${escapeHtml(item.label)}
+              </button>
+            `).join('');
+            selectorButtons.push(...iterationSelector.querySelectorAll('.modal-iter-chip'));
+          }
+
+          let selectedIterationBatchId = null;
+          const activateSelector = (batchIdFilter = null) => {
+            selectedIterationBatchId = batchIdFilter;
+            selectorButtons.forEach(btn => {
+              const isActive = (btn.dataset.iterBatch === '__all__' && batchIdFilter == null) || btn.dataset.iterBatch === String(batchIdFilter);
+              btn.classList.toggle('border-indigo-400/50', isActive);
+              btn.classList.toggle('text-indigo-300', isActive);
+              btn.classList.toggle('bg-indigo-500/10', isActive);
+              btn.classList.toggle('border-white/10', !isActive);
+              btn.classList.toggle('text-zinc-400', !isActive);
+            });
+            renderCallLists(batchIdFilter);
+          };
+
+          selectorButtons.forEach(btn => {
+            btn.onclick = () => {
+              const raw = btn.dataset.iterBatch;
+              activateSelector(raw === '__all__' ? null : raw);
+            };
+          });
+          activateSelector(null);
 
           // TABS Logic
           const btnF = document.getElementById('tab-btn-failed');
@@ -937,6 +1108,8 @@ const initDashboardApp = () => {
               retryBtn.classList.remove('opacity-30', 'cursor-not-allowed', 'grayscale');
               retryBtn.onclick = async () => {
                   modal.classList.remove('visible');
+                  modal.classList.remove('flex');
+                  modal.classList.add('hidden');
                   await retryUnansweredCalls(unansweredToRetry, retryBtn, 'Reintento', payload.rootKey);
               };
           } else {
@@ -945,7 +1118,10 @@ const initDashboardApp = () => {
               retryBtn.onclick = null;
           }
 
-          // Show window using the global .visible class from index.css
+          // Ensure compatibility with Tailwind utility classes (`hidden`/`flex`)
+          // and custom `.modal-overlay.visible` animations.
+          modal.classList.remove('hidden');
+          modal.classList.add('flex');
           modal.classList.add('visible');
           
         } catch (error) {
@@ -962,6 +1138,8 @@ const initDashboardApp = () => {
         modalCloser.addEventListener('click', () => {
             const m = document.getElementById('batch-details-modal');
             m.classList.remove('visible');
+            m.classList.remove('flex');
+            m.classList.add('hidden');
         });
     }
 
@@ -977,25 +1155,169 @@ const initDashboardApp = () => {
     });
   }
 
-  async function retryUnansweredCalls(unansweredCalls, buttonEl, batchLabelBase = 'Reintento', parentBatchId = null) {
+  function renderRetryBook() {
+    if (!retryBookRootSelect || !rbTableBody) return;
+
+    const groups = buildHistoryBatchGroups();
+    if (!groups.length) {
+      retryBookRootSelect.innerHTML = '<option value="">Sin lotes</option>';
+      if (retryBookFlow) retryBookFlow.textContent = 'Sin datos de lotes para analizar.';
+      if (rbTotalAttempts) rbTotalAttempts.textContent = '0';
+      if (rbTotalAnswered) rbTotalAnswered.textContent = '0';
+      if (rbTotalPending) rbTotalPending.textContent = '0';
+      if (rbIterationsCount) rbIterationsCount.textContent = '0';
+      if (rbTableBody) rbTableBody.innerHTML = '<tr><td colspan="6" class="px-6 py-10 text-center text-xs text-slate-500">Sin iteraciones disponibles.</td></tr>';
+      if (rbDomainList) rbDomainList.innerHTML = '<p class="text-xs text-slate-500">Sin dominios.</p>';
+      return;
+    }
+
+    const currentOptions = new Set(Array.from(retryBookRootSelect.options).map(o => o.value));
+    const newOptions = groups.map(g => g.rootKey);
+    const changed = newOptions.length !== currentOptions.size || newOptions.some(v => !currentOptions.has(v));
+    if (changed) {
+      retryBookRootSelect.innerHTML = groups.map(g => `<option value="${escapeHtml(g.rootKey)}">${escapeHtml(g.label || 'Lote')}</option>`).join('');
+    }
+
+    if (!retryBookSelectedRoot || !groups.some(g => g.rootKey === retryBookSelectedRoot)) {
+      retryBookSelectedRoot = groups[0].rootKey;
+    }
+    retryBookRootSelect.value = retryBookSelectedRoot;
+
+    const selected = groups.find(g => g.rootKey === retryBookSelectedRoot) || groups[0];
+    if (!selected) return;
+
+    const iterations = Array.from(selected.iterations.values()).sort((a, b) => {
+      const aHasNum = Number.isInteger(a.iterationNumber);
+      const bHasNum = Number.isInteger(b.iterationNumber);
+      if (aHasNum && bHasNum) return a.iterationNumber - b.iterationNumber;
+      if (aHasNum) return -1;
+      if (bHasNum) return 1;
+      return new Date(a.startedAt || 0) - new Date(b.startedAt || 0);
+    });
+
+    const rows = iterations.map((iter, idx) => {
+      const total = iter.calls.length;
+      const answered = iter.calls.filter(c => classifyOutboundCall(c) === 'answered').length;
+      const unanswered = iter.calls.filter(c => classifyOutboundCall(c) === 'unanswered').length;
+      const rate = total ? Math.round((answered / total) * 100) : 0;
+      const when = iter.startedAt ? new Date(iter.startedAt).toLocaleString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
+      const label = iter.iterationNumber === 0 ? 'Original' : `Reintento ${Number.isInteger(iter.iterationNumber) ? iter.iterationNumber : idx}`;
+      return { label, total, answered, unanswered, rate, when, calls: iter.calls, batchId: iter.batchId };
+    });
+    retryBookRowsCache = rows;
+
+    const totalAttempts = rows.reduce((acc, r) => acc + r.total, 0);
+    const totalAnswered = rows.reduce((acc, r) => acc + r.answered, 0);
+    const finalPending = rows.length ? rows[rows.length - 1].unanswered : 0;
+    const firstTotal = rows.length ? rows[0].total : 0;
+    const retryAnswered = rows.slice(1).reduce((acc, r) => acc + r.answered, 0);
+
+    if (rbTotalAttempts) rbTotalAttempts.textContent = String(totalAttempts);
+    if (rbTotalAnswered) rbTotalAnswered.textContent = String(totalAnswered);
+    if (rbTotalPending) rbTotalPending.textContent = String(finalPending);
+    if (rbIterationsCount) rbIterationsCount.textContent = String(rows.length);
+    if (retryBookFlow) retryBookFlow.textContent = `${firstTotal} base inicial -> ${rows[0]?.answered || 0} contestaron, ${rows[0]?.unanswered || 0} no | Reintentos: +${retryAnswered} contestaron | Pendientes finales: ${finalPending}`;
+    if (retryBookLastUpdate) retryBookLastUpdate.textContent = `Update: ${new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+
+    if (retryBookSelectedIterIndex < 0 || retryBookSelectedIterIndex >= rows.length) {
+      retryBookSelectedIterIndex = rows.length ? rows.length - 1 : -1; // default: latest iteration
+    }
+
+    rbTableBody.innerHTML = rows.map((r, idx) => `
+      <tr data-rb-iter-idx="${idx}" class="border-b border-white/5 hover:bg-white/[0.02] cursor-pointer ${idx === retryBookSelectedIterIndex ? 'bg-indigo-500/10' : ''}">
+        <td class="px-6 py-3 text-xs font-black text-white">${escapeHtml(r.label)}</td>
+        <td class="px-6 py-3 text-xs text-slate-200">${r.total}</td>
+        <td class="px-6 py-3 text-xs text-emerald-400 font-bold">${r.answered}</td>
+        <td class="px-6 py-3 text-xs text-rose-400 font-bold">${r.unanswered}</td>
+        <td class="px-6 py-3 text-xs text-indigo-300 font-bold">${r.rate}%</td>
+        <td class="px-6 py-3 text-[11px] text-slate-500">${escapeHtml(r.when)}</td>
+      </tr>
+    `).join('');
+
+    rbTableBody.querySelectorAll('tr[data-rb-iter-idx]').forEach(tr => {
+      tr.addEventListener('click', () => {
+        retryBookSelectedIterIndex = parseInt(tr.dataset.rbIterIdx, 10);
+        renderRetryBook();
+      });
+    });
+
+    const domainCounter = new Map();
+    rows.forEach(r => {
+      r.calls.forEach(c => {
+        const d = String(c.domain || '').trim();
+        if (!d) return;
+        domainCounter.set(d, (domainCounter.get(d) || 0) + 1);
+      });
+    });
+    const topDomains = Array.from(domainCounter.entries()).sort((a, b) => b[1] - a[1]).slice(0, 20);
+    rbDomainList.innerHTML = topDomains.length
+      ? topDomains.map(([d, n]) => `
+          <div class="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
+            <p class="text-xs text-slate-200 truncate pr-3">${escapeHtml(d)}</p>
+            <span class="text-[10px] font-black text-indigo-300">${n}</span>
+          </div>
+        `).join('')
+      : '<p class="text-xs text-slate-500">Este lote no tiene dominios registrados.</p>';
+
+    const selectedRow = rows[retryBookSelectedIterIndex];
+    const unansweredCalls = (selectedRow?.calls || []).filter(c => classifyOutboundCall(c) === 'unanswered');
+    if (rbSelectedIterTitle) {
+      rbSelectedIterTitle.textContent = selectedRow
+        ? `${selectedRow.label}: ${unansweredCalls.length} no contestaron`
+        : 'Selecciona una iteración';
+    }
+    if (rbRetrySelectedCount) rbRetrySelectedCount.textContent = String(unansweredCalls.length);
+    if (rbUnansweredList) {
+      rbUnansweredList.innerHTML = unansweredCalls.length
+        ? unansweredCalls.map(c => `
+            <div class="rounded-xl border border-rose-500/20 bg-rose-500/5 px-4 py-3 flex items-center justify-between">
+              <div>
+                <p class="text-xs font-black text-white">${escapeHtml(c.to || 'Desconocido')}</p>
+                <p class="text-[10px] text-slate-500 mt-1">${escapeHtml(c.domain || 'Sin dominio')}</p>
+              </div>
+              <span class="text-[10px] font-bold text-rose-400 uppercase tracking-widest">${escapeHtml(String(c.status || 'unanswered'))}</span>
+            </div>
+          `).join('')
+        : '<p class="text-xs text-slate-500">No hay no contestados en esta iteración.</p>';
+    }
+    if (rbRetrySelectedBtn) {
+      rbRetrySelectedBtn.disabled = unansweredCalls.length === 0;
+      rbRetrySelectedBtn.onclick = async () => {
+        if (!selectedRow || unansweredCalls.length === 0) return;
+        await retryUnansweredCalls(unansweredCalls, rbRetrySelectedBtn, selectedRow.label, selected.rootKey);
+      };
+    }
+  }
+
+  if (retryBookRootSelect) {
+    retryBookRootSelect.addEventListener('change', () => {
+      retryBookSelectedRoot = retryBookRootSelect.value;
+      renderRetryBook();
+    });
+  }
+
+  async function retryUnansweredCalls(unansweredCalls, buttonEl, batchLabelBase = 'Reintento', parentBatchId = null, options = {}) {
     const entries = buildRetryEntries(unansweredCalls);
     if (!entries.length) {
       appAlert('No hay llamadas no contestadas para reintentar.');
       return;
     }
 
-    const previewLines = entries
-      .slice(0, 8)
-      .map(e => `${e.number}${e.domain ? ` | ${e.domain}` : ''}`)
-      .join('\n');
-    const previewSuffix = entries.length > 8 ? `\n... y ${entries.length - 8} más` : '';
-    const confirmMsg = `Lista de reintento (${entries.length}):\n${previewLines}${previewSuffix}\n\nEscribe REINTENTAR para continuar:`;
+    const requireConfirm = options?.requireConfirm === true;
+    if (requireConfirm) {
+      const previewLines = entries
+        .slice(0, 8)
+        .map(e => `${e.number}${e.domain ? ` | ${e.domain}` : ''}`)
+        .join('\n');
+      const previewSuffix = entries.length > 8 ? `\n... y ${entries.length - 8} más` : '';
+      const confirmMsg = `Lista de reintento (${entries.length}):\n${previewLines}${previewSuffix}\n\nEscribe REINTENTAR para continuar:`;
 
-    const confirmText = await appPrompt(
-      confirmMsg,
-      'REINTENTAR'
-    );
-    if (confirmText !== 'REINTENTAR') return;
+      const confirmText = await appPrompt(
+        confirmMsg,
+        'REINTENTAR'
+      );
+      if (confirmText !== 'REINTENTAR') return;
+    }
 
     if (buttonEl) {
       buttonEl.disabled = true;
@@ -1235,6 +1557,7 @@ const initDashboardApp = () => {
       callsData = preloadedData || await (await fetch('/api/calls')).json();
       renderHistorySummary();
       renderHistoryBatchCards();
+      renderRetryBook();
       if (historyLastUpdate) {
         historyLastUpdate.textContent = `Actualizado: ${new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
       }
@@ -2173,4 +2496,3 @@ if (document.readyState === 'loading') {
 } else {
   initDashboardApp();
 }
-
