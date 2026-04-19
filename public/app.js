@@ -1245,23 +1245,35 @@ const initDashboardApp = () => {
       });
     });
 
-    const domainCounter = new Map();
+    // Siempre mostrar numero + dominio (con fallback "Sin dominio")
+    const contactCounter = new Map();
     rows.forEach(r => {
       r.calls.forEach(c => {
-        const d = String(c.domain || '').trim();
-        if (!d) return;
-        domainCounter.set(d, (domainCounter.get(d) || 0) + 1);
+        const number = String(c.to || c.to_number || c.from || '').trim() || 'Desconocido';
+        const domain = String(c.domain || '').trim() || 'Sin dominio';
+        const key = `${number}__${domain}`;
+        const prev = contactCounter.get(key);
+        if (prev) {
+          prev.count += 1;
+        } else {
+          contactCounter.set(key, { number, domain, count: 1 });
+        }
       });
     });
-    const topDomains = Array.from(domainCounter.entries()).sort((a, b) => b[1] - a[1]).slice(0, 20);
-    rbDomainList.innerHTML = topDomains.length
-      ? topDomains.map(([d, n]) => `
-          <div class="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
-            <p class="text-xs text-slate-200 truncate pr-3">${escapeHtml(d)}</p>
-            <span class="text-[10px] font-black text-indigo-300">${n}</span>
+    const topContacts = Array.from(contactCounter.values())
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 50);
+    rbDomainList.innerHTML = topContacts.length
+      ? topContacts.map(({ number, domain, count }) => `
+          <div class="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
+            <div class="flex items-center justify-between gap-3">
+              <p class="text-xs font-black text-slate-100 truncate">${escapeHtml(number)}</p>
+              <span class="text-[10px] font-black text-indigo-300">${count}</span>
+            </div>
+            <p class="text-[10px] text-slate-400 mt-1 truncate">${escapeHtml(domain)}</p>
           </div>
         `).join('')
-      : '<p class="text-xs text-slate-500">Este lote no tiene dominios registrados.</p>';
+      : '<p class="text-xs text-slate-500">No hay numeros registrados para este lote.</p>';
 
     const selectedRow = rows[retryBookSelectedIterIndex];
     const unansweredCalls = (selectedRow?.calls || []).filter(c => classifyOutboundCall(c) === 'unanswered');
