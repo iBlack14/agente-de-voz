@@ -77,16 +77,15 @@ const { addInflightOutbound } = require('../services/callState');
 
 router.post('/make-call', async (req, res) => {
   const { number, domain, mode, greeting, instructions, retry_interval, scheduled_for, batch_id, batch_label } = req.body || {};
-  if (!number || !isValidE164(number)) return res.status(400).json({ error: 'Número inválido' });
+  console.log(`📞 [API] Intento de llamada a: ${number} | Modo: ${scheduled_for ? 'Programado' : 'Inmediato'}`);
 
-  const ip = req.ip;
-  const now = Date.now();
-  const recent = (callRateLimits.get(ip) || []).filter(t => now - t < WINDOW);
-  if (recent.length >= MAX) return res.status(429).json({ error: 'Rate limit exceeded' });
-  recent.push(now);
-  callRateLimits.set(ip, recent);
+  if (!number || !isValidE164(number)) {
+    console.error(`❌ [API] Número inválido: ${number}`);
+    return res.status(400).json({ error: 'Número inválido' });
+  }
 
   if (scheduled_for) {
+     console.log(`📅 [API] Guardando llamada programada en Supabase para: ${scheduled_for}`);
      await supabase.from('scheduled_calls').insert({
         to_number: number,
         batch_id: batch_id || null,
@@ -103,10 +102,14 @@ router.post('/make-call', async (req, res) => {
   // Add call to neural queue
   (async () => {
     try {
+      console.log(`🧠 [API] Añadiendo llamada a ${number} a la cola neural...`);
       await callQueue.add(async () => {
+        console.log(`🚀 [Telnyx] Disparando llamada real a: ${number}`);
         const result = await makeOutboundCall(number, domain, { mode, customGreeting: greeting, customInstructions: instructions });
         const callId = result.data?.call_control_id;
+        
         if (callId) {
+          console.log(`✅ [Telnyx] Llamada aceptada. ID: ${callId}`);
           addInflightOutbound(callId);
           setCallContext(callId, { domain, mode, customGreeting: greeting, customInstructions: instructions, retry_interval, batch_id, batch_label });
           await logCall({
@@ -123,10 +126,12 @@ router.post('/make-call', async (req, res) => {
             startedAt: new Date().toISOString(),
             status: 'queued'
           });
+        } else {
+            console.warn(`⚠️ [Telnyx] La llamada se aceptó pero no devolvió call_control_id`);
         }
       });
     } catch (err) {
-      console.error(`[Queue Manager] Failed call to ${number}:`, err.message);
+      console.error(`❌ [Queue Manager] Error en llamada a ${number}:`, err.message);
     }
   })();
 
