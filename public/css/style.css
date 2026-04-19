@@ -152,3 +152,29 @@ textarea:focus, input:focus, select:focus {
     border-color: var(--primary) !important;
     box-shadow: 0 0 0 2px rgba(207, 0, 218, 0.2) !important;
 }
+
+/* View-state guards for advanced dashboard */
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.modal-overlay {
+    display: none !important;
+}
+
+.modal-overlay.visible {
+    display: flex !important;
+}
+
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}

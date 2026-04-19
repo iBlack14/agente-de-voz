@@ -65,8 +65,8 @@ app.get('/who', async (req, res) => {
 app.use('/api', authRouter);
 app.use(restrictAccess);
 
-// Static Frontend
-app.use(express.static('public'));
+// Static Frontend (disable automatic / -> /index.html)
+app.use(express.static('public', { index: false }));
 
 const path = require('path');
 
@@ -170,7 +170,7 @@ server.listen(PORT, async () => {
 const { hangupCall } = require('./services/telephony/telnyxClient');
 
 async function gracefulShutdown(signal) {
-  console.log(`\n[Server] ${signal} signal received. Cleaning up active calls...`);
+  console.log(`\n🛑  [Server] ${signal} signal received. Cleaning up active calls...`);
   const promises = Array.from(callState.processedCalls).map(id => hangupCall(id).catch(() => {}));
   await Promise.race([Promise.allSettled(promises), new Promise(r => setTimeout(r, 2000))]);
   process.exit(0);

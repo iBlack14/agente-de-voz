@@ -72,7 +72,9 @@ router.post('/logout', (req, res) => {
 const restrictAccess = (req, res, next) => {
   const publicPaths = ['/login', '/api/login', '/webhook/telnyx', '/health', '/partials/'];
   const isPublic = publicPaths.some(p => req.path.startsWith(p));
-  const isStatic = req.path.match(/\.(css|js|png|jpg|jpeg|gif|svg|ico|html)$/i);
+  // Never treat HTML pages as public static assets.
+  // This prevents bypassing auth via /advanced.html, /simple.html, etc.
+  const isStatic = req.path.match(/\.(css|js|png|jpg|jpeg|gif|svg|ico)$/i);
   const isWS = req.headers.upgrade === 'websocket';
 
   if (isPublic || isStatic || isWS) return next();
@@ -81,7 +83,10 @@ const restrictAccess = (req, res, next) => {
   const token = cookies.auth_token;
   const expiresAt = authSessions.get(token);
 
-  console.log(`[Auth] ${req.method} ${req.path} - Token: ${token ? token.substring(0, 8) + '...' : 'NONE'}, Valid: ${token && expiresAt && expiresAt > Date.now()}`);
+  const isPeriodic = req.path.match(/\/(calls|scheduled|prompts|reminders|health)$/i);
+  if (!isPeriodic) {
+      console.log(`[Auth] ${req.method} ${req.path} - Token: ${token ? token.substring(0, 8) + '...' : 'NONE'} ${token && expiresAt && expiresAt > Date.now() ? '✅' : '❌'}`);
+  }
 
   if (token && expiresAt && expiresAt > Date.now()) return next();
 
