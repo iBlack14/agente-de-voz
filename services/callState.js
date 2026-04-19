@@ -1,10 +1,16 @@
 // Shared State for Active Calls with timestamp tracking
-const processedCalls = new Map(); // callId -> timestamp
-const inflightOutbound = new Map(); // callId -> timestamp
+const processedCalls = new Map();
+const inflightOutbound = new Map();
+const callIntervals = new Map();
 const STALE_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 
+// Clear everything on startup to avoid stale blocks
+inflightOutbound.clear();
+processedCalls.clear();
+callIntervals.clear();
+
 function addProcessedCall(callId) {
-  processedCalls.set(callId, Date.now());
+  processedCalls.add(callId);
 }
 
 function removeProcessedCall(callId) {
