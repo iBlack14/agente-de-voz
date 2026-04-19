@@ -143,6 +143,8 @@ router.post('/make-call', async (req, res) => {
 router.post('/batches', async (req, res) => {
   try {
     const { id, parent_batch_id, name, template_used, total_destinations } = req.body;
+    console.log(`📊 [API] Registrando Lote: ${name} (ID: ${id}) | Destinos: ${total_destinations}`);
+    
     await supabase.from('call_batches').upsert({
         id,
         parent_batch_id: parent_batch_id || null,
@@ -152,6 +154,7 @@ router.post('/batches', async (req, res) => {
     });
     res.json({ success: true });
   } catch (err) {
+    console.error(`❌ [API] Error al registrar lote:`, err.message);
     res.status(500).json({ error: err.message });
   }
 });

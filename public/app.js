@@ -1981,7 +1981,7 @@ const initDashboardApp = () => {
                } catch(e) { console.error('Error al iniciar recordatorio', e); }
             }
             
-            if(submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'LLAMAR'; }
+            if(submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'LLAMAR AHORA'; }
             const badge = item.querySelector('span.text-secondary');
             if (badge) {
                 badge.className = 'text-[8px] uppercase font-bold text-green-400 tracking-widest bg-green-500/10 px-2 py-1 rounded';
@@ -2013,7 +2013,7 @@ const initDashboardApp = () => {
                     })
                 });
             }
-            if(submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'LLAMAR'; }
+            if(submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'PROGRAMAR LLAMADA'; }
         })();
       }
     });
