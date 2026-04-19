@@ -9,6 +9,7 @@
     "db:migrate-json": "node scripts/migrate-json-to-postgres.js"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.103.3",
     "axios": "^1.7.0",
     "clsx": "^2.1.1",
     "dotenv": "^16.4.0",
