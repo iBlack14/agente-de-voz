@@ -46,6 +46,24 @@ module.exports = {
                 return { rows: data, rowCount: data.length };
             }
 
+            // SELECT scheduled_calls
+            if (textLower.includes('select') && textLower.includes('from scheduled_calls')) {
+                const { data, error } = await supabase.from('scheduled_calls').select('*').order('scheduled_for', { ascending: true });
+                if (error) throw error;
+                return { rows: data, rowCount: data.length };
+            }
+
+            // SELECT app_settings
+            if (textLower.includes('select') && textLower.includes('from app_settings')) {
+                const keyMatch = text.match(/key\s*=\s*['"]([^'"]+)['"]/i);
+                let query = supabase.from('app_settings').select('value');
+                if (keyMatch) query = query.eq('key', keyMatch[1]);
+                
+                const { data, error } = await query;
+                if (error) throw error;
+                return { rows: data, rowCount: data.length };
+            }
+
             // Handle UPDATE / DELETE / INSERT (Bypass or basic implementation)
             // For initialization cleanups, we can return rowCount 0 to avoid crashes
             if (textLower.startsWith('update') || textLower.startsWith('delete') || textLower.startsWith('insert')) {
@@ -57,7 +75,7 @@ module.exports = {
             return { rows: [], rowCount: 0 };
         } catch (e) {
             console.error('[Supabase Shim] Error in simulated query:', e.message);
-            throw e;
+            return { rows: [], rowCount: 0 };
         }
     },
 
