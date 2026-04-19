@@ -97,10 +97,22 @@ CREATE TABLE IF NOT EXISTS scheduled_calls (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- 8. VENCIMIENTOS Y DOMINIOS (UPDATES)
+CREATE TABLE IF NOT EXISTS updates (
+  id BIGSERIAL PRIMARY KEY,
+  domain VARCHAR(255) NOT NULL,
+  phone VARCHAR(50),
+  execution_date DATE NOT NULL,
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- ÍNDICES
 CREATE INDEX IF NOT EXISTS idx_calls_started_at ON calls (started_at DESC);
 CREATE INDEX IF NOT EXISTS idx_call_transcripts_call_id ON call_transcripts (call_id);
 CREATE INDEX IF NOT EXISTS idx_scheduled_calls_status ON scheduled_calls (status);
+CREATE INDEX IF NOT EXISTS idx_updates_execution_date ON updates (execution_date);
+CREATE INDEX IF NOT EXISTS idx_updates_domain ON updates (domain);
 
 -- ==========================================
 -- SEMILLAS (DATA DE LA EMPRESA)

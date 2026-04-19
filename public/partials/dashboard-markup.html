@@ -15,6 +15,10 @@
                 <span class="material-symbols-outlined text-xl">campaign</span>
                 <span class="text-[9px] font-bold uppercase tracking-wider">Campañas</span>
             </button>
+            <button class="nav-item w-full flex items-center gap-3 text-slate-400 hover:text-white transition-all" data-tab="updates">
+                <span class="material-symbols-outlined text-xl">domain_verification</span>
+                <span class="text-[9px] font-bold uppercase tracking-wider">Renovaciones</span>
+            </button>
             <button class="nav-item w-full flex items-center gap-3 text-slate-400 hover:text-white transition-all" data-tab="prompts">
                 <span class="material-symbols-outlined text-xl">psychology</span>
                 <span class="text-[9px] font-bold uppercase tracking-wider">Identidad</span>
@@ -103,7 +107,84 @@
                 </div>
             </div>
 
-            <!-- TAB: IDENTIDAD -->
+            <!-- TAB: VENCIMIENTOS -->
+            <div id="tab-updates" class="tab-content space-y-8">
+                <section class="glass-card">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+                        <div class="flex items-center gap-6">
+                            <div class="w-12 h-12 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-lg">
+                                <span class="material-symbols-outlined text-2xl font-bold">event_repeat</span>
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-bold text-white">Gestión de Renovaciones</h3>
+                                <p class="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Base de Datos de Clientes</p>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap gap-3">
+                            <button id="updates-add-btn" class="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold rounded-xl text-[10px] uppercase hover:bg-emerald-500/20 transition-all flex items-center gap-2">
+                                <span class="material-symbols-outlined text-sm">add</span>
+                                Nuevo Registro
+                            </button>
+                            <select id="updates-filter-month" class="bg-black/20 border border-white/5 rounded-xl py-2 px-4 text-xs text-white outline-none">
+                                <option value="">Todos los meses</option>
+                                <option value="1">Enero</option>
+                                <option value="2">Febrero</option>
+                                <option value="3">Marzo</option>
+                                <option value="4">Abril</option>
+                                <option value="5">Mayo</option>
+                                <option value="6">Junio</option>
+                                <option value="7">Julio</option>
+                                <option value="8">Agosto</option>
+                                <option value="9">Septiembre</option>
+                                <option value="10">Octubre</option>
+                                <option value="11">Noviembre</option>
+                                <option value="12">Diciembre</option>
+                            </select>
+                            <input type="text" id="updates-search" class="bg-black/20 border border-white/5 rounded-xl py-2 px-4 text-xs text-white outline-none w-48" placeholder="Buscar dominio...">
+                            <button id="updates-refresh-btn" class="p-2 bg-white/5 hover:bg-white/10 rounded-xl text-white transition-all">
+                                <span class="material-symbols-outlined text-sm">refresh</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="space-y-6">
+                        <!-- Batch Actions -->
+                        <div class="p-4 bg-primary/5 border border-primary/10 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-4">
+                            <div class="flex items-center gap-3">
+                                <span class="text-[10px] font-bold text-primary uppercase tracking-widest"><span id="updates-selected-count">0</span> seleccionados</span>
+                                <div class="h-4 w-px bg-white/10"></div>
+                                <select id="updates-batch-reminder" class="bg-black/20 border border-white/5 rounded-lg py-1 px-3 text-[10px] text-white outline-none min-w-[200px]">
+                                    <option value="">Seleccionar Recordatorio...</option>
+                                </select>
+                            </div>
+                            <div class="flex gap-2 w-full md:w-auto">
+                                <button id="updates-call-now-btn" class="flex-1 md:flex-none px-6 py-2 bg-primary text-white font-black rounded-xl text-[10px] uppercase shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed">LLAMAR AHORA</button>
+                                <button id="updates-schedule-btn" class="flex-1 md:flex-none px-6 py-2 bg-white/5 border border-white/5 text-white font-bold rounded-xl text-[10px] uppercase hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed">PROGRAMAR</button>
+                            </div>
+                        </div>
+
+                        <!-- Table -->
+                        <div class="overflow-x-auto no-scrollbar">
+                            <table class="w-full text-left">
+                                <thead class="bg-black/20 text-slate-500 uppercase text-[9px] tracking-widest font-bold border-b border-white/5">
+                                    <tr>
+                                        <th class="px-6 py-4 w-10"><input type="checkbox" id="updates-select-all" class="rounded border-white/10 bg-black/40"></th>
+                                        <th class="px-6 py-4">Dominio</th>
+                                        <th class="px-6 py-4">Teléfono</th>
+                                        <th class="px-6 py-4">Vencimiento</th>
+                                        <th class="px-6 py-4">Notas</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="updates-table-body" class="text-white text-xs divide-y divide-white/5">
+                                    <tr>
+                                        <td colspan="5" class="px-6 py-12 text-center text-slate-500 italic">Cargando datos...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+            </div>
             <div id="tab-prompts" class="tab-content space-y-8">
                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
                     <section class="lg:col-span-4 space-y-4">
@@ -187,34 +268,45 @@
             </div>
 
             <!-- TAB: HISTORIAL -->
-            <div id="tab-history" class="tab-content space-y-10">
-                <section class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div class="glass-card border-emerald-500/20">
-                         <div class="flex items-center justify-between mb-2">
-                            <span class="material-symbols-outlined text-emerald-500">call_made</span>
-                            <h4 id="history-answered-count" class="text-3xl font-bold text-white">0</h4>
-                         </div>
-                         <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Contestadas</p>
+            <div id="tab-history" class="tab-content space-y-8">
+                <!-- Estadísticas Rápidas -->
+                <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                    <div class="glass-card p-6 flex flex-col gap-1 border-emerald-500/10">
+                        <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Total Salientes</span>
+                        <span id="history-outbound-total" class="text-3xl font-headline font-bold text-white">0</span>
                     </div>
-                    <div class="glass-card border-rose-500/20">
-                         <div class="flex items-center justify-between mb-2">
-                            <span class="material-symbols-outlined text-rose-500">call_missed</span>
-                            <h4 id="history-unanswered-count" class="text-3xl font-bold text-white">0</h4>
-                         </div>
-                         <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Sin Respuesta</p>
+                    <div class="glass-card p-6 flex flex-col gap-1 border-blue-500/10">
+                        <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Contestadas</span>
+                        <span id="history-answered-count" class="text-3xl font-headline font-bold text-emerald-400">0</span>
                     </div>
-                    <div class="glass-card border-primary/20">
-                         <div class="flex items-center justify-between mb-2">
-                            <span class="material-symbols-outlined text-primary">query_stats</span>
-                            <h4 id="history-answer-rate" class="text-3xl font-bold text-white">0%</h4>
-                         </div>
-                         <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Efectividad</p>
+                    <div class="glass-card p-6 flex flex-col gap-1 border-rose-500/10">
+                        <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">No Contestadas</span>
+                        <span id="history-unanswered-count" class="text-3xl font-headline font-bold text-rose-500">0</span>
                     </div>
-                </section>
-                <section class="glass-card">
-                    <h3 class="text-[10px] font-bold text-primary mb-6 uppercase tracking-widest">Resumen por Lotes</h3>
-                    <div id="history-batch-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-h-[500px] overflow-y-auto no-scrollbar"></div>
-                </section>
+                    <div class="glass-card p-6 flex flex-col gap-1 border-white/5">
+                        <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Efectividad</span>
+                        <span id="history-answer-rate" class="text-3xl font-headline font-bold text-indigo-400">0%</span>
+                    </div>
+                    <div class="glass-card p-6 flex flex-col gap-1 border-white/5">
+                        <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Promedio Conversación</span>
+                        <span id="history-avg-duration" class="text-3xl font-headline font-bold text-white opacity-40">—</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    <!-- Column: Campaigns/Groups -->
+                    <div class="lg:col-span-12 space-y-6">
+                        <div class="flex items-center justify-between mb-2">
+                             <h4 class="text-[10px] font-black text-white uppercase tracking-[0.2em] flex items-center gap-2">
+                                <span class="material-symbols-outlined text-sm">campaign</span>
+                                Lotes Recientes
+                             </h4>
+                        </div>
+                        <div id="history-batch-container" class="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6 items-stretch">
+                            <!-- Batches will be rendered here as beautiful summary cards -->
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- TAB: CONTROL -->
@@ -229,16 +321,69 @@
                     <div class="lg:col-span-8 glass-card p-0 overflow-hidden">
                         <div class="px-6 py-4 bg-white/5 border-b border-white/5 flex justify-between items-center">
                             <h4 class="text-xs font-bold text-white">Iteraciones</h4>
-                            <button id="rb-retry-selected-btn" class="px-3 py-1.5 bg-primary text-white text-[9px] font-bold rounded-lg uppercase transition-all">Reintentar Grupo</button>
+                            <button id="rb-retry-selected-btn" class="px-3 py-1.5 bg-primary text-white text-[9px] font-bold rounded-lg uppercase transition-all">Volver a Llamar</button>
                         </div>
                         <table class="w-full text-left text-[11px]">
-                            <thead class="bg-black/20 text-slate-500 uppercase"><tr class="px-6 py-2"><th>Iter</th><th>Contestó</th><th>Tasa</th><th>Hora</th></tr></thead>
+                            <thead class="bg-black/20 text-slate-500 uppercase text-[10px] tracking-widest">
+                                <tr class="px-6 py-2">
+                                    <th class="px-6 py-4">Iteración</th>
+                                    <th class="px-6 py-4">Total</th>
+                                    <th class="px-6 py-4">Contestó</th>
+                                    <th class="px-6 py-4">No Contestó</th>
+                                    <th class="px-6 py-4">Tasa</th>
+                                    <th class="px-6 py-4">Hora</th>
+                                </tr>
+                            </thead>
                             <tbody id="rb-table-body"></tbody>
                         </table>
                     </div>
-                    <div class="lg:col-span-4 glass-card">
-                        <h4 class="text-xs font-bold text-white mb-4">Dominios</h4>
-                        <div id="rb-domain-list" class="space-y-1"></div>
+                    <div class="lg:col-span-4 glass-card space-y-5">
+                        <div class="rounded-2xl border border-white/5 bg-white/[0.02] px-5 py-4 flex items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <h4 class="text-xs font-bold text-white">Detalle de Iteración</h4>
+                                <p id="rb-selected-iter-title" class="text-[10px] text-slate-500 mt-1">Selecciona una iteración</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-[8px] uppercase tracking-widest text-slate-500 font-bold">Pendientes</p>
+                                <p id="rb-retry-selected-count" class="text-lg font-black text-rose-400">0</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="rounded-xl border border-emerald-500/15 bg-emerald-500/5 px-4 py-3">
+                                <p class="text-[9px] uppercase tracking-widest text-emerald-400 font-bold">Contestaron</p>
+                                <p id="rb-answered-count" class="text-2xl font-black text-white mt-2">0</p>
+                            </div>
+                            <div class="rounded-xl border border-rose-500/15 bg-rose-500/5 px-4 py-3">
+                                <p class="text-[9px] uppercase tracking-widest text-rose-400 font-bold">No Contestaron</p>
+                                <p id="rb-unanswered-count" class="text-2xl font-black text-white mt-2">0</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                            <div class="min-h-[320px] rounded-2xl border border-emerald-500/10 bg-black/15 p-4">
+                                <div class="flex items-center justify-between gap-3 mb-4">
+                                    <h5 class="text-[10px] font-bold uppercase tracking-widest text-emerald-400">Contestaron</h5>
+                                    <span id="rb-answered-badge" class="text-[10px] font-black text-emerald-300">0</span>
+                                </div>
+                                <div id="rb-answered-list" class="space-y-2 max-h-[520px] overflow-y-auto no-scrollbar"></div>
+                            </div>
+                            <div class="min-h-[320px] rounded-2xl border border-rose-500/10 bg-black/15 p-4">
+                                <div class="flex items-center justify-between gap-3 mb-4">
+                                    <h5 class="text-[10px] font-bold uppercase tracking-widest text-rose-400">No Contestaron</h5>
+                                    <span id="rb-unanswered-badge" class="text-[10px] font-black text-rose-300">0</span>
+                                </div>
+                                <div id="rb-unanswered-list" class="space-y-2 max-h-[520px] overflow-y-auto no-scrollbar"></div>
+                            </div>
+                        </div>
+                        <div class="rounded-2xl border border-primary/15 bg-primary/5 p-4 space-y-3">
+                            <div class="flex items-center justify-between gap-3">
+                                <div>
+                                    <p class="text-[10px] font-bold uppercase tracking-widest text-primary">Acción</p>
+                                    <p class="text-[10px] text-slate-500 mt-1">Relanzar solo a quienes no contestaron en esta iteración.</p>
+                                </div>
+                                <span class="text-sm font-black text-rose-300" id="rb-retry-selected-pill">0</span>
+                            </div>
+                            <button id="rb-retry-selected-detail-btn" class="w-full py-3 bg-primary text-white font-black rounded-xl text-[10px] uppercase tracking-widest shadow-lg shadow-primary/20 transition-all">Volver a Llamar a los No Contestaron</button>
+                        </div>
                     </div>
                  </div>
             </div>
@@ -327,6 +472,45 @@
                 <div class="flex gap-4 pt-2">
                     <button type="button" id="identity-modal-cancel" class="flex-1 py-4 rounded-xl bg-zinc-800 text-zinc-300 font-bold text-[10px] uppercase">Cancelar</button>
                     <button type="submit" class="flex-1 py-4 bg-primary text-[#050505] font-black rounded-xl text-[10px] uppercase shadow-lg shadow-primary/20">Inicializar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- New Update Modal -->
+    <div id="new-update-modal" class="modal-overlay fixed inset-0 z-[105] hidden items-center justify-center p-6 bg-black/80 backdrop-blur-lg">
+        <div class="glass-card max-w-xl w-full rounded-3xl p-8 space-y-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h3 class="text-xl font-bold tracking-tight text-white">Nuevo Registro</h3>
+                    <p class="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mt-1">Gestión de Renovaciones</p>
+                </div>
+                <button id="update-modal-close" class="text-zinc-500 hover:text-white transition-colors">
+                    <span class="material-symbols-outlined text-sm">close</span>
+                </button>
+            </div>
+            <form id="new-update-form" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="space-y-2 md:col-span-2">
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-zinc-500 px-1">Dominio</label>
+                        <input id="new-update-domain" class="w-full bg-black/40 border border-white/5 rounded-xl py-4 px-6 text-sm outline-none text-white" placeholder="ejemplo.com" required>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-zinc-500 px-1">Teléfono</label>
+                        <input id="new-update-phone" class="w-full bg-black/40 border border-white/5 rounded-xl py-4 px-6 text-sm outline-none text-white" placeholder="999999999 o +51999999999">
+                    </div>
+                    <div class="space-y-2">
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-zinc-500 px-1">Vencimiento</label>
+                        <input id="new-update-date" type="date" class="w-full bg-black/40 border border-white/5 rounded-xl py-4 px-6 text-sm outline-none text-white" required>
+                    </div>
+                </div>
+                <div class="space-y-2">
+                    <label class="block text-[10px] font-bold uppercase tracking-widest text-zinc-500 px-1">Notas</label>
+                    <textarea id="new-update-notes" class="w-full min-h-[130px] bg-black/40 border border-white/5 rounded-xl py-4 px-6 text-sm outline-none text-white resize-none" placeholder="Notas internas o detalles del cliente"></textarea>
+                </div>
+                <div class="flex gap-4 pt-2">
+                    <button type="button" id="update-modal-cancel" class="flex-1 py-4 rounded-xl bg-zinc-800 text-zinc-300 font-bold text-[10px] uppercase">Cancelar</button>
+                    <button type="submit" class="flex-1 py-4 bg-primary text-white font-black rounded-xl text-[10px] uppercase shadow-lg shadow-primary/20">Guardar Registro</button>
                 </div>
             </form>
         </div>

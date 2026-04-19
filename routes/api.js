@@ -11,6 +11,9 @@ const { makeOutboundCall } = require('../services/telephony/telnyxClient');
 const { setCallContext } = require('../services/telephony/context.service');
 const { isValidE164 } = require('../services/utils');
 
+// New: Updates Service
+const updatesService = require('../services/db/updates.service');
+
 const callRateLimits = new Map();
 const WINDOW = 60_000;
 const MAX = 50;
@@ -264,6 +267,47 @@ router.delete('/scheduled/:id', async (req, res) => {
     if (error) throw error;
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// --- UPDATES & RENEWALS ---
+router.get('/updates', async (req, res) => {
+  try {
+    const { month, year, search } = req.query;
+    const data = await updatesService.getUpdates({ 
+      month: month ? parseInt(month) : null, 
+      year: year ? parseInt(year) : null, 
+      search 
+    });
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/updates', async (req, res) => {
+  try {
+    const { domain, phone, execution_date, notes } = req.body;
+    if (!domain || !execution_date) {
+      return res.status(400).json({ error: 'Dominio y fecha son obligatorios' });
+    }
+    const data = await updatesService.createUpdate({ domain, phone, execution_date, notes });
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/updates/schedule-batch', async (req, res) => {
+  try {
+    const { updateIds, promptId, scheduledFor } = req.body;
+    if (!updateIds || !promptId) {
+      return res.status(400).json({ error: 'updateIds y promptId son requeridos' });
+    }
+    const result = await updatesService.scheduleBatch({ updateIds, promptId, scheduledFor });
+    res.json({ success: true, ...result });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;

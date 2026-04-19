@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "db:migrate-json": "node scripts/migrate-json-to-postgres.js"
+    "db:migrate-json": "node scripts/migrate-json-to-postgres.js",
+    "seed:demo-retries": "node scripts/seed-demo-retry-batch.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.103.3",
