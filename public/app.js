@@ -213,6 +213,7 @@ const initDashboardApp = () => {
   // ─── Campaign Logic ───────────────────────────────
   const form = document.getElementById('campaign-form');
   const numberInput = document.getElementById('phone-numbers');
+  const domainInput = document.getElementById('domain-names');
   const clearBtn = document.getElementById('clear-btn');
   const startBtn = document.getElementById('start-btn');
   const callList = document.getElementById('call-list');
@@ -240,23 +241,25 @@ const initDashboardApp = () => {
 
   clearBtn.addEventListener('click', () => {
     numberInput.value = '';
+    if (domainInput) domainInput.value = '';
     callList.innerHTML = '';
     emptyState.style.display = 'flex';
   });
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const rawValue = numberInput.value;
-    const lines = rawValue.split('\n').filter(l => l.trim().length > 0);
-    const entries = [];
+    const rawNumbers = numberInput.value;
+    const rawDomains = domainInput ? domainInput.value : '';
     
-    lines.forEach(line => {
-      const parts = line.split(/[,\s\t;|]+/).map(p => p.trim()).filter(p => p.length > 0);
-      const num = (parts[0] || '').replace(/[^0-9+]/g, '');
+    const linesNumbers = rawNumbers.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    const linesDomains = rawDomains.split('\n').map(l => l.trim());
+    
+    const entries = [];
+    linesNumbers.forEach((line, index) => {
+      const num = line.replace(/[^0-9+]/g, '');
       if (num.length >= 8) {
-        // Capturar todo lo que sigue al número como contexto/dominio completo
-        const extraData = line.substring(line.indexOf(parts[0]) + parts[0].length).replace(/^[,\s\t;|]+/, '').trim();
-        entries.push({ number: num, domain: extraData || '' });
+        const dom = (linesDomains[index] || '').trim();
+        entries.push({ number: num, domain: dom });
       }
     });
 

@@ -81,7 +81,10 @@
                                         <input type="file" id="import-file-campaigns" accept=".xlsx, .xls, .docx, .doc" class="hidden">
                                     </label>
                                 </div>
-                                <textarea id="phone-numbers" class="w-full bg-black/20 border border-white/5 rounded-xl py-4 px-4 text-sm focus:border-primary outline-none text-white min-h-[120px]" placeholder="+51..."></textarea>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <textarea id="phone-numbers" class="w-full bg-black/20 border border-white/5 rounded-xl py-4 px-4 text-sm focus:border-primary outline-none text-white min-h-[120px]" placeholder="Números (+51...)"></textarea>
+                                    <textarea id="domain-names" class="w-full bg-black/20 border border-white/5 rounded-xl py-4 px-4 text-sm focus:border-primary outline-none text-white min-h-[120px]" placeholder="Dominios / Notas"></textarea>
+                                </div>
                             </div>
                             <div class="flex gap-3">
                                 <button type="button" id="clear-btn" class="px-6 py-3 bg-white/5 text-slate-400 font-bold rounded-xl hover:bg-white/10 transition-all uppercase tracking-widest text-[9px]">Limpiar</button>
