@@ -116,9 +116,10 @@ app.get('/api/active-calls', (req, res) => {
   res.json(calls);
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 0;
 
 server.listen(PORT, async () => {
+  const actualPort = server.address().port;
   try {
     await initSchema();
     await testConnection();
@@ -142,8 +143,8 @@ server.listen(PORT, async () => {
       }
     }, 300000); // Every 5 minutes
 
-    console.log(`\n🎙️  ViaAI Voice Matrix active on port ${PORT}`);
-    console.log(`❤️  Health Check: http://localhost:${PORT}/health\n`);
+    console.log(`\n🎙️  ViaAI Voice Matrix active on port ${actualPort}`);
+    console.log(`❤️  Health Check: http://localhost:${actualPort}/health\n`);
   } catch (err) {
     console.error('[Startup] Critical Error:', err.message);
   }
