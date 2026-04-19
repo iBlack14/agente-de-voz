@@ -2775,7 +2775,7 @@ const initDashboardApp = () => {
           ${group.items.map(u => `
             <article class="update-row update-domain-item-list" data-month-key="${escapeHtml(group.key)}" onclick="const cb = this.querySelector('.update-checkbox'); cb.checked = !cb.checked; cb.dispatchEvent(new Event('change', { bubbles: true }));">
               <div class="update-list-check" onclick="event.stopPropagation()">
-                <input type="checkbox" class="update-checkbox appearance-none rounded-full border border-white/15 bg-black/40 h-4 w-4 cursor-pointer transition-all focus:outline-none" data-id="${u.id}">
+                <input type="checkbox" class="update-checkbox h-4 w-4 rounded-full border border-white/15 bg-black/40 cursor-pointer transition-all outline-none" data-id="${u.id}">
               </div>
               <div class="update-list-content">
                 <div class="update-list-main">
@@ -2862,19 +2862,7 @@ const initDashboardApp = () => {
     if (row) {
       row.classList.toggle('is-selected', cb.checked);
     }
-    
-    if (cb.checked) {
-      cb.style.borderColor = '#cf00da';
-      cb.style.boxShadow = '0 0 0 4px rgba(207,0,218,0.2), 0 0 15px rgba(207,0,218,0.4)';
-      cb.style.background = 'radial-gradient(circle, #fff 35%, #cf00da 38%)';
-      cb.style.transform = 'scale(1.15)';
-    } else {
-      cb.style.borderColor = 'rgba(255,255,255,0.15)';
-      cb.style.boxShadow = 'none';
-      cb.style.background = 'rgba(0, 0, 0, 0.4)';
-      cb.style.transform = 'scale(1)';
-    }
-    cb.style.transition = 'all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+    cb.classList.toggle('is-checked', cb.checked);
   }
 
   function updateSelectedCount() {
@@ -2901,19 +2889,19 @@ const initDashboardApp = () => {
       if (monthSelectAll) {
         monthSelectAll.checked = monthCheckboxes.length > 0 && monthSelected === monthCheckboxes.length;
         monthSelectAll.indeterminate = monthSelected > 0 && monthSelected < monthCheckboxes.length;
-        
-        // Premium styling for the header checkbox
-        if (monthSelectAll.checked) {
-          monthSelectAll.style.background = 'radial-gradient(circle, #fff 35%, #cf00da 38%)';
-          monthSelectAll.style.borderColor = '#cf00da';
-        } else {
-          monthSelectAll.style.background = 'rgba(0, 0, 0, 0.4)';
-          monthSelectAll.style.borderColor = 'rgba(255, 255, 255, 0.15)';
-        }
+        paintUpdateCheckboxState(monthSelectAll);
       }
       if (monthCallBtn) monthCallBtn.disabled = monthSelected === 0;
       if (monthScheduleBtn) monthScheduleBtn.disabled = monthSelected === 0;
     });
+
+    if (updatesSelectAll) {
+      const allCheckboxes = document.querySelectorAll('.update-checkbox');
+      const totalSelected = Array.from(allCheckboxes).filter(cb => cb.checked).length;
+      updatesSelectAll.checked = allCheckboxes.length > 0 && totalSelected === allCheckboxes.length;
+      updatesSelectAll.indeterminate = totalSelected > 0 && totalSelected < allCheckboxes.length;
+      paintUpdateCheckboxState(updatesSelectAll);
+    }
   }
 
   async function triggerUpdatesBatchAction({ selectedIds, promptId, mode, triggerButton }) {
@@ -3000,7 +2988,7 @@ const initDashboardApp = () => {
   });
   
   updatesSelectAll?.addEventListener('change', () => {
-    document.querySelectorAll('.update-checkbox').forEach(cb => {
+    document.querySelectorAll('.update-checkbox, .updates-month-select-all').forEach(cb => {
       cb.checked = updatesSelectAll.checked;
       paintUpdateCheckboxState(cb);
     });
