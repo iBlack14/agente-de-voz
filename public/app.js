@@ -154,10 +154,7 @@ const initDashboardApp = () => {
     
     // Trigger data loading
     if (tabId === 'history') loadCallHistory();
-    if (tabId === 'updates') {
-      syncUpdatesMonthFilter(new Date().getMonth() + 1);
-      loadUpdates();
-    }
+    if (tabId === 'updates') loadUpdates();
     if (tabId === 'retrybook') loadCallHistory();
     if (tabId === 'stats') updateConsumptionOverview();
     if (tabId === 'monitor') typeof loadActiveCalls === 'function' && loadActiveCalls();
@@ -648,7 +645,7 @@ const initDashboardApp = () => {
   const historyBatchContainer = document.getElementById('history-batch-container');
 
   function initPremiumSelects() {
-    const selects = document.querySelectorAll('select.form-control, #reminder-message-template, #prompt-select, #updates-filter-month, #updates-batch-reminder, #retry-interval-select, #reminder-retry');
+    const selects = document.querySelectorAll('select.form-control, .updates-month-reminder, #reminder-message-template, #prompt-select, #updates-batch-reminder, #retry-interval-select, #reminder-retry');
     
     selects.forEach(select => {
       if (!select) return;
@@ -2639,6 +2636,7 @@ const initDashboardApp = () => {
   const updatesBatchReminder = document.getElementById('updates-batch-reminder');
   const updatesCallNowBtn = document.getElementById('updates-call-now-btn');
   const updatesScheduleBtn = document.getElementById('updates-schedule-btn');
+  const updatesMonthChips = Array.from(document.querySelectorAll('.updates-month-chip'));
 
   let currentUpdates = [];
 
@@ -2665,10 +2663,21 @@ const initDashboardApp = () => {
   }
 
   function syncUpdatesMonthFilter(monthValue, { force = false, triggerLoad = false } = {}) {
-    if (!updatesFilterMonth || !monthValue) return;
-    if (!force && updatesFilterMonth.value) return;
-    updatesFilterMonth.value = String(monthValue);
+    if (!updatesFilterMonth) return;
+    if (!force && updatesFilterMonth.value === String(monthValue ?? '')) return;
+    updatesFilterMonth.value = String(monthValue ?? '');
+    syncUpdatesMonthGrid();
     if (triggerLoad) window.loadUpdates();
+  }
+
+  function syncUpdatesMonthGrid() {
+    if (!updatesMonthChips.length || !updatesFilterMonth) return;
+    const currentValue = String(updatesFilterMonth.value || '');
+  updatesMonthChips.forEach(chip => {
+    const isActive = chip.dataset.month === currentValue;
+      chip.classList.toggle('active', isActive);
+      chip.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
   }
 
   window.loadUpdates = async function() {
@@ -2698,45 +2707,174 @@ const initDashboardApp = () => {
       `).join('');
   }
 
+  function getUpdatesReminderOptionsHtml() {
+    return '<option value="">Seleccionar Recordatorio...</option>' + 
+      currentReminderPrompts.map(p => `
+        <option value="${p.id}">${escapeHtml(p.name)}</option>
+      `).join('');
+  }
+
   function renderUpdatesTable(data) {
     if (!updatesTableBody) return;
     if (!data.length) {
-      updatesTableBody.innerHTML = '<tr><td colspan="5" class="px-6 py-12 text-center text-slate-500 italic">No se encontraron registros.</td></tr>';
+      updatesTableBody.innerHTML = '<div class="updates-empty-state">No se encontraron registros.</div>';
       return;
     }
-    
-    updatesTableBody.innerHTML = data.map(u => `
-      <tr class="update-row hover:bg-white/5 transition-colors cursor-pointer group" onclick="const cb = this.querySelector('.update-checkbox'); cb.checked = !cb.checked; cb.dispatchEvent(new Event('change', { bubbles: true }));">
-        <td class="px-6 py-4" onclick="event.stopPropagation()">
-            <div class="flex items-center">
+
+    const grouped = data.reduce((acc, item) => {
+      const date = new Date(item.execution_date);
+      const key = `${date.getFullYear()}-${date.getMonth()}`;
+      if (!acc[key]) {
+        acc[key] = {
+          key,
+          monthName: date.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }),
+          monthIndex: date.getMonth(),
+          year: date.getFullYear(),
+          items: []
+        };
+      }
+      acc[key].items.push(item);
+      return acc;
+    }, {});
+
+    const groups = Object.values(grouped).sort((a, b) => {
+      if (a.year !== b.year) return a.year - b.year;
+      return a.monthIndex - b.monthIndex;
+    });
+
+    updatesTableBody.innerHTML = groups.map(group => `
+      <section class="updates-month-card">
+        <div class="updates-month-card-head">
+          <div class="updates-month-card-icon">
+            <span class="material-symbols-outlined text-xl">calendar_month</span>
+          </div>
+          <div class="flex-1">
+            <h3 class="updates-month-card-title">${escapeHtml(group.monthName)}</h3>
+            <p class="updates-month-card-subtitle">${group.items.length} dominios</p>
+          </div>
+          <button class="add-to-month-btn w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center hover:bg-primary hover:text-white transition-all" data-month="${group.monthIndex + 1}" data-year="${group.year}" title="Agregar a este mes">
+            <span class="material-symbols-outlined text-lg">add</span>
+          </button>
+        </div>
+        <div class="updates-month-toolbar" data-month-key="${escapeHtml(group.key)}">
+          <div class="updates-month-toolbar-left">
+            <label class="updates-month-toolbar-select">
+              <input type="checkbox" class="updates-month-select-all rounded border-white/10 bg-black/40" data-month-key="${escapeHtml(group.key)}">
+              <span><span class="updates-month-selected-count">0</span> seleccionados</span>
+            </label>
+            <select class="updates-month-reminder bg-black/20 border border-white/5 rounded-lg py-1 px-3 text-[10px] text-white outline-none min-w-[200px]">
+              ${getUpdatesReminderOptionsHtml()}
+            </select>
+          </div>
+          <div class="updates-month-toolbar-right">
+            <button type="button" class="updates-month-call-btn px-5 py-2 bg-primary text-white font-black rounded-xl text-[10px] uppercase shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed" disabled>Llamar Ahora</button>
+            <button type="button" class="updates-month-schedule-btn px-5 py-2 bg-white/5 border border-white/5 text-white font-bold rounded-xl text-[10px] uppercase hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed" disabled>Programar</button>
+          </div>
+        </div>
+        <div class="updates-domain-list">
+          ${group.items.map(u => `
+            <article class="update-row update-domain-item-list" data-month-key="${escapeHtml(group.key)}" onclick="const cb = this.querySelector('.update-checkbox'); cb.checked = !cb.checked; cb.dispatchEvent(new Event('change', { bubbles: true }));">
+              <div class="update-list-check" onclick="event.stopPropagation()">
                 <input type="checkbox" class="update-checkbox appearance-none rounded-full border border-white/15 bg-black/40 h-4 w-4 cursor-pointer transition-all focus:outline-none" data-id="${u.id}">
-            </div>
-        </td>
-        <td class="px-6 py-4 font-bold text-white group-hover:text-primary transition-colors">${escapeHtml(u.domain)}</td>
-        <td class="px-6 py-4 text-emerald-400 font-mono text-[11px]">${escapeHtml(u.phone || '—')}</td>
-        <td class="px-6 py-4 text-slate-400 text-[10px]">${new Date(u.execution_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
-        <td class="px-6 py-4 text-slate-500 text-[9px] max-w-xs truncate" title="${escapeHtml(u.notes || '')}">${escapeHtml(u.notes || '')}</td>
-      </tr>
+              </div>
+              <div class="update-list-content">
+                <div class="update-list-main">
+                  <h4 class="update-list-title">${escapeHtml(u.domain)}</h4>
+                  <p class="update-list-phone">${escapeHtml(u.phone || '—')}</p>
+                </div>
+                <div class="update-list-meta">
+                  <span class="update-list-date">${new Date(u.execution_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}</span>
+                  <span class="material-symbols-outlined text-xs text-zinc-600">event</span>
+                </div>
+              </div>
+            </article>
+          `).join('')}
+        </div>
+      </section>
     `).join('');
+    
+    // Add click event for "Add to month" buttons
+    document.querySelectorAll('.add-to-month-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const month = btn.dataset.month;
+        const year = btn.dataset.year;
+        
+        // Open the "New Update" modal and pre-fill the date
+        if (updatesAddBtn) {
+          updatesAddBtn.click();
+          const dateInput = document.getElementById('new-update-date');
+          if (dateInput) {
+            const today = new Date();
+            const day = Math.min(today.getDate(), new Date(year, month, 0).getDate());
+            dateInput.value = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          }
+        }
+      });
+    });
     
     // Add event listeners to checkboxes
     document.querySelectorAll('.update-checkbox').forEach(cb => {
       cb.addEventListener('change', () => {
-        const row = cb.closest('.update-row');
-        if (row) {
-          row.classList.toggle('bg-primary/10', cb.checked);
-          row.classList.toggle('shadow-[inset_0_0_0_1px_rgba(207,0,218,0.18)]', cb.checked);
-        }
-        cb.style.borderColor = cb.checked ? '#cf00da' : 'rgba(255,255,255,0.15)';
-        cb.style.boxShadow = cb.checked
-          ? '0 0 0 4px rgba(207,0,218,0.18)'
-          : 'none';
-        cb.style.background = cb.checked
-          ? '#cf00da'
-          : 'rgba(0, 0, 0, 0.4)';
+        paintUpdateCheckboxState(cb);
         updateSelectedCount();
       });
     });
+
+    document.querySelectorAll('.updates-month-select-all').forEach(toggle => {
+      toggle.addEventListener('change', () => {
+        const monthKey = toggle.dataset.monthKey;
+        document.querySelectorAll(`.update-row[data-month-key="${monthKey}"] .update-checkbox`).forEach(cb => {
+          cb.checked = toggle.checked;
+          paintUpdateCheckboxState(cb);
+        });
+        updateSelectedCount();
+      });
+    });
+
+    document.querySelectorAll('.updates-month-call-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const toolbar = btn.closest('.updates-month-toolbar');
+        const monthKey = toolbar?.dataset.monthKey;
+        const promptId = toolbar?.querySelector('.updates-month-reminder')?.value || '';
+        const selectedIds = Array.from(document.querySelectorAll(`.update-row[data-month-key="${monthKey}"] .update-checkbox:checked`)).map(cb => cb.dataset.id);
+        await triggerUpdatesBatchAction({ selectedIds, promptId, mode: 'call', triggerButton: btn });
+      });
+    });
+
+    document.querySelectorAll('.updates-month-schedule-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const toolbar = btn.closest('.updates-month-toolbar');
+        const monthKey = toolbar?.dataset.monthKey;
+        const promptId = toolbar?.querySelector('.updates-month-reminder')?.value || '';
+        const selectedIds = Array.from(document.querySelectorAll(`.update-row[data-month-key="${monthKey}"] .update-checkbox:checked`)).map(cb => cb.dataset.id);
+        await triggerUpdatesBatchAction({ selectedIds, promptId, mode: 'schedule', triggerButton: btn });
+      });
+    });
+
+    // Initialize premium selects for the new dynamically created elements
+    setTimeout(initPremiumSelects, 50);
+  }
+
+  function paintUpdateCheckboxState(cb) {
+    if (!cb) return;
+    const row = cb.closest('.update-row');
+    if (row) {
+      row.classList.toggle('is-selected', cb.checked);
+    }
+    
+    if (cb.checked) {
+      cb.style.borderColor = '#cf00da';
+      cb.style.boxShadow = '0 0 0 4px rgba(207,0,218,0.2), 0 0 15px rgba(207,0,218,0.4)';
+      cb.style.background = 'radial-gradient(circle, #fff 35%, #cf00da 38%)';
+      cb.style.transform = 'scale(1.15)';
+    } else {
+      cb.style.borderColor = 'rgba(255,255,255,0.15)';
+      cb.style.boxShadow = 'none';
+      cb.style.background = 'rgba(0, 0, 0, 0.4)';
+      cb.style.transform = 'scale(1)';
+    }
+    cb.style.transition = 'all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
   }
 
   function updateSelectedCount() {
@@ -2750,11 +2888,110 @@ const initDashboardApp = () => {
       updatesSelectAll.checked = checkboxes.length > 0 && selected === checkboxes.length;
       updatesSelectAll.indeterminate = selected > 0 && selected < checkboxes.length;
     }
+
+    document.querySelectorAll('.updates-month-toolbar').forEach(toolbar => {
+      const monthKey = toolbar.dataset.monthKey;
+      const monthCheckboxes = Array.from(document.querySelectorAll(`.update-row[data-month-key="${monthKey}"] .update-checkbox`));
+      const monthSelected = monthCheckboxes.filter(cb => cb.checked).length;
+      const countEl = toolbar.querySelector('.updates-month-selected-count');
+      const monthSelectAll = toolbar.querySelector('.updates-month-select-all');
+      const monthCallBtn = toolbar.querySelector('.updates-month-call-btn');
+      const monthScheduleBtn = toolbar.querySelector('.updates-month-schedule-btn');
+      if (countEl) countEl.textContent = monthSelected;
+      if (monthSelectAll) {
+        monthSelectAll.checked = monthCheckboxes.length > 0 && monthSelected === monthCheckboxes.length;
+        monthSelectAll.indeterminate = monthSelected > 0 && monthSelected < monthCheckboxes.length;
+        
+        // Premium styling for the header checkbox
+        if (monthSelectAll.checked) {
+          monthSelectAll.style.background = 'radial-gradient(circle, #fff 35%, #cf00da 38%)';
+          monthSelectAll.style.borderColor = '#cf00da';
+        } else {
+          monthSelectAll.style.background = 'rgba(0, 0, 0, 0.4)';
+          monthSelectAll.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+        }
+      }
+      if (monthCallBtn) monthCallBtn.disabled = monthSelected === 0;
+      if (monthScheduleBtn) monthScheduleBtn.disabled = monthSelected === 0;
+    });
+  }
+
+  async function triggerUpdatesBatchAction({ selectedIds, promptId, mode, triggerButton }) {
+    if (!selectedIds?.length) return appAlert('Selecciona al menos un dominio.', true);
+    if (!promptId) return appAlert('Por favor selecciona un recordatorio.', true);
+
+    if (mode === 'call') {
+      try {
+        if (triggerButton) {
+          triggerButton.disabled = true;
+          triggerButton.textContent = 'PROCESANDO...';
+        }
+        const resp = await fetch('/api/updates/schedule-batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ updateIds: selectedIds, promptId })
+        });
+        const result = await resp.json();
+        if (result.success) {
+          appAlert(`Éxito: ${result.scheduled} llamadas han sido encoladas.`);
+          switchTab('campaigns');
+        } else {
+          appAlert(`Error: ${result.error}`, true);
+        }
+      } catch (e) {
+        appAlert('Error de conexión', true);
+      } finally {
+        if (triggerButton) {
+          triggerButton.disabled = false;
+          triggerButton.textContent = triggerButton.classList.contains('updates-month-call-btn') ? 'Llamar Ahora' : 'LLAMAR AHORA';
+        }
+      }
+      return;
+    }
+
+    const time = await appPrompt('Ingresa la fecha y hora para programar (YYYY-MM-DD HH:MM):', new Date().toISOString().slice(0, 16).replace('T', ' '));
+    if (!time) return;
+
+    try {
+      if (triggerButton) {
+        triggerButton.disabled = true;
+        triggerButton.textContent = 'PROGRAMANDO...';
+      }
+      const resp = await fetch('/api/updates/schedule-batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ updateIds: selectedIds, promptId, scheduledFor: new Date(time).toISOString() })
+      });
+      const result = await resp.json();
+      if (result.success) {
+        appAlert(`Éxito: ${result.scheduled} llamadas programadas para ${time}.`);
+      } else {
+        appAlert(`Error: ${result.error}`, true);
+      }
+    } catch (e) {
+      appAlert('Error de conexión', true);
+    } finally {
+      if (triggerButton) {
+        triggerButton.disabled = false;
+        triggerButton.textContent = triggerButton.classList.contains('updates-month-schedule-btn') ? 'Programar' : 'PROGRAMAR';
+      }
+    }
   }
 
   updatesRefreshBtn?.addEventListener('click', window.loadUpdates);
-  updatesFilterMonth?.addEventListener('change', window.loadUpdates);
-  syncUpdatesMonthFilter(new Date().getMonth() + 1);
+  updatesFilterMonth?.addEventListener('change', () => {
+    syncUpdatesMonthGrid();
+    window.loadUpdates();
+  });
+  updatesMonthChips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      if (!updatesFilterMonth) return;
+      updatesFilterMonth.value = chip.dataset.month || '';
+      syncUpdatesMonthGrid();
+      window.loadUpdates();
+    });
+  });
+  syncUpdatesMonthFilter('');
   
   let searchTimeout;
   updatesSearch?.addEventListener('input', () => {
@@ -2765,6 +3002,7 @@ const initDashboardApp = () => {
   updatesSelectAll?.addEventListener('change', () => {
     document.querySelectorAll('.update-checkbox').forEach(cb => {
       cb.checked = updatesSelectAll.checked;
+      paintUpdateCheckboxState(cb);
     });
     updateSelectedCount();
   });
@@ -2772,62 +3010,13 @@ const initDashboardApp = () => {
   updatesCallNowBtn?.addEventListener('click', async () => {
     const selectedIds = Array.from(document.querySelectorAll('.update-checkbox:checked')).map(cb => cb.dataset.id);
     const promptId = updatesBatchReminder.value;
-    
-    if (!promptId) return appAlert('Por favor selecciona un recordatorio.', true);
-    
-    try {
-      updatesCallNowBtn.disabled = true;
-      updatesCallNowBtn.textContent = 'PROCESANDO...';
-      
-      const resp = await fetch('/api/updates/schedule-batch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ updateIds: selectedIds, promptId })
-      });
-      
-      const result = await resp.json();
-      if (result.success) {
-        appAlert(`Éxito: ${result.scheduled} llamadas han sido encoladas.`);
-        switchTab('campaigns'); 
-      } else {
-        appAlert(`Error: ${result.error}`, true);
-      }
-    } catch (e) {
-      appAlert('Error de conexión', true);
-    } finally {
-      updatesCallNowBtn.disabled = false;
-      updatesCallNowBtn.textContent = 'LLAMAR AHORA';
-    }
+    await triggerUpdatesBatchAction({ selectedIds, promptId, mode: 'call', triggerButton: updatesCallNowBtn });
   });
 
   updatesScheduleBtn?.addEventListener('click', async () => {
     const selectedIds = Array.from(document.querySelectorAll('.update-checkbox:checked')).map(cb => cb.dataset.id);
     const promptId = updatesBatchReminder.value;
-    
-    if (!promptId) return appAlert('Por favor selecciona un recordatorio.', true);
-    
-    const time = await appPrompt('Ingresa la fecha y hora para programar (YYYY-MM-DD HH:MM):', new Date().toISOString().slice(0, 16).replace('T', ' '));
-    if (!time) return;
-    
-    try {
-      updatesScheduleBtn.disabled = true;
-      const resp = await fetch('/api/updates/schedule-batch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ updateIds: selectedIds, promptId, scheduledFor: new Date(time).toISOString() })
-      });
-      
-      const result = await resp.json();
-      if (result.success) {
-        appAlert(`Éxito: ${result.scheduled} llamadas programadas para ${time}.`);
-      } else {
-        appAlert(`Error: ${result.error}`, true);
-      }
-    } catch (e) {
-      appAlert('Error de conexión', true);
-    } finally {
-      updatesScheduleBtn.disabled = false;
-    }
+    await triggerUpdatesBatchAction({ selectedIds, promptId, mode: 'schedule', triggerButton: updatesScheduleBtn });
   });
 
   // Modal: Nuevo Registro Manual
