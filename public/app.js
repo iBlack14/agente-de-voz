@@ -1382,14 +1382,14 @@ const initDashboardApp = () => {
     if (rbAnsweredList) {
       rbAnsweredList.innerHTML = answeredCalls.length
         ? answeredCalls.map(c => `
-            <div class="rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 flex items-center justify-between gap-3">
+            <div class="rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-6 py-5 flex items-center justify-between gap-5">
               <div class="min-w-0">
-                <p class="text-xs font-black text-white truncate">${escapeHtml(c.to || 'Desconocido')}</p>
-                <p class="text-[10px] text-slate-500 mt-1 truncate">${escapeHtml(c.domain || 'Sin dominio')}</p>
+                <p class="text-base md:text-lg font-black text-white truncate">${escapeHtml(c.to || 'Desconocido')}</p>
+                <p class="text-sm md:text-base text-slate-400 mt-1 truncate">${escapeHtml(c.domain || 'Sin dominio')}</p>
               </div>
               <div class="text-right shrink-0">
-                <p class="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Contestó</p>
-                <p class="text-[10px] text-slate-400 mt-1">${escapeHtml(formatDuration(c.durationSec ?? c.duration_sec))}</p>
+                <p class="text-xs font-bold text-emerald-400 uppercase tracking-widest">Contestó</p>
+                <p class="text-sm md:text-base text-slate-300 mt-1">${escapeHtml(formatDuration(c.durationSec ?? c.duration_sec))}</p>
               </div>
             </div>
           `).join('')
@@ -1398,12 +1398,12 @@ const initDashboardApp = () => {
     if (rbUnansweredList) {
       rbUnansweredList.innerHTML = unansweredCalls.length
         ? unansweredCalls.map(c => `
-            <div class="rounded-xl border border-rose-500/20 bg-rose-500/5 px-4 py-3 flex items-center justify-between gap-3">
+            <div class="rounded-xl border border-rose-500/20 bg-rose-500/5 px-6 py-5 flex items-center justify-between gap-5">
               <div class="min-w-0">
-                <p class="text-xs font-black text-white truncate">${escapeHtml(c.to || 'Desconocido')}</p>
-                <p class="text-[10px] text-slate-500 mt-1 truncate">${escapeHtml(c.domain || 'Sin dominio')}</p>
+                <p class="text-base md:text-lg font-black text-white truncate">${escapeHtml(c.to || 'Desconocido')}</p>
+                <p class="text-sm md:text-base text-slate-400 mt-1 truncate">${escapeHtml(c.domain || 'Sin dominio')}</p>
               </div>
-              <span class="text-[10px] font-bold text-rose-400 uppercase tracking-widest">${escapeHtml(String(c.status || 'unanswered'))}</span>
+              <span class="text-xs font-bold text-rose-400 uppercase tracking-widest">${escapeHtml(String(c.status || 'unanswered'))}</span>
             </div>
           `).join('')
         : '<p class="text-xs text-slate-500">No hay no contestados en esta iteración.</p>';
@@ -2674,10 +2674,10 @@ const initDashboardApp = () => {
     }
     
     updatesTableBody.innerHTML = data.map(u => `
-      <tr class="update-row border-l-2 border-l-transparent hover:bg-white/5 transition-colors cursor-pointer group" onclick="const cb = this.querySelector('.update-checkbox'); cb.checked = !cb.checked; cb.dispatchEvent(new Event('change', { bubbles: true }));">
+      <tr class="update-row hover:bg-white/5 transition-colors cursor-pointer group" onclick="const cb = this.querySelector('.update-checkbox'); cb.checked = !cb.checked; cb.dispatchEvent(new Event('change', { bubbles: true }));">
         <td class="px-6 py-4" onclick="event.stopPropagation()">
             <div class="flex items-center">
-                <input type="checkbox" class="update-checkbox rounded border-white/10 bg-black/40 text-primary focus:ring-primary h-4 w-4" data-id="${u.id}">
+                <input type="checkbox" class="update-checkbox appearance-none rounded-full border border-white/15 bg-black/40 h-4 w-4 cursor-pointer transition-all focus:outline-none" data-id="${u.id}">
             </div>
         </td>
         <td class="px-6 py-4 font-bold text-white group-hover:text-primary transition-colors">${escapeHtml(u.domain)}</td>
@@ -2693,9 +2693,15 @@ const initDashboardApp = () => {
         const row = cb.closest('.update-row');
         if (row) {
           row.classList.toggle('bg-primary/10', cb.checked);
-          row.classList.toggle('border-l-primary', cb.checked);
           row.classList.toggle('shadow-[inset_0_0_0_1px_rgba(207,0,218,0.18)]', cb.checked);
         }
+        cb.style.borderColor = cb.checked ? '#cf00da' : 'rgba(255,255,255,0.15)';
+        cb.style.boxShadow = cb.checked
+          ? '0 0 0 4px rgba(207,0,218,0.18)'
+          : 'none';
+        cb.style.background = cb.checked
+          ? 'radial-gradient(circle, #cf00da 0 38%, rgba(207,0,218,0.14) 39% 100%)'
+          : 'rgba(0, 0, 0, 0.4)';
         updateSelectedCount();
       });
     });
@@ -2735,9 +2741,6 @@ const initDashboardApp = () => {
     const promptId = updatesBatchReminder.value;
     
     if (!promptId) return appAlert('Por favor selecciona un recordatorio.', true);
-    
-    const confirmed = await appPrompt(`¿Deseas iniciar ${selectedIds.length} llamadas ahora mismo? Escribe "SI" para confirmar.`, 'SI');
-    if (confirmed !== 'SI') return;
     
     try {
       updatesCallNowBtn.disabled = true;
