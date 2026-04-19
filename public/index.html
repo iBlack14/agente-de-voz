@@ -108,9 +108,9 @@
             console.log('Redirecting to:', mode === 'simple' ? '/simple.html' : '/advanced.html');
             
             if (mode === 'simple') {
-                window.location.href = '/simple.html';
+                window.location.href = '/simple';
             } else {
-                window.location.href = '/advanced.html';
+                window.location.href = '/advanced';
             }
         }
 
@@ -123,12 +123,11 @@
                 console.log('Found onclick element:', el);
             });
             
-            const savedMode = localStorage.getItem('ui-mode');
             if (savedMode) {
                 if (savedMode === 'simple') {
-                    window.location.href = '/simple.html';
+                    window.location.href = '/simple';
                 } else {
-                    window.location.href = '/advanced.html';
+                    window.location.href = '/advanced';
                 }
             }
         });

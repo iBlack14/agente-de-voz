@@ -57,11 +57,22 @@ app.use(restrictAccess);
 // Static Frontend
 app.use(express.static('public'));
 
-/**
- * Modular API Routes
- */
+const path = require('path');
+
+// Modular API Routes
 app.use('/api', apiRouter);
 app.use('/webhook', webhookRouter);
+
+/**
+ * Clean Frontend Routes
+ */
+app.get('/selection', (req, res) => res.sendFile(path.join(__dirname, 'public/index.html')));
+app.get('/advanced',  (req, res) => res.sendFile(path.join(__dirname, 'public/advanced.html')));
+app.get('/simple',    (req, res) => res.sendFile(path.join(__dirname, 'public/simple.html')));
+app.get('/login',     (req, res) => res.sendFile(path.join(__dirname, 'public/login.html')));
+
+// Root redirect
+app.get('/', (req, res) => res.redirect('/selection'));
 
 /**
  * Server Initialization

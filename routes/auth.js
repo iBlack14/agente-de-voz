@@ -32,7 +32,7 @@ router.post('/logout', (req, res) => {
 
 // Middleware to protect routes
 const restrictAccess = (req, res, next) => {
-  const publicPaths = ['/login.html', '/api/login', '/webhook/telnyx', '/health', '/simple.html', '/advanced.html', '/index.html', '/partials/'];
+  const publicPaths = ['/login', '/api/login', '/webhook/telnyx', '/health', '/partials/'];
   const isPublic = publicPaths.some(p => req.path.startsWith(p));
   const isStatic = req.path.match(/\.(css|js|png|jpg|jpeg|gif|svg|ico|html)$/i);
   const isWS = req.headers.upgrade === 'websocket';
@@ -46,9 +46,12 @@ const restrictAccess = (req, res, next) => {
   if (token && expiresAt && expiresAt > Date.now()) return next();
   if (token) authSessions.delete(token);
 
-  if (req.path === '/' || req.path === '/index.html') return res.redirect('/login.html');
+  if (req.path === '/' || req.path === '/selection' || req.path === '/advanced' || req.path === '/simple') {
+      return res.redirect('/login');
+  }
+  
   if (req.path.startsWith('/api')) return res.status(401).json({ error: 'Tu sesión ha expirado por seguridad o reinicio de servidor.', code: 'AUTH_EXPIRED' });
-  res.status(401).send('Acceso denegado');
+  res.redirect('/login');
 };
 
 module.exports = { authRouter: router, restrictAccess, authSessions };
