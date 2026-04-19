@@ -73,7 +73,6 @@ router.get('/voices', async (req, res) => {
 });
 
 const { callQueue } = require('../services/telephony/queue.service');
-const { addInflightOutbound } = require('../services/callState');
 
 router.post('/make-call', async (req, res) => {
   const { number, domain, mode, greeting, instructions, retry_interval, scheduled_for, batch_id, batch_label } = req.body || {};
@@ -110,7 +109,6 @@ router.post('/make-call', async (req, res) => {
         
         if (callId) {
           console.log(`✅ [Telnyx] Solicitud aceptada por API. ID: ${callId} (esperando call.answered para confirmar contestación)`);
-          addInflightOutbound(callId);
           setCallContext(callId, { domain, mode, customGreeting: greeting, customInstructions: instructions, retry_interval, batch_id, batch_label });
           await logCall({
             callId,
