@@ -3,236 +3,392 @@
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>ViaAI | Secure Access</title>
+    <title>ViaAI Voice - Login</title>
     
-    <!-- Modern Typography -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet" />
     
-    <!-- Tailwind & Motion -->
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <script src="https://unpkg.com/pvh-motion@latest/dist/motion.js"></script> <!-- Motion (Vanilla Framer Motion) -->
-    
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#0ea5e9',
-                        secondary: '#6366f1',
-                        accent: '#f43f5e',
-                        dark: {
-                            900: '#020617',
-                            800: '#0f172a',
-                            700: '#1e293b'
-                        }
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                        outfit: ['Outfit', 'sans-serif']
-                    }
-                }
-            }
-        }
-    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
     
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            background: radial-gradient(circle at top right, #0f172a 0%, #020617 100%);
-            overflow: hidden;
+            background: linear-gradient(135deg, #0f172a 0%, #1a1f3a 50%, #0d1629 100%);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 400px;
+            padding: 0 20px;
+        }
+
+        .login-card {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 48px 32px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .logo-section {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .logo {
+            width: 56px;
+            height: 56px;
+            margin: 0 auto 20px;
+            opacity: 0;
+            animation: slideDown 0.6s ease-out forwards;
+        }
+
+        .logo-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .logo-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 8px;
+            opacity: 0;
+            animation: slideDown 0.6s ease-out 0.1s forwards;
+        }
+
+        .logo-subtitle {
+            font-size: 13px;
+            color: #94a3b8;
+            font-weight: 500;
+            letter-spacing: 1px;
+            opacity: 0;
+            animation: slideDown 0.6s ease-out 0.2s forwards;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #cbd5e1;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-input-wrapper {
+            position: relative;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px 12px 44px;
+            background: rgba(2, 6, 23, 0.5);
+            border: 1.5px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            color: #ffffff;
+            font-size: 14px;
+            transition: all 0.3s ease;
             font-family: 'Inter', sans-serif;
         }
 
-        .glass-panel {
-            background: rgba(15, 23, 42, 0.6);
-            backdrop-filter: blur(24px) saturate(150%);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        .form-input::placeholder {
+            color: #64748b;
         }
 
-        .input-field {
-            background: rgba(2, 6, 23, 0.4);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .input-field:focus {
-            border-color: #0ea5e9;
+        .form-input:focus {
+            outline: none;
             background: rgba(14, 165, 233, 0.05);
-            box-shadow: 0 0 20px rgba(14, 165, 233, 0.1);
+            border-color: #0ea5e9;
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
         }
 
-        .button-glow {
-            transition: all 0.4s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .button-glow::after {
-            content: '';
+        .form-icon {
             position: absolute;
-            top: -50%; left: -50%; width: 200%; height: 200%;
-            background: conic-gradient(from 0deg, transparent, rgba(255,255,255,0.1), transparent 30%);
-            animation: rotate 4s linear infinite;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            font-size: 20px;
+            transition: color 0.3s ease;
             pointer-events: none;
         }
 
-        @keyframes rotate {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        .form-input-wrapper:has(.form-input:focus) .form-icon {
+            color: #0ea5e9;
         }
 
-        .shimmer {
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
-            background-size: 200% 100%;
-            animation: shimmer 3s infinite;
+        .toggle-password {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.3s ease;
         }
 
-        @keyframes shimmer {
-            0% { background-position: -200% 0; }
-            100% { background-position: 200% 0; }
+        .toggle-password:hover {
+            color: #cbd5e1;
+        }
+
+        .error-message {
+            display: none;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 24px;
+            color: #fca5a5;
+            font-size: 13px;
+            font-weight: 500;
+            text-align: center;
+            animation: shake 0.4s ease-in-out;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 13px;
+            background: linear-gradient(135deg, #0ea5e9, #0284c7);
+            border: none;
+            border-radius: 10px;
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            background: linear-gradient(135deg, #06b6d4, #0284c7);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(14, 165, 233, 0.3);
+        }
+
+        .submit-btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .submit-btn.success {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        .footer-text {
+            text-align: center;
+            margin-top: 32px;
+            font-size: 12px;
+            color: #64748b;
+        }
+
+        @media (max-width: 480px) {
+            .login-card {
+                padding: 36px 24px;
+            }
+
+            .logo-title {
+                font-size: 24px;
+            }
+
+            .form-group {
+                margin-bottom: 20px;
+            }
         }
     </style>
 </head>
-<body class="min-h-screen flex items-center justify-center p-4">
-
-    <!-- Abstract Background Decor -->
-    <div class="fixed top-[-10%] right-[-10%] w-[500px] h-[500px] bg-blue-500/10 blur-[120px] rounded-full pointer-events-none"></div>
-    <div class="fixed bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-indigo-500/10 blur-[120px] rounded-full pointer-events-none"></div>
-
-    <main id="main-container" class="relative w-full max-w-[420px] opacity-0 translate-y-4">
-        
-        <!-- Logo Section -->
-        <div class="flex flex-col items-center mb-10">
-            <div id="logo-wrapper" class="w-20 h-20 mb-6 relative">
-                <div class="absolute inset-0 bg-blue-500/20 blur-2xl rounded-full"></div>
-                <img src="assets/logo.png" alt="ViaAI" class="relative w-full h-full object-contain">
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <!-- Logo Section -->
+            <div class="logo-section">
+                <div class="logo">
+                    <img src="assets/logo.png" alt="ViaAI" class="logo-img">
+                </div>
+                <h1 class="logo-title">ViaAI Voice</h1>
+                <p class="logo-subtitle">SECURE ACCESS</p>
             </div>
-            <h1 class="text-3xl font-outfit font-bold tracking-tight text-white mb-2">ViaAI Voice</h1>
-            <p class="text-slate-400 text-sm font-medium tracking-widest uppercase">Secure Node Portal</p>
-        </div>
 
-        <!-- Card -->
-        <div class="glass-panel p-10 rounded-[2rem] relative overflow-hidden">
-            <div class="shimmer absolute inset-0 pointer-events-none"></div>
-            
-            <form id="login-form" class="space-y-6">
-                <div class="space-y-2">
-                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] ml-2">Node Identity</label>
-                    <div class="relative group">
-                        <span class="material-symbols-rounded absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary transition-colors">hub</span>
-                        <input id="username" type="text" placeholder="username" class="input-field w-full h-14 pl-12 pr-4 rounded-2xl text-white placeholder-slate-600 focus:outline-none focus:ring-0">
+            <!-- Form -->
+            <form id="login-form">
+                <!-- Error Message -->
+                <div id="error-msg" class="error-message"></div>
+
+                <!-- Username -->
+                <div class="form-group">
+                    <label class="form-label">Usuario</label>
+                    <div class="form-input-wrapper">
+                        <span class="material-symbols-rounded form-icon">person</span>
+                        <input 
+                            id="username" 
+                            type="text" 
+                            class="form-input" 
+                            placeholder="Ingresa tu usuario"
+                            autocomplete="off"
+                            required
+                        >
                     </div>
                 </div>
 
-                <div class="space-y-2">
-                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] ml-2">Neural Key</label>
-                    <div class="relative group">
-                        <span class="material-symbols-rounded absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary transition-colors">key</span>
-                        <input id="password" type="password" placeholder="••••••••" class="input-field w-full h-14 pl-12 pr-12 rounded-2xl text-white placeholder-slate-600 focus:outline-none focus:ring-0">
-                        <button type="button" id="toggle-pw" class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-600 hover:text-white transition-colors">
-                            <span class="material-symbols-rounded text-xl">visibility</span>
+                <!-- Password -->
+                <div class="form-group">
+                    <label class="form-label">Contraseña</label>
+                    <div class="form-input-wrapper">
+                        <span class="material-symbols-rounded form-icon">lock</span>
+                        <input 
+                            id="password" 
+                            type="password" 
+                            class="form-input" 
+                            placeholder="Ingresa tu contraseña"
+                            autocomplete="off"
+                            required
+                        >
+                        <button type="button" id="toggle-pw" class="toggle-password">
+                            <span class="material-symbols-rounded" style="font-size: 20px;">visibility_off</span>
                         </button>
                     </div>
                 </div>
 
-                <div id="error-msg" class="hidden text-rose-500 text-[11px] font-semibold uppercase tracking-wider text-center bg-rose-500/5 py-3 rounded-xl border border-rose-500/10">
-                    Access Denied: Invalid Credentials
-                </div>
-
-                <button type="submit" id="submit-btn" class="button-glow w-full h-14 bg-primary text-slate-950 font-bold rounded-2xl flex items-center justify-center gap-2 hover:brightness-110 active:scale-95 transition-all">
-                    <span>AUTHENTICATE</span>
-                    <span class="material-symbols-rounded">arrow_forward</span>
+                <!-- Submit Button -->
+                <button type="submit" id="submit-btn" class="submit-btn">
+                    <span>ACCEDER</span>
+                    <span class="material-symbols-rounded" style="font-size: 20px;">arrow_forward</span>
                 </button>
             </form>
-        </div>
 
-        <p class="mt-8 text-center text-[10px] text-slate-500 uppercase tracking-[0.3em] font-medium">Via Comunicativa © 2026</p>
-    </main>
+            <!-- Footer -->
+            <p class="footer-text">© 2026 ViaAI. Todos los derechos reservados.</p>
+        </div>
+    </div>
 
     <script>
-        // Use Motion library for entrance
-        window.onload = () => {
-            const container = document.getElementById('main-container');
-            
-            // Minimalist entrance using native CSS + simple delay for compatibility
-            container.style.transition = 'all 0.8s cubic-bezier(0.16, 1, 0.3, 1)';
-            setTimeout(() => {
-                container.style.opacity = '1';
-                container.style.transform = 'translateY(0)';
-            }, 100);
-
-            // Subtle logo float
-            const logo = document.getElementById('logo-wrapper');
-            let angle = 0;
-            function float() {
-                angle += 0.02;
-                logo.style.transform = `translateY(${Math.sin(angle) * 5}px)`;
-                requestAnimationFrame(float);
-            }
-            float();
-        };
-
         const form = document.getElementById('login-form');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const togglePwBtn = document.getElementById('toggle-pw');
         const submitBtn = document.getElementById('submit-btn');
         const errorMsg = document.getElementById('error-msg');
 
-        // Toggle Password
-        document.getElementById('toggle-pw').addEventListener('click', function() {
-            const input = document.getElementById('password');
-            const isPass = input.type === 'password';
-            input.type = isPass ? 'text' : 'password';
-            this.querySelector('span').textContent = isPass ? 'visibility_off' : 'visibility';
+        // Toggle password visibility
+        togglePwBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const isPassword = passwordInput.type === 'password';
+            passwordInput.type = isPassword ? 'text' : 'password';
+            togglePwBtn.innerHTML = `<span class="material-symbols-rounded" style="font-size: 20px;">${isPassword ? 'visibility' : 'visibility_off'}</span>`;
         });
 
+        // Handle form submission
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
             
-            errorMsg.classList.add('hidden');
-            submitBtn.style.opacity = '0.7';
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value;
+
+            if (!username || !password) {
+                showError('Por favor completa todos los campos');
+                return;
+            }
+
+            errorMsg.classList.remove('show');
             submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span>AUTENTICANDO...</span>';
 
             try {
-                const resp = await fetch('/api/login', {
+                const response = await fetch('/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({ username, password }),
+                    credentials: 'same-origin'
                 });
-                
-                const data = await resp.json();
-                
-                if (resp.ok && data.success) {
-                    submitBtn.innerHTML = '<span>ACCESS GRANTED</span>';
-                    submitBtn.classList.replace('bg-primary', 'bg-emerald-500');
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    // Success animation
+                    submitBtn.classList.add('success');
+                    submitBtn.innerHTML = '<span>ACCESO CONCEDIDO</span><span class="material-symbols-rounded" style="font-size: 20px;">check_circle</span>';
                     
-                    document.getElementById('main-container').style.filter = 'blur(10px)';
-                    document.getElementById('main-container').style.opacity = '0';
-                    document.body.style.background = '#020617';
+                    // Fade out and redirect
+                    document.querySelector('.login-container').style.opacity = '0';
+                    document.querySelector('.login-container').style.transform = 'scale(0.95)';
+                    document.querySelector('.login-container').style.transition = 'all 0.4s ease';
                     
                     setTimeout(() => {
                         window.location.href = '/selection';
-                    }, 500);
+                    }, 600);
                 } else {
-                    throw new Error(data.message || 'Login Failed');
+                    throw new Error(data.message || 'Credenciales inválidas');
                 }
-            } catch (err) {
-                errorMsg.textContent = err.message.toUpperCase();
-                errorMsg.classList.remove('hidden');
-                submitBtn.style.opacity = '1';
+            } catch (error) {
+                showError(error.message);
                 submitBtn.disabled = false;
-                
-                // Shake effect on error
-                const card = form.parentElement;
-                card.animate([
-                    { transform: 'translateX(0)' },
-                    { transform: 'translateX(-5px)' },
-                    { transform: 'translateX(5px)' },
-                    { transform: 'translateX(0)' }
-                ], { duration: 300 });
+                submitBtn.innerHTML = '<span>ACCEDER</span><span class="material-symbols-rounded" style="font-size: 20px;">arrow_forward</span>';
             }
+        });
+
+        function showError(message) {
+            errorMsg.textContent = message;
+            errorMsg.classList.add('show');
+            setTimeout(() => {
+                errorMsg.classList.remove('show');
+            }, 4000);
+        }
+
+        // Focus on username input on load
+        window.addEventListener('load', () => {
+            usernameInput.focus();
         });
     </script>
 </body>

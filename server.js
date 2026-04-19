@@ -157,7 +157,10 @@ server.listen(PORT, async () => {
     console.log(`\n🎙️  ViaAI Voice Matrix active on port ${actualPort}`);
     console.log(`❤️  Health Check: http://localhost:${actualPort}/health\n`);
   } catch (err) {
-    console.error('[Startup] Critical Error:', err.message);
+    console.warn('[Startup] Database Warning:', err.message);
+    console.log('[Startup] Server continuing without database...');
+    console.log(`\n🎙️  ViaAI Voice Matrix active on port ${actualPort}`);
+    console.log(`❤️  Health Check: http://localhost:${actualPort}/health\n`);
   }
 });
 
