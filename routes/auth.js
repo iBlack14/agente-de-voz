@@ -44,13 +44,15 @@ router.post('/login', (req, res) => {
     const token = require('crypto').randomBytes(32).toString('hex');
     authSessions.set(token, Date.now() + SESSION_TTL_MS);
     saveSessions();
-    
+
     res.cookie('auth_token', token, {
       httpOnly: true,
       sameSite: 'lax',
       maxAge: SESSION_TTL_MS,
       path: '/',
+      secure: false, // Allow http in dev
     });
+    console.log(`[Auth] User ${username} logged in. Token: ${token.substring(0, 8)}...`);
     return res.json({ success: true });
   }
   res.status(401).json({ success: false, message: 'Credenciales inválidas' });
@@ -72,24 +74,27 @@ const restrictAccess = (req, res, next) => {
   const isPublic = publicPaths.some(p => req.path.startsWith(p));
   const isStatic = req.path.match(/\.(css|js|png|jpg|jpeg|gif|svg|ico|html)$/i);
   const isWS = req.headers.upgrade === 'websocket';
-  
+
   if (isPublic || isStatic || isWS) return next();
 
   const cookies = parseCookies(req.headers.cookie || '');
   const token = cookies.auth_token;
   const expiresAt = authSessions.get(token);
 
+  console.log(`[Auth] ${req.method} ${req.path} - Token: ${token ? token.substring(0, 8) + '...' : 'NONE'}, Valid: ${token && expiresAt && expiresAt > Date.now()}`);
+
   if (token && expiresAt && expiresAt > Date.now()) return next();
-  
+
   if (token) {
       authSessions.delete(token);
       saveSessions();
   }
 
   if (req.path === '/' || req.path === '/selection' || req.path === '/advanced' || req.path === '/simple') {
+      console.log(`[Auth] Redirecting to /login (no valid session)`);
       return res.redirect('/login');
   }
-  
+
   if (req.path.startsWith('/api')) return res.status(401).json({ error: 'Tu sesión ha expirado por seguridad o reinicio de servidor.', code: 'AUTH_EXPIRED' });
   res.redirect('/login');
 };
