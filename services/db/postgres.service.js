@@ -1,7 +1,20 @@
 const { Pool } = require('pg');
 
+// Construct Supabase connection string if SUPABASE_URL is set, otherwise fall back to DATABASE_URL
+const getConnectionString = () => {
+  if (process.env.SUPABASE_URL) {
+    // Convert Supabase REST URL to PostgreSQL connection string
+    // e.g., http://supabasekong-xxx.xxx.xxx.sslip.io -> postgres://user:pass@host:5432/postgres
+    const supabaseUrl = process.env.SUPABASE_URL.replace(/^https?:\/\//, '');
+    const supabaseKey = process.env.SUPABASE_ANON_KEY;
+    // Default Supabase connection: postgres://postgres:postgres@host:5432/postgres
+    return `postgres://postgres:postgres@${supabaseUrl}:5432/postgres`;
+  }
+  return process.env.DATABASE_URL;
+};
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: getConnectionString(),
   ssl: process.env.PGSSL === 'true' ? { rejectUnauthorized: false } : false,
 });
 
