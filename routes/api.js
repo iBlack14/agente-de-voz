@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const axios = require('axios');
+const { supabase } = require('../services/db/supabase.service');
 const { 
   readPrompts, upsertPrompt, setActivePrompt, deletePrompt,
   readReminderPrompts, upsertReminderPrompt, setActiveReminderPrompt, deleteReminderPrompt 
 } = require('../services/prompts/promptService');
-const { readCallLog, logCall } = require('../services/db/repository');
+const { readCallLog, logCall, getUsageStats } = require('../services/db/repository');
 const { makeOutboundCall } = require('../services/telephony/telnyxClient');
 const { setCallContext } = require('../services/telephony/context.service');
 const { isValidE164 } = require('../services/utils');
@@ -52,16 +53,13 @@ router.get('/calls', async (req, res) => {
 
 router.delete('/calls/reset-all', async (req, res) => {
   try {
-    const { query } = require('../services/db/postgres.service');
-    await query('BEGIN');
-    await query(`TRUNCATE TABLE call_transcripts, usage_logs, calls, scheduled_calls RESTART IDENTITY`);
-    await query('COMMIT');
+    // Supabase native multi-delete
+    await supabase.from('call_transcripts').delete().neq('id', 0);
+    await supabase.from('usage_logs').delete().neq('id', 0);
+    await supabase.from('calls').delete().neq('call_id', 'none');
+    await supabase.from('scheduled_calls').delete().neq('id', 0);
     res.json({ success: true, message: 'Datos operativos reiniciados correctamente.' });
   } catch (err) {
-    try {
-      const { query } = require('../services/db/postgres.service');
-      await query('ROLLBACK');
-    } catch (_) {}
     res.status(500).json({ error: err.message });
   }
 });
@@ -89,16 +87,20 @@ router.post('/make-call', async (req, res) => {
   callRateLimits.set(ip, recent);
 
   if (scheduled_for) {
-     const { query } = require('../services/db/postgres.service');
-     await query(
-       `INSERT INTO scheduled_calls (to_number, batch_id, batch_label, domain, greeting, instructions, scheduled_for, retry_interval_hours)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-       [number, batch_id || null, batch_label || null, domain, greeting, instructions, scheduled_for, retry_interval || 0]
-     );
+     await supabase.from('scheduled_calls').insert({
+        to_number: number,
+        batch_id: batch_id || null,
+        batch_label: batch_label || null,
+        domain,
+        greeting,
+        instructions,
+        scheduled_for,
+        retry_interval_hours: retry_interval || 0
+     });
      return res.json({ success: true, message: `Llamada programada para ${scheduled_for}` });
   }
 
-  // Add call to neural queue to handle concurrency (Telnyx D1 error fix)
+  // Add call to neural queue
   (async () => {
     try {
       await callQueue.add(async () => {
@@ -136,12 +138,13 @@ router.post('/make-call', async (req, res) => {
 router.post('/batches', async (req, res) => {
   try {
     const { id, parent_batch_id, name, template_used, total_destinations } = req.body;
-    const { query } = require('../services/db/postgres.service');
-    await query(
-      `INSERT INTO call_batches (id, parent_batch_id, name, template_used, total_destinations) 
-       VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING`,
-      [id, parent_batch_id || null, name, template_used || null, total_destinations]
-    );
+    await supabase.from('call_batches').upsert({
+        id,
+        parent_batch_id: parent_batch_id || null,
+        name,
+        template_used: template_used || null,
+        total_destinations
+    });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -150,19 +153,25 @@ router.post('/batches', async (req, res) => {
 
 router.get('/batches', async (req, res) => {
   try {
-    const { query } = require('../services/db/postgres.service');
-    const { rows } = await query(`
-      SELECT b.id, b.parent_batch_id, b.name, b.template_used, b.total_destinations, b.created_at,
-             COUNT(c.call_id) FILTER (WHERE c.status='completed' OR c.status='answered') AS answered_count,
-             COUNT(c.call_id) FILTER (WHERE c.status NOT IN ('completed', 'answered', 'queued', 'in-progress', 'ringing', 'pending', 'scheduled')) AS failed_count,
-             COUNT(c.call_id) FILTER (WHERE c.status IN ('queued', 'in-progress', 'ringing', 'pending', 'scheduled')) AS active_count
-      FROM call_batches b
-      LEFT JOIN calls c ON b.id = c.batch_id
-      GROUP BY b.id
-      ORDER BY b.created_at DESC
-      LIMIT 100
-    `);
-    res.json(rows);
+    // Complex view replacement using Supabase logic
+    const { data: batches, error } = await supabase.from('call_batches').select('*').order('created_at', { ascending: false }).limit(100);
+    if (error) throw error;
+    
+    // For counts, we might need a separate query or an RPC for performance
+    // Simple version: join is hard in SDK without views, let's fetch summary
+    const { data: calls } = await supabase.from('calls').select('batch_id, status').not('batch_id', 'is', null);
+    
+    const results = batches.map(b => {
+        const bCalls = (calls || []).filter(c => c.batch_id === b.id);
+        return {
+            ...b,
+            answered_count: bCalls.filter(c => ['completed', 'answered'].includes(c.status)).length,
+            failed_count: bCalls.filter(c => !['completed', 'answered', 'queued', 'in-progress', 'ringing', 'pending', 'scheduled'].includes(c.status)).length,
+            active_count: bCalls.filter(c => ['queued', 'in-progress', 'ringing', 'pending', 'scheduled'].includes(c.status)).length
+        };
+    });
+    
+    res.json(results);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -170,36 +179,26 @@ router.get('/batches', async (req, res) => {
 
 router.get('/batches/:id/failed', async (req, res) => {
   try {
-    const { query } = require('../services/db/postgres.service');
-    const { rows } = await query(`
-      SELECT to_number, domain 
-      FROM calls 
-      WHERE batch_id = $1 
-      AND status NOT IN ('completed', 'answered', 'queued', 'in-progress', 'ringing', 'pending', 'scheduled')
-      GROUP BY to_number, domain
-    `, [req.params.id]);
-    res.json(rows);
+    const { data, error } = await supabase
+        .from('calls')
+        .select('to_number, domain')
+        .eq('batch_id', req.params.id)
+        .not('status', 'in', "('completed', 'answered', 'queued', 'in-progress', 'ringing', 'pending', 'scheduled')");
+    
+    if (error) throw error;
+    res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
 router.get('/stats', async (req, res) => {
-  try {
-    const { getUsageStats } = require('../services/db/repository');
-    res.json(await getUsageStats());
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  try { res.json(await getUsageStats()); } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-/**
- * TTS Voice Preview — Listen to the AI voice directly from the dashboard
- */
 router.post('/tts-preview', async (req, res) => {
   const { text } = req.body;
   if (!text || !text.trim()) return res.status(400).json({ error: 'Texto requerido' });
-
   const apiKey = process.env.ELEVENLABS_API_KEY;
   const voiceId = process.env.ELEVENLABS_VOICE_ID || '90ipbRoKi4CpHXvKVtl0';
 
@@ -218,52 +217,47 @@ router.post('/tts-preview', async (req, res) => {
       }
     );
     res.setHeader('Content-Type', 'audio/mpeg');
-    res.setHeader('Cache-Control', 'no-cache');
     response.data.pipe(res);
   } catch (err) {
-    console.error('[TTS Preview] Error:', err.message);
-    res.status(500).json({ error: 'Error al generar audio de vista previa' });
+    res.status(500).json({ error: 'Error tts preview' });
   }
 });
 
 router.get('/scheduled', async (req, res) => {
   try {
-    const { query } = require('../services/db/postgres.service');
-    const { rows } = await query(`SELECT * FROM scheduled_calls WHERE status IN ('pending', 'processing', 'failed') ORDER BY scheduled_for ASC LIMIT 300`);
-    res.json(rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+    const { data, error } = await supabase
+        .from('scheduled_calls')
+        .select('*')
+        .in('status', ['pending', 'processing', 'failed'])
+        .order('scheduled_for', { ascending: true })
+        .limit(300);
+    if (error) throw error;
+    res.json(data);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.post('/scheduled/recover-stuck', async (req, res) => {
   try {
     const { recoverStuckScheduledCalls } = require('../services/telephony/scheduler.service');
-    await recoverStuckScheduledCalls(0); // recover all currently processing
+    await recoverStuckScheduledCalls(0); 
     res.json({ success: true, message: 'Tareas atascadas recuperadas.' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.delete('/scheduled', async (req, res) => {
   try {
-    const { query } = require('../services/db/postgres.service');
-    await query(`DELETE FROM scheduled_calls WHERE status = 'pending'`);
+    const { error } = await supabase.from('scheduled_calls').delete().eq('status', 'pending');
+    if (error) throw error;
     res.json({ success: true, message: 'Todos los recordatorios pendientes han sido eliminados.' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.delete('/scheduled/:id', async (req, res) => {
   try {
-    const { query } = require('../services/db/postgres.service');
-    await query(`DELETE FROM scheduled_calls WHERE id = $1`, [req.params.id]);
+    const { error } = await supabase.from('scheduled_calls').delete().eq('id', req.params.id);
+    if (error) throw error;
     res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 module.exports = router;

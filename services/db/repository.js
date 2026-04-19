@@ -1,71 +1,52 @@
-const { query, pool } = require('./postgres.service');
+const { supabase } = require('./supabase.service');
 
 /**
- * Handles all database interactions for call records and transcripts.
+ * Handles all database interactions using Supabase SDK.
  */
 module.exports = {
   /**
-   * Logs or updates a call record and its transcript turns.
+   * Logs or updates a call record.
    */
   logCall: async (entry) => {
     const callId = String(entry.callId || 'unknown');
     const transcript = Array.isArray(entry.transcript) ? entry.transcript : null;
 
-    await query(
-      `INSERT INTO calls (call_id, direction, from_number, to_number, domain, mode, reminder_greeting, reminder_instructions, batch_id, batch_label, started_at, ended_at, duration_sec, turn_count, status, recording_url, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW())
-       ON CONFLICT (call_id) DO UPDATE SET 
-         direction = COALESCE(EXCLUDED.direction, calls.direction),
-         from_number = COALESCE(EXCLUDED.from_number, calls.from_number),
-         to_number = COALESCE(EXCLUDED.to_number, calls.to_number),
-         domain = COALESCE(EXCLUDED.domain, calls.domain),
-         mode = COALESCE(EXCLUDED.mode, calls.mode),
-         reminder_greeting = COALESCE(EXCLUDED.reminder_greeting, calls.reminder_greeting),
-         reminder_instructions = COALESCE(EXCLUDED.reminder_instructions, calls.reminder_instructions),
-         batch_id = COALESCE(EXCLUDED.batch_id, calls.batch_id),
-         batch_label = COALESCE(EXCLUDED.batch_label, calls.batch_label),
-         started_at = COALESCE(EXCLUDED.started_at, calls.started_at),
-         ended_at = COALESCE(EXCLUDED.ended_at, calls.ended_at),
-         duration_sec = COALESCE(EXCLUDED.duration_sec, calls.duration_sec),
-         turn_count = COALESCE(EXCLUDED.turn_count, calls.turn_count),
-         status = COALESCE(EXCLUDED.status, calls.status),
-         recording_url = COALESCE(EXCLUDED.recording_url, calls.recording_url),
-         updated_at = NOW()`,
-      [
-        callId,
-        entry.direction,
-        entry.from,
-        entry.to,
-        entry.domain,
-        entry.mode,
-        entry.reminderGreeting,
-        entry.reminderInstructions,
-        entry.batchId,
-        entry.batchLabel,
-        entry.startedAt,
-        entry.endedAt,
-        entry.durationSec,
-        entry.turnCount,
-        entry.status,
-        entry.recordingUrl
-      ]
-    );
+    try {
+        const { error } = await supabase.from('calls').upsert({
+            call_id: callId,
+            direction: entry.direction,
+            from_number: entry.from,
+            to_number: entry.to,
+            domain: entry.domain,
+            mode: entry.mode,
+            reminder_greeting: entry.reminderGreeting,
+            reminder_instructions: entry.reminderInstructions,
+            batch_id: entry.batchId,
+            batch_label: entry.batchLabel,
+            started_at: entry.startedAt,
+            ended_at: entry.endedAt,
+            duration_sec: entry.durationSec,
+            turn_count: entry.turnCount,
+            status: entry.status,
+            recording_url: entry.recordingUrl,
+            updated_at: new Date().toISOString()
+        });
 
-    if (transcript && transcript.length > 0) {
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-        await client.query('DELETE FROM call_transcripts WHERE call_id = $1', [callId]);
-        for (const msg of transcript) {
-          await client.query(`INSERT INTO call_transcripts (call_id, role, text, at) VALUES ($1, $2, $3, $4)`, [callId, msg.role, msg.text, msg.at]);
+        if (error) throw error;
+
+        if (transcript && transcript.length > 0) {
+            // Delete old and insert new transcript
+            await supabase.from('call_transcripts').delete().eq('call_id', callId);
+            const records = transcript.map(msg => ({
+                call_id: callId,
+                role: msg.role,
+                text: msg.text,
+                at: msg.at
+            }));
+            await supabase.from('call_transcripts').insert(records);
         }
-        await client.query('COMMIT');
-      } catch (err) {
-        await client.query('ROLLBACK');
-        throw err;
-      } finally {
-        client.release();
-      }
+    } catch (err) {
+        console.error('[Repository] Error logging call:', err.message);
     }
   },
 
@@ -73,74 +54,100 @@ module.exports = {
    * Reads call history with associated transcripts.
    */
   readCallLog: async () => {
-    const historyLimit = Math.max(200, parseInt(process.env.CALL_HISTORY_LIMIT || '5000', 10) || 5000);
-    const { rows: calls } = await query(
-      `SELECT * FROM calls ORDER BY COALESCE(started_at, created_at) DESC LIMIT $1`,
-      [historyLimit]
-    );
-    if (!calls.length) return [];
+    try {
+        const historyLimit = 200;
+        const { data: calls, error } = await supabase
+            .from('calls')
+            .select('*')
+            .order('started_at', { ascending: false, nullsFirst: false })
+            .limit(historyLimit);
 
-    const ids = calls.map(c => c.call_id);
-    const placeholders = ids.map((_, i) => `$${i + 1}`).join(', ');
-    const { rows: transcripts } = await query(`SELECT * FROM call_transcripts WHERE call_id IN (${placeholders}) ORDER BY id ASC`, ids);
+        if (error) throw error;
+        if (!calls || !calls.length) return [];
 
-    const transcriptsMap = transcripts.reduce((acc, t) => {
-      if (!acc[t.call_id]) acc[t.call_id] = [];
-      acc[t.call_id].push({ role: t.role, text: t.text, at: t.at });
-      return acc;
-    }, {});
+        const ids = calls.map(c => c.call_id);
+        const { data: transcripts, error: tError } = await supabase
+            .from('call_transcripts')
+            .select('*')
+            .in('call_id', ids)
+            .order('id', { ascending: true });
 
-    return calls.map(r => ({
-      callId: r.call_id,
-      direction: r.direction,
-      from: r.from_number,
-      to: r.to_number,
-      domain: r.domain,
-      mode: r.mode,
-      reminderGreeting: r.reminder_greeting,
-      reminderInstructions: r.reminder_instructions,
-      batchId: r.batch_id,
-      batchLabel: r.batch_label,
-      startedAt: r.started_at,
-      endedAt: r.ended_at,
-      durationSec: r.duration_sec,
-      turnCount: r.turn_count,
-      status: r.status,
-      recordingUrl: r.recording_url,
-      transcript: transcriptsMap[r.call_id] || []
-    }));
+        if (tError) throw tError;
+
+        const transcriptsMap = (transcripts || []).reduce((acc, t) => {
+            if (!acc[t.call_id]) acc[t.call_id] = [];
+            acc[t.call_id].push({ role: t.role, text: t.text, at: t.at });
+            return acc;
+        }, {});
+
+        return calls.map(r => ({
+            callId: r.call_id,
+            direction: r.direction,
+            from: r.from_number,
+            to: r.to_number,
+            domain: r.domain,
+            mode: r.mode,
+            reminderGreeting: r.reminder_greeting,
+            reminderInstructions: r.reminder_instructions,
+            batchId: r.batch_id,
+            batchLabel: r.batch_label,
+            startedAt: r.started_at,
+            endedAt: r.ended_at,
+            durationSec: r.duration_sec,
+            turnCount: r.turn_count,
+            status: r.status,
+            recordingUrl: r.recording_url,
+            transcript: transcriptsMap[r.call_id] || []
+        }));
+    } catch (err) {
+        console.error('[Repository] Error reading logs:', err.message);
+        return [];
+    }
   },
 
   /**
-   * Logs usage metrics for AI or Telephony services.
+   * Logs usage metrics.
    */
   logUsage: async ({ callId, service, metric, value }) => {
-    await query(
-      `INSERT INTO usage_logs (call_id, service, metric, value) VALUES ($1, $2, $3, $4)`,
-      [callId || null, service, metric, value]
-    );
+    try {
+        await supabase.from('usage_logs').insert({
+            call_id: callId || null,
+            service,
+            metric,
+            value
+        });
+    } catch (err) { /* ignore */ }
   },
 
   /**
-   * Aggregates usage statistics for the dashboard.
+   * Aggregates usage statistics.
    */
   getUsageStats: async () => {
-    const { rows } = await query(`
-      SELECT 
-        service, 
-        metric, 
-        SUM(value) as total 
-      FROM usage_logs 
-      GROUP BY service, metric
-    `);
-    
-    // Also include telnyx call duration from calls table
-    const { rows: telnyxRows } = await query(`SELECT SUM(duration_sec) as total_sec FROM calls WHERE duration_sec > 0`);
-    const totalSec = telnyxRows[0]?.total_sec || 0;
+    try {
+        const { data: usage } = await supabase
+            .from('usage_logs')
+            .select('service, metric, value');
+        
+        const stats = (usage || []).reduce((acc, curr) => {
+            const key = `${curr.service}:${curr.metric}`;
+            if (!acc[key]) acc[key] = { service: curr.service, metric: curr.metric, total: 0 };
+            acc[key].total += Number(curr.value);
+            return acc;
+        }, {});
 
-    return {
-      usage: rows,
-      telnyx_seconds: totalSec
-    };
+        const { data: telnyxSum } = await supabase.rpc('sum_call_duration'); // Note: Requires RPC if large, otherwise manual sum
+        let totalSec = 0;
+        if (!telnyxSum) {
+            const { data } = await supabase.from('calls').select('duration_sec').gt('duration_sec', 0);
+            totalSec = (data || []).reduce((sum, r) => sum + r.duration_sec, 0);
+        }
+
+        return {
+            usage: Object.values(stats),
+            telnyx_seconds: totalSec
+        };
+    } catch (err) {
+        return { usage: [], telnyx_seconds: 0 };
+    }
   }
 };

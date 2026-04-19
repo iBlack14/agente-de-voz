@@ -1,4 +1,4 @@
-const { query } = require('../db/postgres.service');
+const { supabase } = require('../db/supabase.service');
 const { makeOutboundCall } = require('./telnyxClient');
 const { setCallContext } = require('./context.service');
 const { logCall } = require('../db/repository');
@@ -10,46 +10,49 @@ const { addInflightOutbound } = require('../callState');
  */
 async function recoverStuckScheduledCalls(maxMinutes = 3) {
     try {
-        const { rowCount } = await query(
-            `UPDATE scheduled_calls
-             SET status = 'pending',
-                 scheduled_for = NOW(),
-                 processing_started_at = NULL,
-                 updated_at = NOW(),
-                 last_error = COALESCE(last_error, 'Recuperado automáticamente tras reinicio/timeout')
-             WHERE status = 'processing'
-               AND (
-                 processing_started_at IS NULL
-                 OR processing_started_at < NOW() - ($1 || ' minutes')::INTERVAL
-               )`,
-            [String(maxMinutes)]
-        );
-        if (rowCount > 0) {
-            console.warn(`[Scheduler] Recovery: ${rowCount} tarea(s) en processing fueron liberadas a pending.`);
+        const threshold = new Date(Date.now() - maxMinutes * 60000).toISOString();
+        
+        const { data, error } = await supabase
+            .from('scheduled_calls')
+            .update({ 
+                status: 'pending', 
+                processing_started_at: null,
+                updated_at: new Date().toISOString()
+            })
+            .eq('status', 'processing')
+            .lt('processing_started_at', threshold)
+            .select();
+
+        if (error) throw error;
+        if (data && data.length > 0) {
+            console.warn(`[Supabase Scheduler] Recovery: ${data.length} tarea(s) liberadas.`);
         }
     } catch (err) {
-        console.error('[Scheduler] Error recovering stuck calls:', err.message);
+        console.error('[Supabase Scheduler] Error recovering stuck calls:', err.message);
     }
 }
 
 async function processScheduledCalls() {
     try {
-        await recoverStuckScheduledCalls(3);
         const now = new Date().toISOString();
-        const { rows } = await query(
-            `UPDATE scheduled_calls 
-             SET status = 'processing',
-                 processing_started_at = NOW(),
-                 attempts = attempts + 1,
-                 updated_at = NOW(),
-                 last_error = NULL
-             WHERE status = 'pending' AND scheduled_for <= $1 
-             RETURNING *`,
-            [now]
-        );
+        
+        // 1. Marcar como processing y obtener los datos (Atomic-ish)
+        const { data: tasks, error } = await supabase
+            .from('scheduled_calls')
+            .update({ 
+                status: 'processing',
+                processing_started_at: now,
+                updated_at: now
+            })
+            .eq('status', 'pending')
+            .lte('scheduled_for', now)
+            .select('*');
 
-        for (const task of rows) {
-            console.log(`[Scheduler] Triggering scheduled call to ${task.to_number}`);
+        if (error) throw error;
+        if (!tasks || tasks.length === 0) return;
+
+        for (const task of tasks) {
+            console.log(`🚀 [Supabase Scheduler] Iniciando llamada: ${task.to_number}`);
             
             try {
                 await callQueue.add(async () => {
@@ -89,42 +92,36 @@ async function processScheduledCalls() {
                     }
                 });
                 
-                await query(
-                  `UPDATE scheduled_calls
-                   SET status = 'completed',
-                       processing_started_at = NULL,
-                       updated_at = NOW()
-                   WHERE id = $1`,
-                  [task.id]
-                );
+                await supabase
+                    .from('scheduled_calls')
+                    .update({ status: 'completed', updated_at: new Date().toISOString() })
+                    .eq('id', task.id);
+
             } catch (err) {
-                console.error(`[Scheduler] Failed to trigger call ${task.id}:`, err.message);
-                await query(
-                  `UPDATE scheduled_calls
-                   SET status = 'pending',
-                       scheduled_for = NOW() + INTERVAL '2 minutes',
-                       processing_started_at = NULL,
-                       updated_at = NOW(),
-                       last_error = $2
-                   WHERE id = $1`,
-                  [task.id, err.message?.slice(0, 500) || 'Error desconocido']
-                );
+                console.error(`❌ [Supabase Scheduler] Error en llamada ${task.id}:`, err.message);
+                await supabase
+                    .from('scheduled_calls')
+                    .update({ 
+                        status: 'pending', 
+                        scheduled_for: new Date(Date.now() + 120000).toISOString(), // Reintentar en 2 min
+                        last_error: err.message?.slice(0, 500)
+                    })
+                    .eq('id', task.id);
             }
         }
     } catch (err) {
-        console.error('[Scheduler] Error processing scheduled calls:', err.message);
+        console.error('[Supabase Scheduler] Error processing calls:', err.message);
     }
 }
 
-// Check every 60 seconds
 function startScheduler() {
     recoverStuckScheduledCalls(1).catch(() => {});
-    // Primera ejecución inmediata para evitar esperar el primer minuto
-    processScheduledCalls().catch(err => console.error('[Scheduler] Initial run failed:', err.message));
+    // Ejecución inicial rápida
+    setTimeout(processScheduledCalls, 3000);
     
-    setInterval(processScheduledCalls, 60000);
-    setInterval(() => recoverStuckScheduledCalls(3), 120000);
-    console.log('[Scheduler] Scheduled Calls Service: STARTED (First run executed)');
+    setInterval(processScheduledCalls, 30000); // Revisar cada 30 segundos para más velocidad
+    setInterval(() => recoverStuckScheduledCalls(5), 300000);
+    console.log('✅ [Supabase Scheduler] Motor Nativo: ACTIVADO');
 }
 
 module.exports = { startScheduler, recoverStuckScheduledCalls };
