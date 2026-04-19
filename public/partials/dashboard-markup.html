@@ -1,590 +1,295 @@
 <!-- Sidebar -->
-    <aside class="h-screen w-72 fixed left-0 top-0 z-50 bg-slate-950/80 backdrop-blur-2xl border-r border-white/5 flex flex-col py-8 shadow-2xl">
-        <div class="px-8 mb-10 flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
-                <img src="assets/logo.png" alt="ViaAI Logo" class="w-7 h-7 object-contain">
+    <aside class="h-screen w-64 fixed left-0 top-0 z-50 bg-[#0a0118] border-r border-white/5 flex flex-col py-6">
+        <div class="px-6 mb-8 flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20">
+                <img src="assets/logo.png" alt="Logo" class="w-5 h-5 object-contain">
             </div>
             <div>
-                <h1 class="text-xl font-extrabold tracking-tight text-white">ViaAI</h1>
-                <p class="text-[9px] font-bold tracking-[0.2em] text-slate-500 uppercase">Neural Matrix</p>
+                <h1 class="text-lg font-bold text-white tracking-tight">ViaAI</h1>
+                <p class="text-[8px] font-bold tracking-widest text-slate-500 uppercase">Neural Matrix</p>
             </div>
         </div>
         
         <nav id="sidebar-nav" class="flex-1 space-y-1">
-            <button class="nav-item active w-full py-4 px-8 flex items-center gap-4 transition-all text-slate-400 hover:text-white" data-tab="campaigns">
+            <button class="nav-item active w-full flex items-center gap-3 text-slate-400 hover:text-white transition-all" data-tab="campaigns">
                 <span class="material-symbols-outlined text-xl">campaign</span>
-                <span class="text-[10px] font-bold uppercase tracking-widest">Campañas</span>
+                <span class="text-[9px] font-bold uppercase tracking-wider">Campañas</span>
             </button>
-            <button class="nav-item w-full py-4 px-8 flex items-center gap-4 transition-all text-slate-400 hover:text-white" data-tab="prompts">
+            <button class="nav-item w-full flex items-center gap-3 text-slate-400 hover:text-white transition-all" data-tab="prompts">
                 <span class="material-symbols-outlined text-xl">psychology</span>
-                <span class="text-[10px] font-bold uppercase tracking-widest">Identidad</span>
+                <span class="text-[9px] font-bold uppercase tracking-wider">Identidad</span>
             </button>
-            <button class="nav-item w-full py-4 px-8 flex items-center gap-4 transition-all text-slate-400 hover:text-white" data-tab="reminders">
+            <button class="nav-item w-full flex items-center gap-3 text-slate-400 hover:text-white transition-all" data-tab="reminders">
                 <span class="material-symbols-outlined text-xl">event_note</span>
-                <span class="text-[10px] font-bold uppercase tracking-widest">Recordatorios</span>
+                <span class="text-[9px] font-bold uppercase tracking-wider">Recordatorios</span>
             </button>
-            <button class="nav-item w-full py-4 px-8 flex items-center gap-4 transition-all text-slate-400 hover:text-white" data-tab="history">
+            <button class="nav-item w-full flex items-center gap-3 text-slate-400 hover:text-white transition-all" data-tab="history">
                 <span class="material-symbols-outlined text-xl">history</span>
-                <span class="text-[10px] font-bold uppercase tracking-widest">Historial</span>
+                <span class="text-[9px] font-bold uppercase tracking-wider">Historial</span>
             </button>
-            <button class="nav-item w-full py-4 px-8 flex items-center gap-4 transition-all text-slate-400 hover:text-white" data-tab="retrybook">
+            <button class="nav-item w-full flex items-center gap-3 text-slate-400 hover:text-white transition-all" data-tab="retrybook">
                 <span class="material-symbols-outlined text-xl">book_5</span>
-                <span class="text-[10px] font-bold uppercase tracking-widest">Control</span>
+                <span class="text-[9px] font-bold uppercase tracking-wider">Control</span>
             </button>
-            <button class="nav-item w-full py-4 px-8 flex items-center gap-4 transition-all text-slate-400 hover:text-white" data-tab="stats">
+            <button class="nav-item w-full flex items-center gap-3 text-slate-400 hover:text-white transition-all" data-tab="stats">
                 <span class="material-symbols-outlined text-xl">monitoring</span>
-                <span class="text-[10px] font-bold uppercase tracking-widest">Consumo</span>
+                <span class="text-[9px] font-bold uppercase tracking-wider">Consumo</span>
             </button>
-            <button class="nav-item w-full py-4 px-8 flex items-center gap-4 transition-all text-slate-400 hover:text-white" data-tab="monitor">
+            <button class="nav-item w-full flex items-center gap-3 text-slate-400 hover:text-white transition-all" data-tab="monitor">
                 <span class="material-symbols-outlined text-xl">radio</span>
-                <span class="text-[10px] font-bold uppercase tracking-widest">Monitor</span>
+                <span class="text-[9px] font-bold uppercase tracking-wider">Monitor</span>
             </button>
         </nav>
 
-        <div class="mt-auto px-8">
-            <button id="logout-btn" class="w-full py-3 rounded-xl border border-white/5 bg-white/5 text-slate-400 flex items-center justify-center gap-3 text-[10px] hover:text-rose-500 hover:bg-rose-500/5 hover:border-rose-500/20 transition-all font-bold uppercase tracking-widest">
-                <span class="material-symbols-outlined text-lg">logout</span>
+        <div class="mt-auto px-6 py-4">
+            <button id="logout-btn" class="w-full py-2.5 rounded-lg border border-white/5 bg-white/5 text-slate-400 flex items-center justify-center gap-2 text-[9px] hover:text-rose-500 hover:bg-rose-500/5 transition-all font-bold uppercase tracking-wider">
+                <span class="material-symbols-outlined text-base">logout</span>
                 Logout
             </button>
         </div>
     </aside>
 
-    <main class="ml-72 min-h-screen relative z-10 flex flex-col no-scrollbar bg-slate-950">
+    <main class="ml-64 min-h-screen relative z-10 flex flex-col no-scrollbar">
         <!-- TopNav -->
-        <header class="w-full sticky top-0 z-40 bg-slate-950/50 backdrop-blur-xl flex justify-between items-center px-12 py-6 border-b border-white/5">
-            <h2 id="page-title" class="text-2xl font-black tracking-tight text-white">Panel Neural</h2>
-            <div class="flex items-center gap-8">
+        <header class="w-full sticky top-0 z-40 flex justify-between items-center px-10 py-6 bg-black/20 backdrop-blur-xl">
+            <h2 id="page-title">Panel de Control</h2>
+            <div class="flex items-center gap-6">
                 <div class="flex flex-col items-end">
-                    <p id="clock" class="text-[10px] font-bold text-primary uppercase tracking-[0.2em]"></p>
-                    <p class="text-[9px] text-slate-500 uppercase tracking-widest">Node Active</p>
+                    <p id="clock" class="text-[10px] font-bold text-primary uppercase tracking-widest"></p>
+                    <p class="text-[8px] text-slate-500 uppercase tracking-widest">Sistema Operativo</p>
                 </div>
-                <div class="h-10 w-px bg-white/10"></div>
-                <div class="relative group cursor-pointer" id="profile-container">
-                    <div class="w-11 h-11 overflow-hidden border-2 border-primary/20 p-[2px] rounded-2xl transition-all group-hover:border-primary">
-                        <img id="profile-img" class="w-full h-full object-cover rounded-xl" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBrTS3sVmMFVUebUp9IUzsVlYqHwiMl_3iNHzefY-KK63fletMSGrhzXejt7VZhIstmJv8vRCs_ijjjsjBM40ln2NR_ZS9zh4T4CSIuefhywX3pyctAuftwSLUqHVu4zG8qNWq90lozfHrU8fK-GIx3fIQkjMF6ElRg9qlGaLE_Q_2q--bADkdLEzkazhKmnPPcd6JhNkbvEkxA90e6fEKJ8WtyGkNlFrDXqVTN_iGEte-TvQ-TsOpz3uMxTwDmkoqfAcJYxEU35O8" alt="X">
-                    </div>
+                <div class="h-8 w-px bg-white/10"></div>
+                <div class="w-10 h-10 overflow-hidden border-2 border-primary/20 p-[1px] rounded-xl cursor-pointer hover:border-primary transition-all">
+                    <img id="profile-img" class="w-full h-full object-cover rounded-[10px]" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBrTS3sVmMFVUebUp9IUzsVlYqHwiMl_3iNHzefY-KK63fletMSGrhzXejt7VZhIstmJv8vRCs_ijjjsjBM40ln2NR_ZS9zh4T4CSIuefhywX3pyctAuftwSLUqHVu4zG8qNWq90lozfHrU8fK-GIx3fIQkjMF6ElRg9qlGaLE_Q_2q--bADkdLEzkazhKmnPPcd6JhNkbvEkxA90e6fEKJ8WtyGkNlFrDXqVTN_iGEte-TvQ-TsOpz3uMxTwDmkoqfAcJYxEU35O8" alt="X">
                 </div>
             </div>
         </header>
 
-        <div class="p-12 space-y-12">
+        <div class="px-10 py-8 space-y-10 max-w-[1600px] mx-auto w-full">
             <!-- TAB: CAMPAÑAS -->
-            <div id="tab-campaigns" class="tab-content active space-y-10">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+            <div id="tab-campaigns" class="tab-content active space-y-8">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <section class="glass-card">
-                        <h3 class="text-[10px] font-bold text-primary mb-10 uppercase tracking-[0.3em] flex items-center gap-3">
-                             <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                                <span class="material-symbols-outlined text-lg">rocket_launch</span>
-                             </div>
-                             Despacho Neural
-                        </h3>
-                        <form id="campaign-form" class="space-y-8">
-                            <div class="space-y-4">
+                        <h3 class="text-[10px] font-bold text-primary mb-6 uppercase tracking-widest">Despacho Neural</h3>
+                        <form id="campaign-form" class="space-y-6">
+                            <div class="space-y-3">
                                 <div class="flex justify-between items-center">
-                                    <label class="block text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Destinatarios</label>
-                                    <label class="cursor-pointer text-[10px] font-bold text-primary hover:underline uppercase tracking-widest flex items-center gap-2">
-                                        <span class="material-symbols-outlined text-[14px]">upload_file</span>
-                                        Importar Datos
+                                    <label class="text-[9px] font-bold uppercase tracking-widest text-slate-500">Destinatarios</label>
+                                    <label class="cursor-pointer text-[9px] font-bold text-primary hover:underline uppercase tracking-widest flex items-center gap-1">
+                                        <span class="material-symbols-outlined text-sm">upload_file</span>
+                                        Importar
                                         <input type="file" id="import-file-campaigns" accept=".xlsx, .xls, .docx, .doc" class="hidden">
                                     </label>
                                 </div>
-                                <textarea id="phone-numbers" class="w-full bg-slate-900/50 border border-white/5 rounded-2xl py-6 px-6 text-sm focus:border-primary outline-none text-white min-h-[150px] placeholder:text-slate-600" placeholder="+51999888777&#10;+51944555666"></textarea>
+                                <textarea id="phone-numbers" class="w-full bg-black/20 border border-white/5 rounded-xl py-4 px-4 text-sm focus:border-primary outline-none text-white min-h-[120px]" placeholder="+51..."></textarea>
                             </div>
-                            <div class="flex gap-4">
-                                <button type="button" id="clear-btn" class="px-8 bg-slate-900 text-slate-400 font-bold rounded-2xl hover:bg-slate-800 transition-all uppercase tracking-widest text-[10px] border border-white/5">Limpiar</button>
-                                <button type="submit" id="start-btn" class="flex-1 py-5 bg-primary text-slate-950 font-black rounded-2xl shadow-xl transition-all uppercase tracking-[0.2em] text-[11px]">Iniciar Transmisión</button>
+                            <div class="flex gap-3">
+                                <button type="button" id="clear-btn" class="px-6 py-3 bg-white/5 text-slate-400 font-bold rounded-xl hover:bg-white/10 transition-all uppercase tracking-widest text-[9px]">Limpiar</button>
+                                <button type="submit" id="start-btn" class="flex-1 py-3 bg-primary text-white font-bold rounded-xl transition-all uppercase tracking-widest text-[10px]">Iniciar Transmisión</button>
                             </div>
                         </form>
                     </section>
-
                     <section class="glass-card">
-                        <h3 class="text-[10px] font-bold text-secondary mb-10 uppercase tracking-[0.3em] flex items-center gap-3">
-                             <div class="w-8 h-8 rounded-lg bg-secondary/10 flex items-center justify-center">
-                                <span class="material-symbols-outlined text-lg">sensors</span>
-                             </div>
-                             Enlace Activo
-                        </h3>
-                        <div id="empty-state" class="flex flex-col items-center justify-center py-20 opacity-10">
-                            <span class="material-symbols-outlined text-6xl mb-4">waves</span>
-                            <p class="text-[10px] font-bold uppercase tracking-widest">Ready for signal</p>
+                        <h3 class="text-[10px] font-bold text-indigo-400 mb-6 uppercase tracking-widest">Enlace Activo</h3>
+                        <div id="empty-state" class="flex flex-col items-center justify-center py-10 opacity-20">
+                            <span class="material-symbols-outlined text-4xl mb-2">waves</span>
+                            <p class="text-[8px] font-bold uppercase tracking-widest">Ready for signal</p>
                         </div>
-                        <ul id="call-list" class="space-y-3 max-h-[400px] overflow-y-auto no-scrollbar"></ul>
+                        <ul id="call-list" class="space-y-2 max-h-[350px] overflow-y-auto no-scrollbar"></ul>
                     </section>
                 </div>
             </div>
 
             <!-- TAB: IDENTIDAD -->
-            <div id="tab-prompts" class="tab-content space-y-10">
-                <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
-                    <section class="lg:col-span-4 space-y-6">
+            <div id="tab-prompts" class="tab-content space-y-8">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    <section class="lg:col-span-4 space-y-4">
                         <div class="glass-card">
-                            <h3 class="text-[10px] font-bold text-primary mb-6 uppercase tracking-[0.25em]">Nodo de Identidad</h3>
-                            <div class="space-y-4">
-                                <label class="block text-[9px] font-bold text-slate-500 uppercase tracking-widest px-1">Seleccionar Conciencia</label>
-                                <select id="prompt-select" class="w-full bg-slate-900/50 border border-white/5 rounded-2xl py-3 px-6 text-sm focus:border-primary outline-none text-white cursor-pointer"></select>
-                                <div class="grid grid-cols-2 gap-3">
-                                    <button id="new-prompt-btn" class="py-3 bg-white/5 border border-white/5 rounded-xl text-[9px] font-bold text-slate-400 uppercase tracking-widest hover:text-white hover:border-white/10 transition-all">Nueva</button>
-                                    <button id="delete-prompt-btn" class="py-3 bg-rose-500/5 border border-rose-500/10 rounded-xl text-[9px] font-bold text-rose-500 uppercase tracking-widest hover:bg-rose-500/10 transition-all">Eliminar</button>
+                            <h3 class="text-[10px] font-bold text-primary mb-4 uppercase tracking-widest">Seleccionar Nodo</h3>
+                            <div class="space-y-3">
+                                <select id="prompt-select" class="w-full bg-black/20 border border-white/5 rounded-xl py-2 px-4 text-xs text-white outline-none"></select>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <button id="new-prompt-btn" class="py-2 bg-white/5 border border-white/5 rounded-lg text-[8px] font-bold text-slate-400 uppercase hover:text-white transition-all">Nueva</button>
+                                    <button id="delete-prompt-btn" class="py-2 bg-rose-500/5 border border-rose-500/10 rounded-lg text-[8px] font-bold text-rose-500 uppercase hover:bg-rose-500/10 transition-all">Eliminar</button>
                                 </div>
                             </div>
                         </div>
-
-                        <div class="glass-card bg-primary/5 border-primary/20">
-                             <p class="text-[10px] leading-relaxed text-slate-400">
-                                <span class="text-primary font-black uppercase tracking-widest block mb-2">Aviso de Matriz</span>
-                                Cada identidad define la personalidad, el tono y los límites éticos de la IA durante la interacción de voz. Los cambios se sincronizan globalmente.
-                             </p>
-                        </div>
                     </section>
-
                     <section class="lg:col-span-8 glass-card">
-                        <h3 class="text-[10px] font-bold text-indigo-400 mb-10 uppercase tracking-[0.3em] flex items-center gap-3">
-                             <div class="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-400">
-                                <span class="material-symbols-outlined text-lg">psychology</span>
-                             </div>
-                             Núcleo de Respuesta (DNA)
-                        </h3>
-                        <div class="space-y-8">
-                            <div class="space-y-4">
-                                <label class="block text-[10px] font-extrabold uppercase tracking-widest text-slate-500">Saludo Inicial</label>
-                                <input id="prompt-greeting" class="w-full bg-slate-900/50 border border-white/5 rounded-2xl py-4 px-6 text-sm focus:border-primary outline-none text-white transition-all shadow-inner" placeholder="Ej: Hola, soy Via de ViaAI Matrix...">
+                        <h3 class="text-[10px] font-bold text-indigo-400 mb-6 uppercase tracking-widest">Configuración ADN</h3>
+                        <div class="space-y-6">
+                            <div class="space-y-2">
+                                <label class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Saludo Inicial</label>
+                                <input id="prompt-greeting" class="w-full bg-black/20 border border-white/5 rounded-xl py-3 px-4 text-sm text-white focus:border-primary outline-none" placeholder="Hola...">
                             </div>
-                            <div class="space-y-4">
-                                <label class="block text-[10px] font-extrabold uppercase tracking-widest text-slate-500">Instrucciones de Red Neuronal</label>
-                                <textarea id="prompt-text" class="w-full bg-slate-900/50 border border-white/5 rounded-2xl py-6 px-6 text-sm focus:border-primary outline-none text-white min-h-[300px] leading-relaxed placeholder:text-slate-700" placeholder="Define el propósito del nodo..."></textarea>
+                            <div class="space-y-2">
+                                <label class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Instrucciones</label>
+                                <textarea id="prompt-text" class="w-full bg-black/20 border border-white/5 rounded-xl py-4 px-4 text-sm text-white focus:border-primary outline-none min-h-[300px]" placeholder="Define el comportamiento..."></textarea>
                             </div>
-                            <button id="save-prompt-btn" class="w-full py-5 bg-primary text-slate-950 font-black rounded-2xl shadow-xl transition-all uppercase tracking-[0.2em] text-[11px]">Sincronizar Nodo</button>
+                            <button id="save-prompt-btn" class="w-full py-3 bg-primary text-white font-bold rounded-xl transition-all uppercase tracking-widest text-[10px]">Guardar Nodo</button>
                         </div>
                     </section>
                 </div>
             </div>
 
             <!-- TAB: RECORDATORIOS -->
-            <div id="tab-reminders" class="tab-content space-y-10">
+            <div id="tab-reminders" class="tab-content space-y-8">
                 <section class="glass-card">
-                    <div class="flex items-center gap-8 mb-12">
-                         <div class="w-16 h-16 rounded-2xl bg-primary text-slate-950 flex items-center justify-center shadow-2xl">
-                             <span class="material-symbols-outlined text-3xl font-bold">event_available</span>
+                    <div class="flex items-center gap-6 mb-8">
+                         <div class="w-12 h-12 rounded-xl bg-primary text-white flex items-center justify-center shadow-lg">
+                             <span class="material-symbols-outlined text-2xl font-bold">event_available</span>
                          </div>
                          <div>
-                             <h3 class="text-2xl font-black tracking-tight mb-2 text-white">Gestión de Recordatorios</h3>
-                             <p class="text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em]">Programación de Lotes Automatizados</p>
+                             <h3 class="text-xl font-bold text-white">Recordatorios</h3>
+                             <p class="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Programación en Lote</p>
                          </div>
                     </div>
-
-                    <form id="reminder-form" class="space-y-12">
-                        <!-- Paso 1 -->
-                        <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
-                            <div class="lg:col-span-4">
-                                <h4 class="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-2">Paso 01</h4>
-                                <div class="flex items-center justify-between mb-4">
-                                    <h5 class="text-lg font-extrabold text-white">Destinatarios</h5>
-                                    <span id="reminder-count" class="text-[10px] font-bold text-primary bg-primary/10 px-3 py-1 rounded-full uppercase tracking-widest">0 Destinos</span>
-                                </div>
-                                <p class="text-slate-500 text-xs leading-relaxed">Carga la base de datos de números y sus contextos correspondientes.</p>
-                                <div class="mt-8">
-                                    <label class="cursor-pointer py-3 px-6 bg-white/5 border border-white/10 rounded-xl text-[10px] font-bold text-slate-300 uppercase tracking-widest hover:text-white flex items-center justify-center gap-2 transition-all group">
-                                        <span class="material-symbols-outlined text-lg group-hover:text-primary transition-colors">cloud_upload</span>
-                                        Importar Base
-                                        <input type="file" id="import-file-reminders" accept=".xlsx, .xls, .docx, .doc" class="hidden">
+                    <form id="reminder-form" class="space-y-8">
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <div class="space-y-6">
+                                <div class="space-y-3">
+                                    <label class="text-[9px] font-bold text-slate-500 uppercase tracking-widest flex justify-between">
+                                        Números y Guiones
+                                        <input type="file" id="import-file-reminders" class="hidden">
                                     </label>
+                                    <select id="reminder-message-template" class="w-full bg-black/20 border border-white/5 rounded-xl py-3 px-4 text-xs text-white"></select>
+                                    <textarea id="reminder-msg" class="w-full bg-black/20 border border-white/5 rounded-xl py-4 px-4 text-sm text-white h-[120px]" placeholder="Mensaje..."></textarea>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <textarea id="reminder-phones" class="w-full bg-black/20 border border-white/5 rounded-xl py-3 px-4 text-[11px] text-white h-[100px]" placeholder="Números"></textarea>
+                                    <textarea id="reminder-domains" class="w-full bg-black/20 border border-white/5 rounded-xl py-3 px-4 text-[11px] text-white h-[100px]" placeholder="Dominios"></textarea>
                                 </div>
                             </div>
-                            <div class="lg:col-span-8 space-y-6">
-                                <!-- Mensajes Predefinidos -->
-                                <div class="space-y-4">
-                                    <div class="flex items-center justify-between px-1">
-                                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Guiones de Recordatorio</label>
-                                    </div>
-                                    <div class="grid grid-cols-1 gap-3">
-                                        <select id="reminder-message-template" class="w-full bg-slate-900/60 border border-white/5 rounded-2xl py-4 px-6 text-sm text-white focus:border-primary outline-none cursor-pointer">
-                                            <option value="">-- SELECCIONAR PLANTILLA --</option>
-                                            <option value="uso_correos">USO DE CORREOS</option>
-                                            <option value="informacion_pendientes">INFORMACIÓN PENDIENTES</option>
-                                            <option value="llamada_ofertas">LLAMADA DE OFERTAS</option>
-                                            <option value="respuesta_cotizacion">RESPUESTA DE COTIZACIÓN</option>
-                                            <option value="renovacion_servicios">RENOVACIÓN DE SERVICIOS</option>
-                                            <option value="actualizacion_datos">ACTUALIZACIÓN DE DATOS</option>
-                                            <option value="mensaje_personalizado">MENSAJE PERSONALIZADO</option>
+                            <div class="space-y-6">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="space-y-2">
+                                        <label class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Ejecución</label>
+                                        <select id="reminder-retry" class="w-full bg-black/20 border border-white/5 rounded-xl py-3 px-4 text-xs text-white">
+                                            <option value="0">Sin Reintento</option>
+                                            <option value="1">1 hora</option>
+                                            <option value="2">2 horas</option>
                                         </select>
-                                        <textarea id="reminder-msg" class="bg-slate-900/40 border border-white/5 rounded-2xl p-6 text-sm focus:border-primary outline-none text-white min-h-[160px] placeholder:text-slate-700 no-scrollbar" placeholder="Texto del recordatorio completo..."></textarea>
-                                        
-                                        <div class="flex items-center justify-between px-1">
-                                            <button id="preview-reminder-btn" type="button" class="text-[9px] font-bold text-indigo-400 uppercase tracking-widest hover:text-indigo-300 transition-all flex items-center gap-1">
-                                                <span class="material-symbols-outlined text-[14px]">play_circle</span> Escuchar Voz
-                                            </button>
-                                            
-                                            <div class="flex gap-4">
-                                                <button id="btn-save-reminder-msg" type="button" class="text-[9px] font-bold text-slate-500 uppercase tracking-widest hover:text-primary transition-all flex items-center gap-1">
-                                                    <span class="material-symbols-outlined text-[14px]">save</span> Guardar
-                                                </button>
-                                                <button id="delete-reminder-btn" type="button" class="text-[9px] font-bold text-slate-500 uppercase tracking-widest hover:text-error transition-all flex items-center gap-1">
-                                                    <span class="material-symbols-outlined text-[14px]">delete</span> Eliminar
-                                                </button>
-                                            </div>
-                                        </div>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Hora</label>
+                                        <input id="reminder-time" type="datetime-local" class="w-full bg-black/20 border border-white/5 rounded-xl py-3 px-4 text-xs text-white">
                                     </div>
                                 </div>
-                                
-                                <!-- Números y Contextos -->
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <textarea id="reminder-phones" class="bg-slate-900/40 border border-white/5 rounded-2xl p-6 text-sm focus:border-primary outline-none text-white min-h-[180px] placeholder:text-slate-700" placeholder="Números (+51...)"></textarea>
-                                    <textarea id="reminder-domains" class="bg-slate-900/40 border border-white/5 rounded-2xl p-6 text-sm focus:border-primary outline-none text-white min-h-[180px] placeholder:text-slate-700" placeholder="Dominios / Contextos"></textarea>
-                                </div>
+                                <button type="submit" id="reminder-submit-btn" class="w-full py-4 bg-primary text-white font-bold rounded-xl uppercase tracking-widest text-[11px] shadow-lg">PROGRAMAR LLAMADAS</button>
+                                <div id="reminder-queue" class="space-y-2 max-h-[150px] overflow-y-auto no-scrollbar"></div>
                             </div>
                         </div>
-
-                        <!-- Paso 2 -->
-                        <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 border-t border-white/5 pt-10">
-                            <div class="lg:col-span-4">
-                                <h4 class="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-2">Paso 02</h4>
-                                <h5 class="text-lg font-extrabold text-white mb-4">Transmisión</h5>
-                                <p class="text-slate-500 text-xs leading-relaxed">Define el momento de ejecución y política de reintentos en caso de fallo.</p>
-                            </div>
-                            <div class="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div class="space-y-4">
-                                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Modo de Envío</label>
-                                    <div class="flex bg-slate-900/60 p-1.5 rounded-2xl border border-white/5">
-                                        <button type="button" id="btn-modo-inmediato" class="flex-1 py-3 bg-primary text-slate-950 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">Directo</button>
-                                        <button type="button" id="btn-modo-programado" class="flex-1 py-3 text-slate-400 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:text-white transition-all">Programar</button>
-                                    </div>
-                                    <div id="reminder-time-container" class="hidden animate-in fade-in slide-in-from-top-2">
-                                        <input id="reminder-time" type="datetime-local" class="w-full bg-slate-950/50 border border-white/10 rounded-2xl py-3 px-6 text-sm text-white focus:border-primary outline-none">
-                                    </div>
-                                </div>
-                                <div class="space-y-4">
-                                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Reintento Automático</label>
-                                    <select id="reminder-retry" class="w-full bg-slate-900/60 border border-white/5 rounded-2xl py-4 px-6 text-sm text-white focus:border-primary outline-none cursor-pointer">
-                                        <option value="0">Desactivado</option>
-                                        <option value="1">1 hora después</option>
-                                        <option value="2">2 horas después</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div id="batch-badge" class="hidden text-[9px] font-bold text-primary bg-primary/10 px-3 py-1 rounded-full uppercase tracking-widest animate-pulse">En curso</div>
-                        </div>
-                        <p class="text-[11px] text-zinc-500 mb-6">Aquí verás el estado del lote y los resultados en tiempo real.</p>
-                        
-                        <button type="submit" id="reminder-submit-btn" class="w-full py-5 bg-primary text-slate-950 font-black rounded-2xl shadow-xl transition-all uppercase tracking-[0.2em] text-[11px] hover:scale-[0.99] active:scale-95 mb-10">
-                            LLAMAR
-                        </button>
-
-                        <!-- Estadísticas de Lote -->
-                        <div id="batch-stats" class="hidden grid grid-cols-2 gap-4 mb-8">
-                            <div class="bg-surface-container-low p-5 rounded-2xl border border-white/5 relative overflow-hidden group">
-                                <div class="absolute -right-4 -bottom-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                                    <span class="material-symbols-outlined text-6xl text-emerald-400">check_circle</span>
-                                </div>
-                                <p class="text-[9px] font-label text-zinc-500 uppercase tracking-widest mb-1">Contestaron</p>
-                                <p id="batch-answered-count" class="text-2xl font-black text-emerald-400">0</p>
-                            </div>
-                            <div class="bg-surface-container-low p-5 rounded-2xl border border-white/5 relative overflow-hidden group">
-                                <div class="absolute -right-4 -bottom-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                                    <span class="material-symbols-outlined text-6xl text-error">cancel</span>
-                                </div>
-                                <p class="text-[9px] font-label text-zinc-500 uppercase tracking-widest mb-1">Sin Respuesta</p>
-                                <p id="batch-failed-count" class="text-2xl font-black text-error">0</p>
-                            </div>
-                        </div>
-
-                        <div id="reminder-queue" class="space-y-4 no-scrollbar max-h-[350px] overflow-y-auto flex-1">
-                           <div class="opacity-10 py-24 text-center uppercase text-[10px] font-bold tracking-widest">Sin actividad</div>
-                        </div>
-
-                        <div id="batch-actions" class="hidden pt-6 mt-auto border-t border-zinc-800/30">
-                            <button type="button" id="btn-reprogramar-fallidos" class="w-full py-4 bg-zinc-800 text-secondary-container font-black border border-secondary-container/20 rounded-xl shadow-lg hover:bg-secondary-container/10 transition-all uppercase tracking-widest text-[10px] flex items-center justify-center gap-3">
-                                 <span class="material-symbols-outlined">restart_alt</span>
-                                 Reprogramar No Contestados
-                            </button>
-                            <button type="button" id="btn-stop-all-reminders" class="w-full mt-3 py-4 bg-error/10 text-error font-black border border-error/20 rounded-xl shadow-lg hover:bg-error/20 transition-all uppercase tracking-widest text-[10px] flex items-center justify-center gap-3">
-                                 <span class="material-symbols-outlined">stop_circle</span>
-                                 Detener Recordatorios
-                            </button>
-                        </div>
-                        </form>
-                    </section>
-                </div>
+                    </form>
+                </section>
             </div>
 
             <!-- TAB: HISTORIAL -->
             <div id="tab-history" class="tab-content space-y-10">
                 <section class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <!-- Answered Card -->
-                    <div class="glass-card border-emerald-500/20 bg-emerald-500/5">
-                         <div class="flex items-center justify-between mb-4">
-                            <div class="w-12 h-12 bg-emerald-500 text-slate-950 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                                <span class="material-symbols-outlined text-2xl font-bold">call_made</span>
-                            </div>
-                            <h4 id="history-answered-count" class="text-4xl font-extrabold text-emerald-400">0</h4>
+                    <div class="glass-card border-emerald-500/20">
+                         <div class="flex items-center justify-between mb-2">
+                            <span class="material-symbols-outlined text-emerald-500">call_made</span>
+                            <h4 id="history-answered-count" class="text-3xl font-bold text-white">0</h4>
                          </div>
-                         <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Llamadas Contestadas</p>
-                         <div class="mt-6 pt-4 border-t border-white/5 flex justify-between items-center">
-                            <span class="text-[9px] text-slate-400 uppercase font-bold">Total Salientes</span>
-                            <span id="history-outbound-total" class="text-[11px] text-emerald-300 font-extrabold">0</span>
-                         </div>
+                         <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Contestadas</p>
                     </div>
-
-                    <!-- Unanswered Card -->
-                    <div class="glass-card border-rose-500/20 bg-rose-500/5">
-                         <div class="flex items-center justify-between mb-4">
-                            <div class="w-12 h-12 bg-rose-500 text-slate-950 rounded-2xl flex items-center justify-center shadow-lg shadow-rose-500/20">
-                                <span class="material-symbols-outlined text-2xl font-bold">call_missed</span>
-                            </div>
-                            <h4 id="history-unanswered-count" class="text-4xl font-extrabold text-rose-400">0</h4>
+                    <div class="glass-card border-rose-500/20">
+                         <div class="flex items-center justify-between mb-2">
+                            <span class="material-symbols-outlined text-rose-500">call_missed</span>
+                            <h4 id="history-unanswered-count" class="text-3xl font-bold text-white">0</h4>
                          </div>
-                         <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Sin Respuesta</p>
-                         <div class="mt-6 flex flex-col gap-3">
-                             <div class="flex gap-2">
-                                <button id="history-retry-all-unanswered" class="flex-1 py-3 bg-white/5 border border-white/10 hover:bg-rose-500/10 hover:border-rose-500/30 text-rose-400 text-[9px] font-bold uppercase tracking-widest rounded-xl transition-all">Reintentar</button>
-                                <button id="history-reset-all-btn" disabled class="flex-1 py-3 bg-white/5 border border-white/10 hover:bg-rose-500/10 text-rose-500 text-[9px] font-bold uppercase tracking-widest rounded-xl transition-all opacity-40">Reset</button>
-                             </div>
-                             <label class="flex items-center gap-2 text-[8px] font-bold text-slate-600 uppercase tracking-tighter">
-                                <input id="history-reset-confirm" type="checkbox" class="w-3 h-3 rounded bg-slate-900 border-white/10 text-rose-500 focus:ring-0">
-                                Confirmar acción irreversible
-                             </label>
-                         </div>
+                         <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Sin Respuesta</p>
                     </div>
-
-                    <!-- Rate Card -->
-                    <div class="glass-card border-primary/20 bg-primary/5">
-                         <div class="flex items-center justify-between mb-4">
-                            <div class="w-12 h-12 bg-primary text-slate-950 rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20">
-                                <span class="material-symbols-outlined text-2xl font-bold">query_stats</span>
-                            </div>
-                            <h4 id="history-answer-rate" class="text-4xl font-extrabold text-primary">0%</h4>
+                    <div class="glass-card border-primary/20">
+                         <div class="flex items-center justify-between mb-2">
+                            <span class="material-symbols-outlined text-primary">query_stats</span>
+                            <h4 id="history-answer-rate" class="text-3xl font-bold text-white">0%</h4>
                          </div>
-                         <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Tasa de Efectividad</p>
-                         <div class="mt-6 pt-4 border-t border-white/5 flex justify-between gap-4 text-[9px] uppercase font-bold text-slate-500">
-                             <div>Duración: <span id="history-total-duration" class="text-primary">0s</span></div>
-                             <div>Promedio: <span id="history-avg-duration" class="text-primary">0s</span></div>
-                         </div>
+                         <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Efectividad</p>
                     </div>
                 </section>
-
-                <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
-                    <!-- Batch Summary -->
-                    <section class="lg:col-span-5 glass-card">
-                        <h3 class="text-[10px] font-bold text-primary mb-8 uppercase tracking-[0.2em] flex items-center gap-3">
-                            <span class="material-symbols-outlined text-xl">view_module</span>
-                            Resumen por Lotes
-                        </h3>
-                        <div id="history-batch-container" class="space-y-4 max-h-[500px] overflow-y-auto no-scrollbar"></div>
-                    </section>
-                    
-                    <!-- Transmission Logs -->
-                    <section class="lg:col-span-7 glass-card p-0 overflow-hidden border-white/5 bg-slate-950/40">
-                        <div class="p-8 border-b border-white/5 bg-slate-900/40">
-                            <div class="flex justify-between items-center mb-6">
-                                <h3 class="text-sm font-extrabold text-white tracking-tight">Logs de Transmisión</h3>
-                                <p id="history-last-update" class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Update: --</p>
-                            </div>
-                            <div class="flex gap-4">
-                                <div class="relative flex-1">
-                                    <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-lg">search</span>
-                                    <input id="history-search-input" class="w-full bg-slate-950/50 border border-white/5 rounded-2xl py-3 pl-12 pr-4 text-xs focus:border-primary outline-none" placeholder="Buscar por número o lote...">
-                                </div>
-                                <select id="history-filter-select" class="bg-slate-950/50 border border-white/5 rounded-2xl py-3 px-6 text-[10px] font-bold uppercase tracking-widest text-slate-400 outline-none focus:border-primary cursor-pointer">
-                                    <option value="all">Todo</option>
-                                    <option value="answered">Contestadas</option>
-                                    <option value="unanswered">Fallidas</option>
-                                    <option value="active">En curso</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div id="history-empty" class="hidden py-32 text-center opacity-10 uppercase text-[10px] font-bold tracking-[0.4em]">Sin Registros Neurales</div>
-                        <div id="history-container" class="p-4 space-y-2 max-h-[500px] overflow-y-auto no-scrollbar"></div>
-                    </section>
-                </div>
+                <section class="glass-card">
+                    <h3 class="text-[10px] font-bold text-primary mb-6 uppercase tracking-widest">Resumen por Lotes</h3>
+                    <div id="history-batch-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-h-[500px] overflow-y-auto no-scrollbar"></div>
+                </section>
             </div>
 
-            <!-- TAB: CONTROL DE REINTENTOS -->
+            <!-- TAB: CONTROL -->
             <div id="tab-retrybook" class="tab-content space-y-8">
-                <section class="glass-card border-indigo-500/20 bg-indigo-500/5">
-                    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                        <div>
-                            <p class="text-[9px] font-bold text-indigo-300 uppercase tracking-[0.25em] mb-2">Libro de Reintentos</p>
-                            <h3 class="text-2xl font-extrabold tracking-tight text-white">Lectura de Cascada por Lote</h3>
-                            <p id="retrybook-flow" class="text-sm text-slate-300 mt-3">Sin datos de lotes.</p>
-                        </div>
-                        <div class="min-w-[280px]">
-                            <label class="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-2">Seleccionar Lote</label>
-                            <select id="retrybook-root-select" class="w-full bg-slate-950/50 border border-white/10 rounded-2xl py-3 px-4 text-xs text-white focus:border-primary outline-none"></select>
-                            <p id="retrybook-last-update" class="text-[9px] text-slate-500 uppercase tracking-widest mt-2">Update: --</p>
-                        </div>
-                    </div>
-                </section>
-
-                <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div class="glass-card"><p class="text-[9px] text-slate-500 uppercase tracking-widest mb-2">Intentos Acumulados</p><h4 id="rb-total-attempts" class="text-3xl font-black text-white">0</h4></div>
-                    <div class="glass-card border-emerald-500/20 bg-emerald-500/5"><p class="text-[9px] text-slate-500 uppercase tracking-widest mb-2">Contestaron</p><h4 id="rb-total-answered" class="text-3xl font-black text-emerald-400">0</h4></div>
-                    <div class="glass-card border-rose-500/20 bg-rose-500/5"><p class="text-[9px] text-slate-500 uppercase tracking-widest mb-2">Pendientes Finales</p><h4 id="rb-total-pending" class="text-3xl font-black text-rose-400">0</h4></div>
-                    <div class="glass-card"><p class="text-[9px] text-slate-500 uppercase tracking-widest mb-2">Iteraciones</p><h4 id="rb-iterations-count" class="text-3xl font-black text-indigo-300">0</h4></div>
-                </section>
-
-                <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                 <section class="glass-card grid grid-cols-1 lg:grid-cols-4 gap-6">
+                    <div><p class="text-[9px] text-slate-500 uppercase mb-2">Total Intentos</p><h4 id="rb-total-attempts" class="text-2xl font-bold text-white">0</h4></div>
+                    <div><p class="text-[9px] text-slate-500 uppercase mb-2">Contestaron</p><h4 id="rb-total-answered" class="text-2xl font-bold text-emerald-400">0</h4></div>
+                    <div><p class="text-[9px] text-slate-500 uppercase mb-2">Pendientes</p><h4 id="rb-total-pending" class="text-2xl font-bold text-rose-400">0</h4></div>
+                    <div><select id="retrybook-root-select" class="w-full bg-black/20 border border-white/5 rounded-xl py-2 px-3 text-xs text-white"></select></div>
+                 </section>
+                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
                     <div class="lg:col-span-8 glass-card p-0 overflow-hidden">
-                        <div class="px-6 py-4 border-b border-white/5 bg-slate-900/40">
-                            <h4 class="text-sm font-extrabold text-white">Detalle por Iteración</h4>
-                            <p class="text-[10px] text-slate-500 mt-1">Haz click en una fila para ver quién no contestó y reintentar solo ese grupo.</p>
+                        <div class="px-6 py-4 bg-white/5 border-b border-white/5 flex justify-between items-center">
+                            <h4 class="text-xs font-bold text-white">Iteraciones</h4>
+                            <button id="rb-retry-selected-btn" class="px-3 py-1.5 bg-primary text-white text-[9px] font-bold rounded-lg uppercase transition-all">Reintentar Grupo</button>
                         </div>
-                        <div class="max-h-[460px] overflow-y-auto no-scrollbar">
-                            <table class="w-full text-left">
-                                <thead class="bg-slate-900/40 sticky top-0">
-                                    <tr class="text-[9px] uppercase tracking-widest text-slate-500">
-                                        <th class="px-6 py-3">Iteración</th>
-                                        <th class="px-6 py-3">Llamados</th>
-                                        <th class="px-6 py-3">Contestó</th>
-                                        <th class="px-6 py-3">No Contestó</th>
-                                        <th class="px-6 py-3">Tasa</th>
-                                        <th class="px-6 py-3">Hora</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="rb-table-body" class="text-sm"></tbody>
-                            </table>
-                        </div>
-                        <div class="border-t border-white/5 p-6 bg-slate-900/20 space-y-4">
-                            <div class="flex flex-wrap items-center justify-between gap-3">
-                                <p id="rb-selected-iter-title" class="text-xs font-bold text-slate-300">Selecciona una iteración</p>
-                                <button id="rb-retry-selected-btn" class="px-4 py-2 rounded-xl bg-indigo-600/80 hover:bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-40 disabled:cursor-not-allowed">
-                                    Reintentar no contestados (<span id="rb-retry-selected-count">0</span>)
-                                </button>
-                            </div>
-                            <div id="rb-unanswered-list" class="max-h-[240px] overflow-y-auto no-scrollbar space-y-2">
-                                <p class="text-xs text-slate-500">No hay selección.</p>
-                            </div>
-                        </div>
+                        <table class="w-full text-left text-[11px]">
+                            <thead class="bg-black/20 text-slate-500 uppercase"><tr class="px-6 py-2"><th>Iter</th><th>Contestó</th><th>Tasa</th><th>Hora</th></tr></thead>
+                            <tbody id="rb-table-body"></tbody>
+                        </table>
                     </div>
-
                     <div class="lg:col-span-4 glass-card">
-                        <h4 class="text-sm font-extrabold text-white mb-5">Dominios Más Frecuentes</h4>
-                        <div id="rb-domain-list" class="space-y-2 max-h-[420px] overflow-y-auto no-scrollbar"></div>
+                        <h4 class="text-xs font-bold text-white mb-4">Dominios</h4>
+                        <div id="rb-domain-list" class="space-y-1"></div>
                     </div>
-                </section>
+                 </div>
             </div>
 
             <!-- TAB: CONSUMO -->
-            <div id="tab-stats" class="tab-content space-y-12">
+            <div id="tab-stats" class="tab-content space-y-8">
                 <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div class="glass-card">
-                        <p class="text-[10px] font-bold text-slate-500 tracking-[0.2em] uppercase mb-4">Groq Tokens</p>
-                        <h4 id="usage-groq-tokens" class="text-4xl font-extrabold text-white mb-6">0</h4>
-                        <div class="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden">
-                             <div class="h-full bg-primary w-2/3 shadow-[0_0_10px_var(--primary-glow)]"></div>
-                        </div>
-                    </div>
-
-                    <div class="glass-card">
-                        <p class="text-[10px] font-bold text-slate-500 tracking-[0.2em] uppercase mb-4">ElevenLabs Chars</p>
-                        <h4 id="usage-tts-chars" class="text-4xl font-extrabold text-white mb-6">0</h4>
-                        <div class="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden">
-                             <div class="h-full bg-indigo-500 w-1/3"></div>
-                        </div>
-                    </div>
-
-                    <div class="glass-card">
-                        <p class="text-[10px] font-bold text-slate-500 tracking-[0.2em] uppercase mb-4">Deepgram Minutes</p>
-                        <h4 id="usage-stt-minutes" class="text-4xl font-extrabold text-white mb-6">0.0</h4>
-                        <div class="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden">
-                             <div class="h-full bg-sky-400 w-1/2"></div>
-                        </div>
-                    </div>
-
-                    <div class="glass-card">
-                        <p class="text-[10px] font-bold text-slate-500 tracking-[0.2em] uppercase mb-4">Call Seconds</p>
-                        <h4 id="usage-telnyx-seconds" class="text-4xl font-extrabold text-white mb-6">0</h4>
-                        <div class="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden">
-                             <div class="h-full bg-emerald-500 w-1/4"></div>
-                        </div>
-                    </div>
-                </section>
-
-                <section class="glass-card border-primary/20 bg-primary/5">
-                    <div class="flex items-center gap-10">
-                        <div class="w-20 h-20 bg-primary/20 rounded-2xl flex items-center justify-center border border-primary/30">
-                             <span class="material-symbols-outlined text-4xl text-primary">query_stats</span>
-                        </div>
-                        <div class="flex-1">
-                             <h3 class="text-2xl font-extrabold tracking-tight mb-2">Análisis de Consumo</h3>
-                             <p class="text-slate-400 text-sm max-w-2xl leading-relaxed">Monitoreo técnico de los recursos consumidos por la red ViaAI. Los datos se sincronizan al finalizar cada sesión de voz.</p>
-                        </div>
-                    </div>
+                    <div class="glass-card"><p class="text-[9px] text-slate-500 uppercase mb-2">Groq Tokens</p><h4 id="usage-groq-tokens" class="text-2xl font-bold text-white">0</h4></div>
+                    <div class="glass-card"><p class="text-[9px] text-slate-500 uppercase mb-2">ElevenLabs Chars</p><h4 id="usage-tts-chars" class="text-2xl font-bold text-white">0</h4></div>
+                    <div class="glass-card"><p class="text-[9px] text-slate-500 uppercase mb-2">Deepgram Mins</p><h4 id="usage-stt-minutes" class="text-2xl font-bold text-white">0.0</h4></div>
+                    <div class="glass-card"><p class="text-[9px] text-slate-500 uppercase mb-2">Telnyx Secs</p><h4 id="usage-telnyx-seconds" class="text-2xl font-bold text-white">0</h4></div>
                 </section>
             </div>
 
-            <!-- TAB: MONITOR EN VIVO -->
+            <!-- TAB: MONITOR -->
             <div id="tab-monitor" class="tab-content space-y-8">
-                <section class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                    <!-- Lista de llamadas activas -->
-                    <div class="lg:col-span-4 glass-card rounded-3xl p-8">
-                        <div class="flex justify-between items-center mb-6">
-                            <h3 class="text-sm font-label font-bold text-primary uppercase tracking-widest flex items-center gap-2">
-                                <span class="material-symbols-outlined text-lg">sensors</span>
-                                Llamadas Activas
-                            </h3>
-                            <button id="refresh-active-calls" class="text-[9px] font-bold text-primary bg-primary/10 px-3 py-1 rounded-full uppercase tracking-widest hover:bg-primary/20 transition-all flex items-center gap-1">
-                                <span class="material-symbols-outlined text-[12px]">refresh</span> Actualizar
-                            </button>
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    <div class="lg:col-span-4 glass-card">
+                        <div class="flex justify-between items-center mb-4">
+                            <h4 class="text-xs font-bold text-primary uppercase tracking-widest">En Vivo</h4>
+                            <button id="refresh-active-calls" class="text-[8px] bg-white/5 px-2 py-1 rounded-lg">Update</button>
                         </div>
-                        <div id="active-calls-list" class="space-y-3 max-h-[500px] overflow-y-auto no-scrollbar">
-                            <div class="opacity-20 py-16 text-center uppercase text-[10px] font-bold tracking-widest flex flex-col items-center gap-3">
-                                <span class="material-symbols-outlined text-3xl">wifi_tethering_off</span>
-                                Sin llamadas activas
-                            </div>
-                        </div>
+                        <div id="active-calls-list" class="space-y-2"></div>
                     </div>
-
-                    <!-- Panel de escucha en vivo -->
-                    <div class="lg:col-span-8 glass-card rounded-3xl p-8 relative overflow-hidden">
-                        <div class="absolute -top-12 -right-12 w-48 h-48 bg-emerald-500/5 blur-[60px] rounded-full"></div>
-                        <div class="flex justify-between items-center mb-6">
-                            <h3 class="text-sm font-label font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-2">
-                                <span class="material-symbols-outlined text-lg">radio</span>
-                                Monitor en Tiempo Real
-                            </h3>
-                            <div id="monitor-status" class="text-[9px] font-bold text-zinc-600 bg-zinc-800 px-3 py-1 rounded-full uppercase tracking-widest">
-                                Desconectado
-                            </div>
-                        </div>
-
-                        <!-- Transcript feed en vivo -->
-                        <div id="live-transcript" class="bg-[#35001f]/90 rounded-2xl border border-primary/15 p-6 min-h-[400px] max-h-[500px] overflow-y-auto no-scrollbar space-y-4 relative">
-                            <div id="monitor-empty" class="absolute inset-0 flex flex-col items-center justify-center opacity-20">
-                                <span class="material-symbols-outlined text-5xl mb-3">headset_mic</span>
-                                <p class="text-[10px] font-bold uppercase tracking-widest">Selecciona una llamada activa para escuchar</p>
-                            </div>
-                        </div>
-
-                        <!-- Disconnect button -->
-                        <div class="mt-4 flex justify-end">
-                            <button id="disconnect-monitor" class="hidden px-6 py-3 bg-error/10 text-error font-bold rounded-xl hover:bg-error/20 transition-all uppercase tracking-widest text-[9px] border border-error/20 flex items-center gap-2">
-                                <span class="material-symbols-outlined text-sm">stop_circle</span> Desconectar
-                            </button>
-                        </div>
+                    <div class="lg:col-span-8 glass-card">
+                        <div class="flex justify-between items-center mb-4"><h4 class="text-xs font-bold text-emerald-400 uppercase tracking-widest">Monitor Transcripción</h4><div id="monitor-status" class="text-[8px] text-slate-500">Standby</div></div>
+                        <div id="live-transcript" class="bg-black/40 rounded-xl p-4 min-h-[300px] text-sm text-slate-300 font-mono"></div>
                     </div>
-                </section>
+                </div>
             </div>
         </div>
+
+        <!-- FAB -->
+        <button class="fab-button shadow-lg" id="global-action-fab">
+            <span class="material-symbols-outlined text-3xl">add</span>
+        </button>
     </main>
 
     <!-- Logout Modal -->
-    <div id="logout-confirm-modal" class="modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#230014]/95 backdrop-blur-md">
+    <div id="logout-confirm-modal" class="modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md">
         <div class="glass-card max-w-sm w-full rounded-3xl p-8 text-center space-y-6">
-            <div class="w-16 h-16 bg-error/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span class="material-symbols-outlined text-error text-3xl">power_settings_new</span>
-            </div>
             <h3 class="text-xl font-bold tracking-tight">¿Terminar Enlace?</h3>
-            <p class="text-zinc-500 text-sm leading-relaxed">¿Deseas desconectar tu conexión con la red ViaAI?</p>
+            <p class="text-zinc-500 text-sm">¿Deseas desconectar tu conexión con ViaAI?</p>
             <div class="flex gap-4 pt-4">
-                <button id="logout-cancel" class="flex-1 py-4 rounded-xl bg-zinc-800 text-zinc-300 font-bold text-[10px] uppercase tracking-widest border border-zinc-700/50">Cancelar</button>
-                <button id="logout-confirm-btn" class="flex-1 py-4 rounded-xl bg-error text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-error/20">Desconectar</button>
+                <button id="logout-cancel" class="flex-1 py-3 rounded-xl bg-zinc-800 text-zinc-300 font-bold text-[10px] uppercase">Cancelar</button>
+                <button id="logout-confirm-btn" class="flex-1 py-3 rounded-xl bg-error text-white font-bold text-[10px] uppercase">Desconectar</button>
             </div>
         </div>
     </div>
 
     <!-- Transcript Modal -->
-    <div id="transcript-modal" class="modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#230014]/95 backdrop-blur-lg">
+    <div id="transcript-modal" class="modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-lg">
         <div class="glass-card max-w-2xl w-full rounded-3xl overflow-hidden flex flex-col max-h-[85vh]">
-            <div class="p-8 border-b border-primary/15 flex justify-between items-center bg-[#4a002b]/45">
+            <div class="p-8 border-b border-white/5 flex justify-between items-center">
                 <div id="modal-meta" class="flex flex-wrap items-center gap-2 text-[10px] font-bold text-zinc-400 uppercase tracking-widest"></div>
                 <button id="modal-close" class="text-zinc-500 hover:text-white transition-colors"><span class="material-symbols-outlined">close</span></button>
             </div>
@@ -593,19 +298,19 @@
     </div>
 
     <!-- Image Full View Modal -->
-    <div id="image-modal" class="modal-overlay fixed inset-0 z-[110] flex items-center justify-center p-6 bg-[#230014]/95 backdrop-blur-xl">
+    <div id="image-modal" class="modal-overlay fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/80 backdrop-blur-xl">
         <div class="relative group max-w-lg w-full scale-90 transition-transform duration-300" id="image-modal-content">
             <button id="image-modal-close" class="absolute -top-12 right-0 text-zinc-500 hover:text-white transition-colors">
                 <span class="material-symbols-outlined text-3xl">close</span>
             </button>
-            <div class="p-[2px] bg-gradient-to-tr from-primary to-secondary-container rounded-3xl overflow-hidden shadow-2xl shadow-primary/20">
+            <div class="p-[2px] bg-gradient-to-tr from-primary to-secondary rounded-3xl overflow-hidden shadow-2xl">
                 <img id="image-modal-img" class="w-full h-full object-cover rounded-3xl" src="" alt="Full View">
             </div>
         </div>
     </div>
 
     <!-- New Identity Modal -->
-    <div id="new-identity-modal" class="modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#230014]/95 backdrop-blur-lg">
+    <div id="new-identity-modal" class="modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-lg">
         <div class="glass-card max-w-sm w-full rounded-3xl p-8 space-y-6">
             <div class="flex justify-between items-center">
                 <h3 class="text-xl font-bold tracking-tight">Nuevo Nodo</h3>
@@ -613,46 +318,39 @@
             </div>
             <form id="new-identity-form" class="space-y-6">
                 <div class="space-y-3">
-                    <label class="block text-[10px] font-bold uppercase tracking-widest text-zinc-500 px-1">Nombre de la Identidad</label>
-                    <input id="new-identity-name" class="w-full bg-[#0e0e0e] border border-zinc-800 rounded-xl py-4 px-6 text-sm focus:ring-1 focus:ring-primary outline-none text-zinc-100" placeholder="Ej: Vendedor Tech" required>
+                    <label class="block text-[10px] font-bold uppercase tracking-widest text-zinc-500 px-1">Nombre</label>
+                    <input id="new-identity-name" class="w-full bg-black/40 border border-white/5 rounded-xl py-4 px-6 text-sm outline-none text-white" placeholder="Ej: Vendedor" required>
                 </div>
                 <div class="flex gap-4 pt-2">
-                    <button type="button" id="identity-modal-cancel" class="flex-1 py-4 rounded-xl bg-zinc-800 text-zinc-300 font-bold text-[10px] uppercase tracking-widest">Cancelar</button>
-                    <button type="submit" class="flex-1 py-4 bg-primary text-[#050505] font-black rounded-xl text-[10px] uppercase tracking-widest shadow-lg shadow-primary/20">Inicializar</button>
+                    <button type="button" id="identity-modal-cancel" class="flex-1 py-4 rounded-xl bg-zinc-800 text-zinc-300 font-bold text-[10px] uppercase">Cancelar</button>
+                    <button type="submit" class="flex-1 py-4 bg-primary text-[#050505] font-black rounded-xl text-[10px] uppercase shadow-lg shadow-primary/20">Inicializar</button>
                 </div>
             </form>
         </div>
     </div>
 
     <!-- Custom Alert Modal -->
-    <div id="custom-alert-modal" class="modal-overlay fixed inset-0 z-[120] flex items-center justify-center p-6 bg-[#230014]/95 backdrop-blur-lg">
-        <div class="glass-card max-w-sm w-full rounded-3xl p-8 text-center space-y-6 transform scale-95 transition-transform duration-300" id="custom-alert-content">
+    <div id="custom-alert-modal" class="modal-overlay fixed inset-0 z-[120] flex items-center justify-center p-6 bg-black/80 backdrop-blur-lg">
+        <div class="glass-card max-w-sm w-full rounded-3xl p-8 text-center space-y-6" id="custom-alert-content">
             <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span class="material-symbols-outlined text-primary text-3xl" id="custom-alert-icon">check_circle</span>
             </div>
             <h3 class="text-lg font-bold tracking-tight text-white mb-2">Notificación</h3>
-            <p id="custom-alert-text" class="text-zinc-400 text-sm leading-relaxed font-label"></p>
+            <p id="custom-alert-text" class="text-zinc-400 text-sm font-label"></p>
             <div class="pt-4">
-                <button id="custom-alert-btn" class="w-full py-4 rounded-xl bg-gradient-to-r from-primary to-primary-container text-[#050505] font-black text-[10px] uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-[0.98] transition-all">Entendido</button>
+                <button id="custom-alert-btn" class="w-full py-3 rounded-xl bg-primary text-white font-bold text-[10px] uppercase shadow-lg">Entendido</button>
             </div>
         </div>
     </div>
 
     <!-- Batch Details Cascading Modal -->
-    <div id="batch-details-modal" class="modal-overlay fixed inset-0 z-[115] hidden items-center justify-center p-4 bg-[#0a0a0a]/95 backdrop-blur-2xl">
-        <div class="glass-card max-w-4xl w-full h-[90vh] md:h-[80vh] rounded-[2rem] flex flex-col overflow-hidden border border-white/5 shadow-2xl shadow-indigo-500/10 transform scale-95 transition-transform duration-300 relative" id="batch-details-content">
+    <div id="batch-details-modal" class="modal-overlay fixed inset-0 z-[115] hidden items-center justify-center p-4 bg-black/90 backdrop-blur-2xl">
+        <div class="glass-card max-w-4xl w-full h-[90vh] md:h-[80vh] rounded-[2rem] flex flex-col overflow-hidden border border-white/5 shadow-2xl relative" id="batch-details-content">
             <!-- Header -->
-            <div class="p-6 md:p-8 border-b border-white/5 bg-white/[0.02] flex items-center justify-between sticky top-0 z-10 backdrop-blur-xl">
+            <div class="p-6 md:p-8 border-b border-white/5 flex items-center justify-between sticky top-0 z-10 backdrop-blur-xl">
                 <div>
-                    <div class="flex items-center gap-3 mb-2">
-                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex flex-shrink-0 items-center justify-center border border-indigo-500/30">
-                            <span class="material-symbols-outlined text-indigo-400">monitoring</span>
-                        </div>
-                        <div>
-                            <p class="text-[9px] uppercase tracking-[0.2em] text-emerald-500 font-bold mb-0.5">Centro de Control Interactivo</p>
-                            <h3 id="modal-batch-title" class="text-xl md:text-2xl font-black text-white tracking-tight">Campaña</h3>
-                        </div>
-                    </div>
+                    <h3 id="modal-batch-title" class="text-xl md:text-2xl font-black text-white tracking-tight">Campaña</h3>
+                    <p class="text-[9px] uppercase tracking-widest text-emerald-500 font-bold mt-1">Centro de Control</p>
                 </div>
                 <button id="close-batch-modal" class="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-all">
                     <span class="material-symbols-outlined">close</span>
@@ -660,70 +358,42 @@
             </div>
 
             <!-- Body -->
-            <div class="flex-1 overflow-y-auto p-6 md:p-8 space-y-8 webkit-scrollbar">
-                <!-- Estadísticas resúmen -->
+            <div class="flex-1 overflow-y-auto p-6 md:p-8 space-y-8 no-scrollbar">
                 <div class="grid grid-cols-2 gap-4">
-                    <div class="rounded-2xl border border-emerald-500/10 bg-emerald-500/5 p-5 md:p-6 flex items-center justify-between">
-                        <div>
-                            <span class="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] block mb-2">Total Contestaron</span>
-                            <span id="modal-answered-total" class="text-4xl font-black text-emerald-400">0</span>
-                        </div>
-                        <span class="material-symbols-outlined text-4xl text-emerald-500/20">check_circle</span>
+                    <div class="rounded-2xl border border-emerald-500/10 bg-emerald-500/5 p-5">
+                        <span class="text-[10px] font-bold text-emerald-500 uppercase block mb-1">Contestaron</span>
+                        <span id="modal-answered-total" class="text-3xl font-bold text-emerald-400">0</span>
                     </div>
-                    <div class="rounded-2xl border border-rose-500/10 bg-rose-500/5 p-5 md:p-6 flex items-center justify-between">
-                        <div>
-                            <span class="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em] block mb-2">Total Fallidos</span>
-                            <span id="modal-failed-total" class="text-4xl font-black text-rose-400">0</span>
-                        </div>
-                        <span class="material-symbols-outlined text-4xl text-rose-500/20">cancel</span>
+                    <div class="rounded-2xl border border-rose-500/10 bg-rose-500/5 p-5">
+                        <span class="text-[10px] font-bold text-rose-500 uppercase block mb-1">Fallidos</span>
+                        <span id="modal-failed-total" class="text-3xl font-bold text-rose-400">0</span>
                     </div>
                 </div>
-
-                <!-- Resumen de flujo + detalle por iteración -->
-                <div class="space-y-4">
-                    <div id="modal-flow-summary" class="rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-4 text-[11px] font-bold tracking-wide text-indigo-200">
-                        Flujo de campaña
-                    </div>
-                    <div id="modal-iterations-detail" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
-                    <div id="modal-iteration-selector" class="flex flex-wrap gap-2"></div>
-                </div>
-
-                <!-- Tabs -->
-                <div class="flex gap-4 border-b border-white/5 mb-6">
-                    <button id="tab-btn-failed" class="px-6 py-4 border-b-2 border-rose-500 text-rose-400 font-black text-[11px] uppercase tracking-widest hover:bg-white/5 transition-colors">Pendientes / No Contestaron</button>
-                    <button id="tab-btn-answered" class="px-6 py-4 border-b-2 border-transparent text-zinc-500 font-black text-[11px] uppercase tracking-widest hover:bg-white/5 transition-colors">Exitosos</button>
-                </div>
-
-                <!-- List content -->
+                <div id="modal-flow-summary" class="rounded-2xl border border-white/5 p-4 text-[10px] font-bold text-slate-400"></div>
+                <div id="modal-iterations-detail" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
                 <div id="modal-list-failed" class="space-y-2"></div>
                 <div id="modal-list-answered" class="space-y-2 hidden"></div>
             </div>
 
-            <!-- Footer con Acción Principal -->
-            <div class="p-6 md:p-8 border-t border-white/5 bg-black/40 backdrop-blur-md">
-                <button id="modal-retry-btn" class="w-full py-5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-sm uppercase tracking-[0.2em] shadow-lg shadow-indigo-600/20 hover:scale-[0.99] active:scale-[0.97] transition-all flex items-center justify-center gap-3">
-                    <span class="material-symbols-outlined">rocket_launch</span>
-                    REINTENTAR A <span id="modal-retry-count" class="text-white">0</span> DESTINOS FALLIDOS
+            <!-- Footer -->
+            <div class="p-8 border-t border-white/5 bg-black/20">
+                <button id="modal-retry-btn" class="w-full py-4 rounded-2xl bg-primary text-white font-bold text-sm uppercase tracking-widest shadow-lg">
+                    REINTENTAR A <span id="modal-retry-count">0</span> DESTINOS
                 </button>
             </div>
         </div>
     </div>
 
     <!-- Custom Prompt Modal -->
-    <div id="custom-prompt-modal" class="modal-overlay fixed inset-0 z-[120] flex items-center justify-center p-6 bg-[#230014]/95 backdrop-blur-lg">
-        <div class="glass-card max-w-md w-full rounded-3xl p-8 space-y-6 transform scale-95 transition-transform duration-300" id="custom-prompt-content">
-            <div class="flex justify-between items-center mb-2">
-                <h3 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
-                     <span class="material-symbols-outlined text-primary">edit_note</span>
-                     Entrada Requerida
-                </h3>
-            </div>
-            <p id="custom-prompt-text" class="text-zinc-400 text-sm leading-relaxed font-label"></p>
+    <div id="custom-prompt-modal" class="modal-overlay fixed inset-0 z-[120] flex items-center justify-center p-6 bg-black/80 backdrop-blur-lg">
+        <div class="glass-card max-w-md w-full rounded-3xl p-8 space-y-6" id="custom-prompt-content">
+            <h3 class="text-lg font-bold text-white">Entrada Requerida</h3>
+            <p id="custom-prompt-text" class="text-zinc-400 text-sm"></p>
             <form id="custom-prompt-form" class="space-y-6">
-                <input id="custom-prompt-input" type="text" class="w-full bg-[#0e0e0e] border border-zinc-800 rounded-xl py-4 px-6 text-sm focus:ring-1 focus:ring-primary outline-none text-white placeholder:text-zinc-600" required>
-                <div class="flex gap-4 pt-2">
-                    <button type="button" id="custom-prompt-cancel" class="flex-1 py-4 rounded-xl bg-zinc-800 text-zinc-300 font-bold text-[10px] uppercase tracking-widest hover:bg-zinc-700 transition-all border border-zinc-700/50">Cancelar</button>
-                    <button type="submit" class="flex-1 py-4 rounded-xl bg-gradient-to-r from-primary to-primary-container text-[#050505] font-black text-[10px] uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-[0.98] transition-all">Confirmar</button>
+                <input id="custom-prompt-input" type="text" class="w-full bg-black/40 border border-white/5 rounded-xl py-4 px-6 text-sm text-white" required>
+                <div class="flex gap-4">
+                    <button type="button" id="custom-prompt-cancel" class="flex-1 py-4 rounded-xl bg-zinc-800 text-zinc-300 font-bold text-[10px] uppercase">Cancelar</button>
+                    <button type="submit" class="flex-1 py-4 rounded-xl bg-primary text-white font-black text-[10px] uppercase shadow-lg">Confirmar</button>
                 </div>
             </form>
         </div>

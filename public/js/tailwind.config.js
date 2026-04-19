@@ -1,30 +1,28 @@
-/**
- * ViaAI - Tailwind Design System Config
- */
 tailwind.config = {
     darkMode: "class",
     theme: {
         extend: {
             colors: {
-                "primary": "#e5057f",
-                "secondary": "#f252a7",
-                "tertiary": "#d57ec1",
-                "surface": "#52002f",
-                "surface-bright": "#7a0047",
-                "surface-container": "#68003d",
-                "surface-container-low": "#4a002b",
-                "surface-container-lowest": "#35001f",
-                "on-surface": "#ffffff",
-                "background": "#230014",
-                "outline-variant": "#b56f9d",
-                "primary-container": "#f252a7",
-                "secondary-container": "#d8b5db",
-                "error": "#ff5555"
+                "primary": "#cf00da",
+                "primary-hover": "#e033ea",
+                "secondary": "#7c3aed",
+                "tertiary": "#00e5ff",
+                "background": "#0a0118",
+                "surface": "rgba(25, 2, 45, 0.6)",
+                "surface-bright": "rgba(45, 5, 85, 0.7)",
+                "surface-container": "rgba(35, 3, 60, 0.5)",
+                "border": "rgba(255, 255, 255, 0.08)",
+                "error": "#ff4d4d",
+                "success": "#00ffcc"
             },
             fontFamily: {
-                "headline": ["Lexend"],
-                "body": ["Lexend"],
-                "label": ["Space Grotesk"]
+                "sans": ["Inter", "system-ui", "-apple-system", "sans-serif"],
+                "headline": ["Plus Jakarta Sans", "Inter", "sans-serif"],
+                "mono": ["Fira Code", "monospace"]
+            },
+            boxShadow: {
+                "glow": "0 0 20px rgba(207, 0, 218, 0.3)",
+                "glow-lg": "0 0 40px rgba(207, 0, 218, 0.4)",
             }
         },
     },
