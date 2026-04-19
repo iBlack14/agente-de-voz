@@ -50,12 +50,12 @@ app.get('/who', async (req, res) => {
   res.json(d.rows);
 });
 
+// Static Frontend (MUST be before restrictAccess)
+app.use(express.static('public'));
+
 // Authentication System
 app.use('/api', authRouter);
 app.use(restrictAccess);
-
-// Static Frontend
-app.use(express.static('public'));
 
 const path = require('path');
 
@@ -71,8 +71,8 @@ app.get('/advanced',  (req, res) => res.sendFile(path.join(__dirname, 'public/ad
 app.get('/simple',    (req, res) => res.sendFile(path.join(__dirname, 'public/simple.html')));
 app.get('/login',     (req, res) => res.sendFile(path.join(__dirname, 'public/login.html')));
 
-// Root redirect
-app.get('/', (req, res) => res.redirect('/selection'));
+// Root route - serve index.html
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public/index.html')));
 
 /**
  * Server Initialization
@@ -116,7 +116,7 @@ app.get('/api/active-calls', (req, res) => {
   res.json(calls);
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 4000;
 
 server.listen(PORT, async () => {
   try {
