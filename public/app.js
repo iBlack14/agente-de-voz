@@ -2700,7 +2700,7 @@ const initDashboardApp = () => {
           ? '0 0 0 4px rgba(207,0,218,0.18)'
           : 'none';
         cb.style.background = cb.checked
-          ? 'radial-gradient(circle, #cf00da 0 38%, rgba(207,0,218,0.14) 39% 100%)'
+          ? '#cf00da'
           : 'rgba(0, 0, 0, 0.4)';
         updateSelectedCount();
       });
