@@ -83,7 +83,7 @@ app.get('/simple',    (req, res) => res.sendFile(path.join(__dirname, 'public/si
 app.get('/login',     (req, res) => res.sendFile(path.join(__dirname, 'public/login.html')));
 
 // Root redirect
-app.get('/', (req, res) => res.redirect('/selection'));
+app.get('/', (req, res) => res.redirect('/login'));
 
 /**
  * Server Initialization

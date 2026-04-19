@@ -24,6 +24,11 @@ module.exports = {
             if (textLower.includes('select') && textLower.includes('from prompts')) {
                 const { data, error } = await supabase.from('prompts').select('*');
                 if (error) throw error;
+                // Fallback if empty to avoid UI prompts
+                if (!data || data.length === 0) {
+                    const defaults = [{ id: '1', name: 'ASISTENTE GENERAL', greeting: 'Hola, soy tu asistente.', text: 'Eres un asistente amable.' }];
+                    return { rows: defaults, rowCount: 1 };
+                }
                 return { rows: data, rowCount: data.length };
             }
             
@@ -31,6 +36,10 @@ module.exports = {
             if (textLower.includes('select') && textLower.includes('from reminder_prompts')) {
                 const { data, error } = await supabase.from('reminder_prompts').select('*');
                 if (error) throw error;
+                if (!data || data.length === 0) {
+                    const defaults = [{ id: '1', name: 'RECORDATORIO GENERAL', greeting: 'Hola.', text: 'Este es un recordatorio.' }];
+                    return { rows: defaults, rowCount: 1 };
+                }
                 return { rows: data, rowCount: data.length };
             }
 
@@ -61,6 +70,9 @@ module.exports = {
                 
                 const { data, error } = await query;
                 if (error) throw error;
+                if (!data || data.length === 0) {
+                    return { rows: [{ value: '1' }], rowCount: 1 };
+                }
                 return { rows: data, rowCount: data.length };
             }
 

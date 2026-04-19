@@ -2492,7 +2492,24 @@ const initDashboardApp = () => {
 };
 
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initDashboardApp);
+  document.addEventListener('DOMContentLoaded', () => {
+      initDashboardApp();
+      // Failsafe: force close any hanging modals on first render
+      setTimeout(() => {
+          document.getElementById('custom-prompt-modal')?.classList.remove('visible');
+          document.getElementById('custom-alert-modal')?.classList.remove('visible');
+          console.log('[ViaAI] Failsafe: Modals cleared.');
+      }, 1500);
+  });
 } else {
   initDashboardApp();
+  setTimeout(() => {
+      document.getElementById('custom-prompt-modal')?.classList.remove('visible');
+      document.getElementById('custom-alert-modal')?.classList.remove('visible');
+  }, 1500);
 }
+
+// Clear legacy storage that might cause blockers
+localStorage.removeItem('active_prompt_id');
+localStorage.removeItem('active_reminder_prompt_id');
+localStorage.removeItem('via_auth_token_retry');
