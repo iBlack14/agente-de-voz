@@ -1,20 +1,53 @@
 const express = require('express');
 const router = express.Router();
+const fs = require('fs');
+const path = require('path');
 const { parseCookies } = require('../middleware/auth');
 
 const ADMIN_USER = process.env.ADMIN_USER;
 const ADMIN_PASS = process.env.ADMIN_PASS;
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
-const authSessions = new Map();
+const SESSION_FILE = path.join(__dirname, '../.sessions.json');
+
+// Persistent Session Map
+let authSessions = new Map();
+
+// Load sessions from disk
+function loadSessions() {
+    try {
+        if (fs.existsSync(SESSION_FILE)) {
+            const data = JSON.parse(fs.readFileSync(SESSION_FILE, 'utf8'));
+            authSessions = new Map(Object.entries(data));
+            console.log(`[Auth] Loaded ${authSessions.size} persistent sessions.`);
+        }
+    } catch (e) {
+        console.error('[Auth] Error loading sessions:', e.message);
+    }
+}
+
+// Save sessions to disk
+function saveSessions() {
+    try {
+        const obj = Object.fromEntries(authSessions);
+        fs.writeFileSync(SESSION_FILE, JSON.stringify(obj), 'utf8');
+    } catch (e) {
+        console.error('[Auth] Error saving sessions:', e.message);
+    }
+}
+
+// Initial load
+loadSessions();
 
 router.post('/login', (req, res) => {
   const { username, password } = req.body;
   if (username === ADMIN_USER && password === ADMIN_PASS) {
     const token = require('crypto').randomBytes(32).toString('hex');
     authSessions.set(token, Date.now() + SESSION_TTL_MS);
+    saveSessions();
+    
     res.cookie('auth_token', token, {
       httpOnly: true,
-      sameSite: 'lax', // Lax is better for external tools and redirects
+      sameSite: 'lax',
       maxAge: SESSION_TTL_MS,
       path: '/',
     });
@@ -25,7 +58,10 @@ router.post('/login', (req, res) => {
 
 router.post('/logout', (req, res) => {
   const cookies = parseCookies(req.headers.cookie || '');
-  if (cookies.auth_token) authSessions.delete(cookies.auth_token);
+  if (cookies.auth_token) {
+      authSessions.delete(cookies.auth_token);
+      saveSessions();
+  }
   res.clearCookie('auth_token', { httpOnly: true, sameSite: 'strict', path: '/' });
   res.json({ success: true });
 });
@@ -44,7 +80,11 @@ const restrictAccess = (req, res, next) => {
   const expiresAt = authSessions.get(token);
 
   if (token && expiresAt && expiresAt > Date.now()) return next();
-  if (token) authSessions.delete(token);
+  
+  if (token) {
+      authSessions.delete(token);
+      saveSessions();
+  }
 
   if (req.path === '/' || req.path === '/selection' || req.path === '/advanced' || req.path === '/simple') {
       return res.redirect('/login');
