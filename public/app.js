@@ -2516,3 +2516,28 @@ if (document.readyState === 'loading') {
 localStorage.removeItem('active_prompt_id');
 localStorage.removeItem('active_reminder_prompt_id');
 localStorage.removeItem('via_auth_token_retry');
+
+/**
+ * Dynamic UI: Change Button labels based on input
+ */
+function initDynamicUI() {
+  const reminderTimeInput = document.getElementById('reminder-time');
+  const reminderSubmitBtn = document.getElementById('reminder-submit-btn');
+
+  if (reminderTimeInput && reminderSubmitBtn) {
+    const updateButtonText = () => {
+      if (reminderTimeInput.value) {
+        reminderSubmitBtn.textContent = 'PROGRAMAR LLAMADA';
+      } else {
+        reminderSubmitBtn.textContent = 'LLAMAR AHORA';
+      }
+    };
+    reminderTimeInput.addEventListener('input', updateButtonText);
+    reminderTimeInput.addEventListener('change', updateButtonText);
+    // Initial check
+    updateButtonText();
+  }
+}
+
+// Run after a short delay to ensure DOM is ready
+setTimeout(initDynamicUI, 2000);

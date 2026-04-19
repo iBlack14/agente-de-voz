@@ -119,9 +119,12 @@ async function processScheduledCalls() {
 // Check every 60 seconds
 function startScheduler() {
     recoverStuckScheduledCalls(1).catch(() => {});
+    // Primera ejecución inmediata para evitar esperar el primer minuto
+    processScheduledCalls().catch(err => console.error('[Scheduler] Initial run failed:', err.message));
+    
     setInterval(processScheduledCalls, 60000);
     setInterval(() => recoverStuckScheduledCalls(3), 120000);
-    console.log('[Scheduler] Scheduled Calls Service: STARTED');
+    console.log('[Scheduler] Scheduled Calls Service: STARTED (First run executed)');
 }
 
 module.exports = { startScheduler, recoverStuckScheduledCalls };

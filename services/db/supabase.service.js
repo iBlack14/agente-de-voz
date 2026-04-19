@@ -95,10 +95,60 @@ module.exports = {
                 return { rows: data, rowCount: data.length };
             }
 
-            // Handle UPDATE / DELETE / INSERT (Bypass or basic implementation)
-            // For initialization cleanups, we can return rowCount 0 to avoid crashes
+            // UPDATE scheduled_calls (Start processing)
+            if (textLower.includes('update scheduled_calls') && textLower.includes("set status = 'processing'")) {
+                const now = new Date().toISOString();
+                const { data, error } = await supabase
+                    .from('scheduled_calls')
+                    .update({ 
+                        status: 'processing', 
+                        processing_started_at: now,
+                        updated_at: now
+                    })
+                    .eq('status', 'pending')
+                    .lte('scheduled_for', params[0] || now)
+                    .select('*');
+                
+                if (error) throw error;
+                return { rows: data || [], rowCount: (data || []).length };
+            }
+
+            // UPDATE scheduled_calls (Complete / Error / Recovery)
+            if (textLower.includes('update scheduled_calls')) {
+                let status = 'pending';
+                if (textLower.includes("'completed'")) status = 'completed';
+                if (textLower.includes("'processing'")) status = 'processing';
+                
+                const { error } = await supabase
+                    .from('scheduled_calls')
+                    .update({ status, updated_at: new Date().toISOString() })
+                    .eq('id', params[0]);
+                
+                return { rows: [], rowCount: error ? 0 : 1 };
+            }
+
+            // INSERT into calls
+            if (textLower.includes('insert into calls')) {
+                // params: [callId, direction, from, to, startedAt, endedAt, duration, turns, status]
+                // Note: The order varies depending on logCall implementation
+                // We'll use a simplified version for common logCall usage
+                const { error } = await supabase.from('calls').upsert({
+                    call_id: params[0],
+                    from_number: params[1],
+                    to_number: params[2],
+                    direction: params[3],
+                    domain: params[4],
+                    mode: params[5],
+                    reminder_greeting: params[6],
+                    reminder_instructions: params[7],
+                    started_at: params[8],
+                    status: params[9]
+                });
+                return { rows: [], rowCount: error ? 0 : 1 };
+            }
+
+            // Handle other UPDATE / DELETE / INSERT (Bypass)
             if (textLower.startsWith('update') || textLower.startsWith('delete') || textLower.startsWith('insert')) {
-                console.log('[Supabase Shim] Bypassing non-select query for initialization stability.');
                 return { rows: [], rowCount: 0 };
             }
 
