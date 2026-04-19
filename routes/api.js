@@ -109,7 +109,7 @@ router.post('/make-call', async (req, res) => {
         const callId = result.data?.call_control_id;
         
         if (callId) {
-          console.log(`✅ [Telnyx] Llamada aceptada. ID: ${callId}`);
+          console.log(`✅ [Telnyx] Solicitud aceptada por API. ID: ${callId} (esperando call.answered para confirmar contestación)`);
           addInflightOutbound(callId);
           setCallContext(callId, { domain, mode, customGreeting: greeting, customInstructions: instructions, retry_interval, batch_id, batch_label });
           await logCall({

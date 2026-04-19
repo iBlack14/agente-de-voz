@@ -28,7 +28,7 @@ router.post('/telnyx', async (req, res) => {
     else if (direction === 'outgoing' || direction === 'outbound') direction = 'outbound';
 
     const shouldStartInbound = type === 'call.initiated' && direction === 'inbound';
-    const shouldStartOutbound = type === 'call.answered';
+    const shouldStartOutbound = type === 'call.answered' && direction === 'outbound';
 
     if ((shouldStartInbound || shouldStartOutbound) && !processedCalls.has(callId)) {
       addProcessedCall(callId);
@@ -40,7 +40,7 @@ router.post('/telnyx', async (req, res) => {
         to: payload.to || 'N/A',
         direction: direction,
         startedAt: new Date().toISOString(),
-        status: 'active',
+        status: shouldStartOutbound ? 'answered' : 'active',
       }).catch(e => console.error('[Webhook] Error logCall:', e.message));
 
       // For inbound calls, we need to answer to start the media stream
@@ -59,7 +59,14 @@ router.post('/telnyx', async (req, res) => {
       const { query } = require('../services/db/postgres.service');
       const { rows: statusCheck } = await query('SELECT status FROM calls WHERE call_id = $1', [callId]);
       const currentStatus = statusCheck[0]?.status;
-      const newStatus = (currentStatus && currentStatus !== 'active' && currentStatus !== 'queued') ? currentStatus : 'completed';
+      let newStatus = 'completed';
+      if (!currentStatus || currentStatus === 'queued') {
+        // Never reached answer event
+        newStatus = 'no_answer';
+      } else if (currentStatus !== 'active' && currentStatus !== 'answered') {
+        // Keep terminal status set elsewhere (failed, busy, etc.)
+        newStatus = currentStatus;
+      }
       await logCall({ callId, endedAt: new Date().toISOString(), status: newStatus });
 
       // Lógica de Re-intento Periódico (Infinite Loop según configuración)

@@ -10,7 +10,7 @@ processedCalls.clear();
 callIntervals.clear();
 
 function addProcessedCall(callId) {
-  processedCalls.add(callId);
+  processedCalls.set(callId, Date.now());
 }
 
 function removeProcessedCall(callId) {

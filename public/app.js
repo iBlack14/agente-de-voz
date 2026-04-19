@@ -1648,23 +1648,23 @@ const initDashboardApp = () => {
       const queue = document.getElementById('reminder-queue');
 
       if (!currentBatch.active) {
-          monitor.classList.add('hidden');
-          badge.classList.add('hidden');
+          monitor?.classList.add('hidden');
+          badge?.classList.add('hidden');
           return;
       }
 
-      monitor.classList.remove('hidden');
-      badge.classList.remove('hidden');
-      ansEl.textContent = currentBatch.stats.answered;
-      failEl.textContent = currentBatch.stats.failed;
+      monitor?.classList.remove('hidden');
+      badge?.classList.remove('hidden');
+      if (ansEl) ansEl.textContent = currentBatch.stats.answered;
+      if (failEl) failEl.textContent = currentBatch.stats.failed;
 
       const totalProcessed = currentBatch.stats.answered + currentBatch.stats.failed;
       if (totalProcessed >= currentBatch.stats.total && currentBatch.stats.total > 0) {
-          badge.classList.add('hidden');
-          actions.classList.remove('hidden');
+          badge?.classList.add('hidden');
+          actions?.classList.remove('hidden');
           
           // Renderizar resumen final en la cola
-          queue.innerHTML = `
+          if (queue) queue.innerHTML = `
             <div class="glass-card p-6 border-l-4 border-emerald-400 rounded-2xl bg-emerald-400/5">
                 <div class="flex items-center gap-3 mb-3">
                     <span class="material-symbols-outlined text-emerald-400">verified</span>
@@ -1760,8 +1760,8 @@ const initDashboardApp = () => {
         
         // Reset batch status
         currentBatch.active = false;
-        document.getElementById('batch-actions').classList.add('hidden');
-        document.getElementById('batch-stats').classList.add('hidden');
+        document.getElementById('batch-actions')?.classList.add('hidden');
+        document.getElementById('batch-stats')?.classList.add('hidden');
     });
   });
 
@@ -1830,7 +1830,7 @@ const initDashboardApp = () => {
         .split('\n')
         .map(n => (n || '').trim().replace(/[^0-9+]/g, ''))
         .filter(n => n.length >= 8).length;
-      reminderCount.textContent = `${count} Destinos`;
+      if (reminderCount) reminderCount.textContent = `${count} Destinos`;
     });
   }
 
@@ -1903,15 +1903,17 @@ const initDashboardApp = () => {
           startTime: new Date()
       };
       
-      document.getElementById('batch-stats').classList.remove('hidden');
-      document.getElementById('batch-actions').classList.add('hidden');
-      document.getElementById('batch-answered-count').textContent = '0';
-      document.getElementById('batch-failed-count').textContent = '0';
-      document.getElementById('batch-badge').classList.remove('hidden');
+      document.getElementById('batch-stats')?.classList.remove('hidden');
+      document.getElementById('batch-actions')?.classList.add('hidden');
+      const batchAnswered = document.getElementById('batch-answered-count');
+      const batchFailed = document.getElementById('batch-failed-count');
+      if (batchAnswered) batchAnswered.textContent = '0';
+      if (batchFailed) batchFailed.textContent = '0';
+      document.getElementById('batch-badge')?.classList.remove('hidden');
 
       // Reset
       reminderForm.reset();
-      reminderCount.textContent = '0 Destinos';
+      if (reminderCount) reminderCount.textContent = '0 Destinos';
       
       // LÓGICA NEURAL DE DISPARO:
       if (reminderDeliveryMode === 'immediate') {
