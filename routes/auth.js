@@ -14,7 +14,7 @@ router.post('/login', (req, res) => {
     authSessions.set(token, Date.now() + SESSION_TTL_MS);
     res.cookie('auth_token', token, {
       httpOnly: true,
-      sameSite: 'strict',
+      sameSite: 'lax', // Lax is better for external tools and redirects
       maxAge: SESSION_TTL_MS,
       path: '/',
     });
