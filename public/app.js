@@ -283,12 +283,13 @@ const initDashboardApp = () => {
       callList.prepend(li);
 
       try {
-        const resp = await fetch('/make-call', {
+        const resp = await fetch('/api/make-call', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             number: entry.number,
             domain: entry.domain,
+            mode: 'identity', // Ensure mode is explicitly set
             batch_id: campaignBatch.batchId,
             batch_label: campaignBatch.batchLabel
           })
