@@ -5,117 +5,384 @@
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <title>ViaBox | Modo Simple</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet"/>
     <script src="js/tailwind.config.js"></script>
     <link rel="stylesheet" href="css/style.css">
     <style>
         body { font-family: 'Inter', sans-serif; }
+        
+        .gradient-header {
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+        }
+        
+        .stat-card {
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            transform: translate(20px, -20px);
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
+        }
+        
+        .form-input-modern {
+            border: 1.5px solid #e5e7eb;
+            transition: all 0.3s ease;
+        }
+        
+        .form-input-modern:focus {
+            border-color: #2563eb;
+            background-color: #f0f9ff;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(37, 99, 235, 0.3);
+        }
+        
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+        
+        .tab-active {
+            color: #2563eb;
+            border-bottom-color: #2563eb;
+        }
+        
+        .call-status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .status-completed {
+            background-color: #dcfce7;
+            color: #15803d;
+        }
+        
+        .status-active {
+            background-color: #dbeafe;
+            color: #0c4a6e;
+        }
+        
+        .status-failed {
+            background-color: #fee2e2;
+            color: #b91c1c;
+        }
+        
+        .icon-wrapper {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            font-size: 24px;
+        }
+        
+        .icon-primary {
+            background-color: #dbeafe;
+            color: #2563eb;
+        }
+        
+        .icon-success {
+            background-color: #dcfce7;
+            color: #15803d;
+        }
+        
+        .icon-danger {
+            background-color: #fee2e2;
+            color: #dc2626;
+        }
+        
+        .icon-warning {
+            background-color: #fef3c7;
+            color: #b45309;
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #e5e7eb, transparent);
+        }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800">
     <!-- Toggle Button -->
-    <div class="fixed top-4 right-4 z-[90]">
+    <div class="fixed top-4 right-4 z-[90] flex gap-2">
+        <button id="simple-logout" class="text-xs bg-gray-200 text-gray-700 px-3 py-1.5 rounded-full hover:bg-gray-300 transition">
+            Cerrar Sesión
+        </button>
         <button id="ui-mode-toggle" class="text-xs bg-gray-800 text-white px-3 py-1.5 rounded-full hover:bg-gray-700 transition">
-            Cambiar a Modo Avanzado
+            Modo Avanzado
         </button>
     </div>
 
-    <!-- Simple Mode Content -->
-    <header class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
-        <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                    <img src="assets/logo.png" alt="VisaAI Logo" class="w-7 h-7 object-contain">
-                </div>
-                <div>
-                    <h1 class="text-xl font-bold text-gray-800">ViaBox</h1>
-                    <p class="text-xs text-gray-500">Asistente de Llamadas</p>
+    <!-- Header -->
+    <header class="gradient-header sticky top-0 z-50 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg">
+                        <img src="assets/logo.png" alt="ViaBox Logo" class="w-8 h-8 object-contain">
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-white">ViaBox</h1>
+                        <p class="text-blue-100 text-sm">Sistema de Llamadas Inteligentes</p>
+                    </div>
                 </div>
             </div>
-            <button id="simple-logout" class="text-gray-500 hover:text-red-600 text-sm">Cerrar Sesión</button>
         </div>
     </header>
 
-    <main class="max-w-6xl mx-auto px-4 py-6">
-        <!-- Stats -->
-        <div class="grid grid-cols-4 gap-4 mb-6">
-            <div class="bg-white rounded-lg shadow p-4">
-                <p class="text-xs text-gray-500 uppercase">Total</p>
-                <p id="stat-total" class="text-2xl font-bold">0</p>
-            </div>
-            <div class="bg-white rounded-lg shadow p-4">
-                <p class="text-xs text-gray-500 uppercase">Contestadas</p>
-                <p id="stat-answered" class="text-2xl font-bold text-green-600">0</p>
-            </div>
-            <div class="bg-white rounded-lg shadow p-4">
-                <p class="text-xs text-gray-500 uppercase">Sin Contestar</p>
-                <p id="stat-missed" class="text-2xl font-bold text-red-600">0</p>
-            </div>
-            <div class="bg-white rounded-lg shadow p-4">
-                <p class="text-xs text-gray-500 uppercase">En Curso</p>
-                <p id="stat-active" class="text-2xl font-bold text-blue-600">0</p>
-            </div>
-        </div>
-
-        <!-- Tabs -->
-        <div class="bg-white rounded-lg shadow mb-6">
-            <div class="flex border-b">
-                <button class="simple-tab active px-6 py-3 text-sm font-medium text-blue-600 border-b-2 border-blue-600" data-tab="make-call">Hacer Llamada</button>
-                <button class="simple-tab px-6 py-3 text-sm font-medium text-gray-500" data-tab="history">Historial</button>
-                <button class="simple-tab px-6 py-3 text-sm font-medium text-gray-500" data-tab="settings">Configuración</button>
-            </div>
-        </div>
-
-        <!-- Tab: Hacer Llamada -->
-        <div id="simple-make-call" class="simple-tab-content">
-            <div class="bg-white rounded-lg shadow p-6">
-                <h2 class="text-lg font-semibold text-gray-800 mb-4">Nueva Llamada</h2>
-                <form id="simple-call-form" class="space-y-4">
+    <main class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Stats Section -->
+        <div class="grid grid-cols-4 gap-4 mb-8">
+            <!-- Total Calls -->
+            <div class="stat-card bg-white rounded-xl shadow-sm p-5 border border-gray-100">
+                <div class="flex items-start justify-between">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Número de Teléfono</label>
-                        <input id="simple-number" type="tel" class="w-full border border-gray-300 rounded-lg px-4 py-2" placeholder="+51 999 888 777" required>
+                        <p class="text-gray-500 text-sm font-medium uppercase tracking-wide">Total Llamadas</p>
+                        <p id="stat-total" class="text-3xl font-bold text-gray-900 mt-2">0</p>
                     </div>
+                    <div class="icon-wrapper icon-primary">
+                        <span class="material-symbols-outlined">call</span>
+                    </div>
+                </div>
+                <div class="mt-3 pt-3 border-t border-gray-100">
+                    <p class="text-xs text-gray-500">Todas las llamadas</p>
+                </div>
+            </div>
+
+            <!-- Answered Calls -->
+            <div class="stat-card bg-white rounded-xl shadow-sm p-5 border border-gray-100">
+                <div class="flex items-start justify-between">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Mensaje (opcional)</label>
-                        <textarea id="simple-message" rows="3" class="w-full border border-gray-300 rounded-lg px-4 py-2" placeholder="¿En qué puedo ayudarte?"></textarea>
+                        <p class="text-gray-500 text-sm font-medium uppercase tracking-wide">Contestadas</p>
+                        <p id="stat-answered" class="text-3xl font-bold text-green-600 mt-2">0</p>
                     </div>
-                    <button type="submit" class="w-full bg-blue-600 text-white font-medium py-3 rounded-lg hover:bg-blue-700">Iniciar Llamada</button>
-                </form>
+                    <div class="icon-wrapper icon-success">
+                        <span class="material-symbols-outlined">check_circle</span>
+                    </div>
+                </div>
+                <div class="mt-3 pt-3 border-t border-green-100">
+                    <p class="text-xs text-green-700">Exitosas</p>
+                </div>
             </div>
-            <div class="mt-6">
-                <h3 class="text-sm font-semibold text-gray-600 mb-3">Llamadas Activas</h3>
-                <div id="simple-call-list" class="space-y-2">
-                    <p class="text-gray-400 text-sm">No hay llamadas activas</p>
+
+            <!-- Missed Calls -->
+            <div class="stat-card bg-white rounded-xl shadow-sm p-5 border border-gray-100">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm font-medium uppercase tracking-wide">Sin Contestar</p>
+                        <p id="stat-missed" class="text-3xl font-bold text-red-600 mt-2">0</p>
+                    </div>
+                    <div class="icon-wrapper icon-danger">
+                        <span class="material-symbols-outlined">missed_video_call</span>
+                    </div>
+                </div>
+                <div class="mt-3 pt-3 border-t border-red-100">
+                    <p class="text-xs text-red-700">No completadas</p>
+                </div>
+            </div>
+
+            <!-- Active Calls -->
+            <div class="stat-card bg-white rounded-xl shadow-sm p-5 border border-gray-100">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm font-medium uppercase tracking-wide">En Curso</p>
+                        <p id="stat-active" class="text-3xl font-bold text-blue-600 mt-2">0</p>
+                    </div>
+                    <div class="icon-wrapper icon-warning">
+                        <span class="material-symbols-outlined">phone_in_use</span>
+                    </div>
+                </div>
+                <div class="mt-3 pt-3 border-t border-blue-100">
+                    <p class="text-xs text-blue-700">Activas ahora</p>
                 </div>
             </div>
         </div>
 
-        <!-- Tab: Historial -->
-        <div id="simple-history" class="simple-tab-content hidden">
-            <div class="bg-white rounded-lg shadow">
-                <div class="p-4 border-b flex justify-between items-center">
-                    <h2 class="text-lg font-semibold text-gray-800">Historial</h2>
-                    <button id="simple-refresh-history" class="text-blue-600 text-sm hover:underline">Actualizar</button>
-                </div>
-                <div id="simple-history-list" class="divide-y max-h-96 overflow-y-auto">
-                    <p class="p-8 text-center text-gray-400">Sin llamadas</p>
+        <!-- Main Content -->
+        <div class="grid grid-cols-3 gap-6">
+            <!-- Left Column: Call Form -->
+            <div class="col-span-2">
+                <!-- Tabs -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 mb-6">
+                    <div class="flex border-b border-gray-100">
+                        <button class="simple-tab active px-6 py-4 text-sm font-semibold tab-active border-b-2 border-blue-600 text-blue-600" data-tab="make-call">
+                            <span class="material-symbols-outlined" style="font-size: 18px; vertical-align: middle; margin-right: 6px;">phone</span>
+                            Hacer Llamada
+                        </button>
+                        <button class="simple-tab px-6 py-4 text-sm font-semibold text-gray-600 hover:text-gray-900 transition" data-tab="history">
+                            <span class="material-symbols-outlined" style="font-size: 18px; vertical-align: middle; margin-right: 6px;">history</span>
+                            Historial
+                        </button>
+                        <button class="simple-tab px-6 py-4 text-sm font-semibold text-gray-600 hover:text-gray-900 transition" data-tab="settings">
+                            <span class="material-symbols-outlined" style="font-size: 18px; vertical-align: middle; margin-right: 6px;">settings</span>
+                            Configuración
+                        </button>
+                    </div>
+
+                    <!-- Tab: Hacer Llamada -->
+                    <div id="simple-make-call" class="simple-tab-content p-6">
+                        <h2 class="section-title">
+                            <span class="material-symbols-outlined">add_call</span>
+                            Nueva Llamada
+                        </h2>
+                        <form id="simple-call-form" class="space-y-5">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Número de Teléfono</label>
+                                <div class="relative">
+                                    <span class="material-symbols-outlined absolute left-3 top-3.5 text-gray-400">phone</span>
+                                    <input id="simple-number" type="tel" class="form-input-modern w-full pl-10 pr-4 py-3 rounded-lg" placeholder="+51 999 888 777" required>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">Ej: +51 987 654 321</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Mensaje o Instrucciones (opcional)</label>
+                                <div class="relative">
+                                    <textarea id="simple-message" rows="3" class="form-input-modern w-full px-4 py-3 rounded-lg resize-none" placeholder="¿Cómo puedo ayudarte hoy?"></textarea>
+                                    <span class="material-symbols-outlined absolute right-3 top-3 text-gray-400 pointer-events-none">edit</span>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn-primary w-full text-white font-semibold py-3 rounded-lg flex items-center justify-center gap-2">
+                                <span class="material-symbols-outlined">call</span>
+                                Iniciar Llamada
+                            </button>
+                        </form>
+
+                        <div class="mt-8 pt-6 border-t border-gray-200">
+                            <h3 class="section-title">
+                                <span class="material-symbols-outlined text-blue-600">phone_in_use</span>
+                                Llamadas Activas
+                            </h3>
+                            <div id="simple-call-list" class="space-y-2">
+                                <p class="text-center text-gray-400 py-6 text-sm">No hay llamadas activas en este momento</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Historial -->
+                    <div id="simple-history" class="simple-tab-content hidden p-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="section-title">
+                                <span class="material-symbols-outlined">history</span>
+                                Historial de Llamadas
+                            </h2>
+                            <button id="simple-refresh-history" class="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1 transition">
+                                <span class="material-symbols-outlined" style="font-size: 18px;">refresh</span>
+                                Actualizar
+                            </button>
+                        </div>
+                        <div id="simple-history-list" class="divide-y divide-gray-200 max-h-96 overflow-y-auto rounded-lg border border-gray-200">
+                            <p class="p-8 text-center text-gray-400 text-sm">Sin llamadas registradas</p>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Configuración -->
+                    <div id="simple-settings" class="simple-tab-content hidden p-6">
+                        <h2 class="section-title">
+                            <span class="material-symbols-outlined">settings</span>
+                            Configuración del Agente
+                        </h2>
+                        <form class="space-y-5">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Mensaje de Bienvenida</label>
+                                <textarea id="simple-greeting" rows="2" class="form-input-modern w-full px-4 py-3 rounded-lg resize-none" placeholder="¡Hola! Soy tu asistente virtual..."></textarea>
+                                <p class="text-xs text-gray-500 mt-1">Este mensaje se reproducirá al inicio de cada llamada</p>
+                            </div>
+                            <div class="divider"></div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Instrucciones del Agente</label>
+                                <textarea id="simple-instructions" rows="4" class="form-input-modern w-full px-4 py-3 rounded-lg resize-none" placeholder="Eres un asistente amable y profesional que..."></textarea>
+                                <p class="text-xs text-gray-500 mt-1">Define el comportamiento y personalidad del agente de voz</p>
+                            </div>
+                            <button type="button" id="simple-save-settings" class="btn-primary text-white font-semibold py-3 px-6 rounded-lg flex items-center gap-2 mt-6">
+                                <span class="material-symbols-outlined">save</span>
+                                Guardar Cambios
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Tab: Configuración -->
-        <div id="simple-settings" class="simple-tab-content hidden">
-            <div class="bg-white rounded-lg shadow p-6 space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Mensaje de Bienvenida</label>
-                    <textarea id="simple-greeting" rows="2" class="w-full border border-gray-300 rounded-lg px-4 py-2" placeholder="¡Hola! ¿En qué puedo ayudarte?"></textarea>
+            <!-- Right Column: Quick Info -->
+            <div class="col-span-1">
+                <!-- Quick Actions -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+                    <h3 class="section-title">
+                        <span class="material-symbols-outlined">bolt</span>
+                        Acciones Rápidas
+                    </h3>
+                    <div class="space-y-3">
+                        <button class="quick-action w-full text-left p-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition flex items-center gap-3 group">
+                            <span class="material-symbols-outlined text-blue-600 group-hover:scale-110 transition">call_split</span>
+                            <div>
+                                <p class="font-medium text-sm text-gray-900">Transferir Llamada</p>
+                                <p class="text-xs text-gray-500">A otro agente</p>
+                            </div>
+                        </button>
+                        <button class="quick-action w-full text-left p-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition flex items-center gap-3 group">
+                            <span class="material-symbols-outlined text-blue-600 group-hover:scale-110 transition">pause_circle</span>
+                            <div>
+                                <p class="font-medium text-sm text-gray-900">Pausar Agente</p>
+                                <p class="text-xs text-gray-500">Temporalmente</p>
+                            </div>
+                        </button>
+                        <button class="quick-action w-full text-left p-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition flex items-center gap-3 group">
+                            <span class="material-symbols-outlined text-blue-600 group-hover:scale-110 transition">analytics</span>
+                            <div>
+                                <p class="font-medium text-sm text-gray-900">Ver Reportes</p>
+                                <p class="text-xs text-gray-500">Análisis detallado</p>
+                            </div>
+                        </button>
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Instrucciones del Agente</label>
-                    <textarea id="simple-instructions" rows="4" class="w-full border border-gray-300 rounded-lg px-4 py-2" placeholder="Eres un asistente amigable..."></textarea>
+
+                <!-- Info Card -->
+                <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200 p-6">
+                    <div class="flex items-start gap-3">
+                        <span class="material-symbols-outlined text-blue-600 text-2xl">info</span>
+                        <div>
+                            <p class="font-semibold text-gray-900 text-sm mb-1">Sistema en Línea</p>
+                            <p class="text-xs text-gray-700">Tu agente de voz está activo y listo para recibir llamadas</p>
+                        </div>
+                    </div>
                 </div>
-                <button id="simple-save-settings" class="bg-blue-600 text-white font-medium py-2 px-6 rounded-lg hover:bg-blue-700">Guardar Cambios</button>
             </div>
         </div>
     </main>
@@ -134,11 +401,11 @@
             document.querySelectorAll('.simple-tab').forEach(btn => {
                 btn.addEventListener('click', () => {
                     document.querySelectorAll('.simple-tab').forEach(b => {
-                        b.classList.remove('active', 'text-blue-600', 'border-b-2', 'border-blue-600');
-                        b.classList.add('text-gray-500');
+                        b.classList.remove('tab-active', 'text-blue-600', 'border-b-2', 'border-blue-600');
+                        b.classList.add('text-gray-600');
                     });
-                    btn.classList.add('active', 'text-blue-600', 'border-b-2', 'border-blue-600');
-                    btn.classList.remove('text-gray-500');
+                    btn.classList.add('tab-active', 'text-blue-600', 'border-b-2', 'border-blue-600');
+                    btn.classList.remove('text-gray-600');
                     
                     document.querySelectorAll('.simple-tab-content').forEach(c => c.classList.add('hidden'));
                     document.getElementById('simple-' + btn.dataset.tab).classList.remove('hidden');
@@ -161,6 +428,7 @@
                     if (data.success) {
                         alert('Llamada iniciada correctamente');
                         document.getElementById('simple-number').value = '';
+                        document.getElementById('simple-message').value = '';
                         loadSimpleHistory();
                     } else {
                         alert('Error: ' + (data.message || data.error));
@@ -178,20 +446,28 @@
                     
                     const list = document.getElementById('simple-history-list');
                     if (!calls.length) {
-                        list.innerHTML = '<p class="p-8 text-center text-gray-400">Sin llamadas</p>';
+                        list.innerHTML = '<p class="p-8 text-center text-gray-400 text-sm">Sin llamadas registradas</p>';
                         return;
                     }
                     
                     list.innerHTML = calls.slice(0, 50).map(c => {
                         const status = c.status === 'completed' ? 'Completada' : c.status === 'active' ? 'En Curso' : 'Fallida';
-                        const statusColor = c.status === 'completed' ? 'text-green-600' : c.status === 'active' ? 'text-blue-600' : 'text-red-600';
+                        const statusClass = c.status === 'completed' ? 'status-completed' : c.status === 'active' ? 'status-active' : 'status-failed';
                         const date = c.started_at ? new Date(c.started_at).toLocaleString('es-ES') : '—';
-                        return `<div class="p-4 hover:bg-gray-50 cursor-pointer">
-                            <div class="flex justify-between items-center">
-                                <span class="font-medium">${c.to_number || c.to || '—'}</span>
-                                <span class="text-xs ${statusColor}">${status}</span>
+                        const duration = c.duration ? `${Math.floor(c.duration / 60)}m ${c.duration % 60}s` : '—';
+                        
+                        return `<div class="p-4 hover:bg-gray-50 cursor-pointer transition">
+                            <div class="flex justify-between items-center mb-2">
+                                <div class="flex items-center gap-3">
+                                    <span class="material-symbols-outlined text-gray-400">phone</span>
+                                    <span class="font-semibold text-gray-900">${c.to_number || c.to || '—'}</span>
+                                </div>
+                                <span class="call-status-badge ${statusClass}">${status}</span>
                             </div>
-                            <p class="text-xs text-gray-500 mt-1">${date}</p>
+                            <div class="grid grid-cols-2 gap-4 text-xs text-gray-500 ml-7">
+                                <span>${date}</span>
+                                <span>Duración: ${duration}</span>
+                            </div>
                         </div>`;
                     }).join('');
                     
@@ -224,7 +500,7 @@
                             text 
                         })
                     });
-                    alert('Configuración guardada');
+                    alert('Configuración guardada correctamente');
                 } catch (e) {
                     alert('Error al guardar');
                 }
