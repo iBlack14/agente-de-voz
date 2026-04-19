@@ -154,7 +154,10 @@ const initDashboardApp = () => {
     
     // Trigger data loading
     if (tabId === 'history') loadCallHistory();
-    if (tabId === 'updates') loadUpdates();
+    if (tabId === 'updates') {
+      syncUpdatesMonthFilter(new Date().getMonth() + 1);
+      loadUpdates();
+    }
     if (tabId === 'retrybook') loadCallHistory();
     if (tabId === 'stats') updateConsumptionOverview();
     if (tabId === 'monitor') typeof loadActiveCalls === 'function' && loadActiveCalls();
@@ -2639,6 +2642,35 @@ const initDashboardApp = () => {
 
   let currentUpdates = [];
 
+  function getLocalDateInputValue(date = new Date()) {
+    const offset = date.getTimezoneOffset();
+    const localDate = new Date(date.getTime() - offset * 60000);
+    return localDate.toISOString().slice(0, 10);
+  }
+
+  function getMonthFromDateInput(dateValue) {
+    if (!dateValue || typeof dateValue !== 'string') return '';
+    const [, month = ''] = dateValue.split('-');
+    return month ? String(parseInt(month, 10)) : '';
+  }
+
+  function getDefaultUpdateDate() {
+    const now = new Date();
+    const selectedMonth = parseInt(updatesFilterMonth?.value || '', 10);
+    if (!selectedMonth) return getLocalDateInputValue(now);
+
+    const year = now.getFullYear();
+    const day = Math.min(now.getDate(), new Date(year, selectedMonth, 0).getDate());
+    return getLocalDateInputValue(new Date(year, selectedMonth - 1, day));
+  }
+
+  function syncUpdatesMonthFilter(monthValue, { force = false, triggerLoad = false } = {}) {
+    if (!updatesFilterMonth || !monthValue) return;
+    if (!force && updatesFilterMonth.value) return;
+    updatesFilterMonth.value = String(monthValue);
+    if (triggerLoad) window.loadUpdates();
+  }
+
   window.loadUpdates = async function() {
     console.log('[ViaAI] Loading domain updates...');
     const month = updatesFilterMonth?.value || '';
@@ -2722,6 +2754,7 @@ const initDashboardApp = () => {
 
   updatesRefreshBtn?.addEventListener('click', window.loadUpdates);
   updatesFilterMonth?.addEventListener('change', window.loadUpdates);
+  syncUpdatesMonthFilter(new Date().getMonth() + 1);
   
   let searchTimeout;
   updatesSearch?.addEventListener('input', () => {
@@ -2805,8 +2838,9 @@ const initDashboardApp = () => {
   updatesAddBtn?.addEventListener('click', () => {
     newUpdateForm.reset();
     const dateInput = document.getElementById('new-update-date');
-    if (dateInput && !dateInput.value) {
-      dateInput.value = new Date().toISOString().slice(0, 10);
+    if (dateInput) {
+      dateInput.value = getDefaultUpdateDate();
+      syncUpdatesMonthFilter(getMonthFromDateInput(dateInput.value));
     }
     newUpdateModal.classList.add('visible');
     setTimeout(() => document.getElementById('new-update-domain').focus(), 100);
@@ -2848,6 +2882,7 @@ const initDashboardApp = () => {
       if (resp.ok) {
         appAlert('✅ Registro guardado exitosamente.');
         newUpdateModal.classList.remove('visible');
+        syncUpdatesMonthFilter(getMonthFromDateInput(execution_date), { force: true });
         window.loadUpdates(); // Refresh table
       } else {
         appAlert(`Error: ${result.error}`, true);
