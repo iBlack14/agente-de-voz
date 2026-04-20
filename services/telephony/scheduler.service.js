@@ -96,13 +96,20 @@ async function processScheduledCalls() {
                     .eq('id', task.id);
 
             } catch (err) {
-                console.error(`❌ [Supabase Scheduler] Error en llamada ${task.id}:`, err.message);
+                const status = err.response?.status;
+                const errorMsg = err.response?.data?.errors?.[0]?.detail || err.message;
+                console.error(`❌ [Supabase Scheduler] Error en llamada ${task.id}:`, errorMsg);
+                
+                // Detect permanent errors (Invalid number D11, Whitelist D13, Authentication)
+                const isPermanent = status === 422 || status === 403 || status === 401;
+                
                 await supabase
                     .from('scheduled_calls')
                     .update({ 
-                        status: 'pending', 
-                        scheduled_for: new Date(Date.now() + 120000).toISOString(), // Reintentar en 2 min
-                        last_error: err.message?.slice(0, 500)
+                        status: isPermanent ? 'failed' : 'pending', 
+                        scheduled_for: isPermanent ? task.scheduled_for : new Date(Date.now() + 180000).toISOString(), // Wait 3 min for transients
+                        attempts: (task.attempts || 0) + 1,
+                        last_error: errorMsg?.slice(0, 500)
                     })
                     .eq('id', task.id);
             }
