@@ -2772,9 +2772,9 @@ const initDashboardApp = () => {
             <button type="button" class="updates-month-schedule-btn px-5 py-2 bg-white/5 border border-white/5 text-white font-bold rounded-xl text-[10px] uppercase hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed" disabled>Programar</button>
           </div>
         </div>
-        <div class="updates-domain-list">
+          <div class="updates-domain-list">
           ${group.items.map(u => `
-            <article class="update-row update-domain-item-list" data-month-key="${escapeHtml(group.key)}" onclick="const cb = this.querySelector('.update-checkbox'); cb.checked = !cb.checked; cb.dispatchEvent(new Event('change', { bubbles: true }));">
+            <article class="update-row update-domain-item-list group" data-month-key="${escapeHtml(group.key)}" onclick="const cb = this.querySelector('.update-checkbox'); if(cb) { cb.checked = !cb.checked; cb.dispatchEvent(new Event('change', { bubbles: true })); }">
               <div class="update-list-check" onclick="event.stopPropagation()">
                 <input type="checkbox" class="update-checkbox h-4 w-4 rounded-full border border-white/15 bg-black/40 cursor-pointer transition-all outline-none" data-id="${u.id}">
               </div>
@@ -2790,7 +2790,15 @@ const initDashboardApp = () => {
                     const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
                     return `${p[2]} ${months[parseInt(p[1], 10)-1]}`;
                   })()}</span>
-                  <span class="material-symbols-outlined text-xs text-zinc-600">event</span>
+                  <div class="flex items-center gap-1 opacity-10 md:opacity-0 md:group-hover:opacity-100 transition-opacity ml-2">
+                    <button class="p-1 text-slate-400 hover:text-primary transition-colors" onclick="event.stopPropagation(); window.openEditUpdateModal('${u.id}')">
+                      <span class="material-symbols-outlined text-[14px]">edit</span>
+                    </button>
+                    <button class="p-1 text-slate-400 hover:text-rose-500 transition-colors" onclick="event.stopPropagation(); window.deleteUpdateRow('${u.id}')">
+                      <span class="material-symbols-outlined text-[14px]">delete</span>
+                    </button>
+                  </div>
+                  <span class="material-symbols-outlined text-xs text-zinc-600 ml-1">event</span>
                 </div>
               </div>
             </article>
@@ -3018,8 +3026,62 @@ const initDashboardApp = () => {
   const newUpdateForm = document.getElementById('new-update-form');
   const updatesAddBtn = document.getElementById('updates-add-btn');
   
+  let editingUpdateId = null;
+
+  window.openEditUpdateModal = (id) => {
+    const update = currentUpdates.find(u => String(u.id) === String(id));
+    if (!update) return;
+
+    editingUpdateId = id;
+    
+    // Change modal title and button text
+    const title = newUpdateModal.querySelector('h3');
+    const subtitle = newUpdateModal.querySelector('p');
+    const submitBtn = newUpdateForm.querySelector('button[type="submit"]');
+
+    if (title) title.textContent = 'Editar Registro';
+    if (subtitle) subtitle.textContent = `Editando: ${update.domain}`;
+    if (submitBtn) submitBtn.textContent = 'ACTUALIZAR REGISTRO';
+
+    // Fill fields
+    document.getElementById('new-update-domain').value = update.domain || '';
+    document.getElementById('new-update-phone').value = update.phone || '';
+    document.getElementById('new-update-date').value = update.execution_date || '';
+    document.getElementById('new-update-notes').value = update.notes || '';
+
+    newUpdateModal.classList.add('visible');
+  };
+
+  window.deleteUpdateRow = async (id) => {
+    const update = currentUpdates.find(u => String(u.id) === String(id));
+    if (!update) return;
+
+    const confirm = await appPrompt(`¿Seguro que deseas ELIMINAR el registro de ${update.domain}?\nEscribe "ELIMINAR" para confirmar:`, 'ELIMINAR');
+    if (confirm !== 'ELIMINAR') return;
+
+    try {
+        const resp = await fetch(`/api/updates/${id}`, { method: 'DELETE' });
+        if (resp.ok) {
+            appAlert('✅ Registro eliminado de la matriz.');
+            window.loadUpdates();
+        } else {
+            appAlert('Error al eliminar registro.', true);
+        }
+    } catch (e) { appAlert('Error de conexión', true); }
+  };
+
   updatesAddBtn?.addEventListener('click', () => {
+    editingUpdateId = null;
     newUpdateForm.reset();
+    
+    const title = newUpdateModal.querySelector('h3');
+    const subtitle = newUpdateModal.querySelector('p');
+    const submitBtn = newUpdateForm.querySelector('button[type="submit"]');
+    
+    if (title) title.textContent = 'Nuevo Registro';
+    if (subtitle) subtitle.textContent = 'Gestión de Renovaciones';
+    if (submitBtn) submitBtn.textContent = 'GUARDAR REGISTRO';
+
     const dateInput = document.getElementById('new-update-date');
     if (dateInput) {
       dateInput.value = getDefaultUpdateDate();
@@ -3055,18 +3117,26 @@ const initDashboardApp = () => {
       btn.disabled = true;
       btn.textContent = 'GUARDANDO...';
       
-      const resp = await fetch('/api/updates', {
-        method: 'POST',
+      const method = editingUpdateId ? 'PUT' : 'POST';
+      const url = editingUpdateId ? `/api/updates/${editingUpdateId}` : '/api/updates';
+
+      const resp = await fetch(url, {
+        method: method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ domain, phone, execution_date, notes })
       });
       
       const result = await resp.json();
       if (resp.ok) {
-        appAlert('✅ Registro guardado exitosamente.');
+        appAlert(editingUpdateId ? '✅ Cambios guardados exitosamente.' : '✅ Registro guardado exitosamente.');
         newUpdateModal.classList.remove('visible');
-        syncUpdatesMonthFilter(getMonthFromDateInput(execution_date), { force: true });
-        window.loadUpdates(); // Refresh table
+        if (editingUpdateId) {
+            // Keep current month filter if editing
+            window.loadUpdates();
+        } else {
+            syncUpdatesMonthFilter(getMonthFromDateInput(execution_date), { force: true });
+            window.loadUpdates(); // Refresh table
+        }
       } else {
         appAlert(`Error: ${result.error}`, true);
       }
@@ -3074,7 +3144,7 @@ const initDashboardApp = () => {
       appAlert('Error de conexión', true);
     } finally {
       btn.disabled = false;
-      btn.textContent = 'GUARDAR REGISTRO';
+      btn.textContent = editingUpdateId ? 'ACTUALIZAR REGISTRO' : 'GUARDAR REGISTRO';
     }
   });
 

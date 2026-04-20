@@ -310,4 +310,23 @@ router.post('/updates/schedule-batch', async (req, res) => {
   }
 });
 
+router.put('/updates/:id', async (req, res) => {
+  try {
+    const { domain, phone, execution_date, notes } = req.body;
+    const data = await updatesService.updateUpdate(req.params.id, { domain, phone, execution_date, notes });
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete('/updates/:id', async (req, res) => {
+  try {
+    const result = await updatesService.deleteUpdate(req.params.id);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

@@ -111,5 +111,30 @@ module.exports = {
         const { data, error } = await supabase.from('updates').insert(records);
         if (error) throw error;
         return data;
+    },
+
+    /**
+     * Update an entry
+     */
+    updateUpdate: async (id, payload) => {
+        const { data, error } = await supabase
+            .from('updates')
+            .update(payload)
+            .eq('id', id)
+            .select();
+        if (error) throw error;
+        return data[0];
+    },
+
+    /**
+     * Delete an entry
+     */
+    deleteUpdate: async (id) => {
+        const { error } = await supabase
+            .from('updates')
+            .delete()
+            .eq('id', id);
+        if (error) throw error;
+        return { success: true };
     }
 };
