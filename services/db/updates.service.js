@@ -7,11 +7,21 @@ module.exports = {
     getUpdates: async ({ month, year, search }) => {
         let query = supabase.from('updates').select('*');
 
-        if (month && year) {
-            // Month is 1-indexed in JS/API but we search in DB
-            const startDate = new Date(year, month - 1, 1).toISOString();
-            const endDate = new Date(year, month, 0).toISOString();
-            query = query.gte('execution_date', startDate).lte('execution_date', endDate);
+        if (month) {
+            if (year) {
+                const startDate = new Date(year, month - 1, 1).toISOString();
+                const endDate = new Date(year, month, 0).toISOString();
+                query = query.gte('execution_date', startDate).lte('execution_date', endDate);
+            } else {
+                // If no year, we'll filter in JS after fetching or use a postgres fragment
+                // For simplicity and compatibility with Supabase client, we'll fetch and filter if there's no year
+                // But wait, it's better to use a raw filter if possible.
+                // Supabase allows .or() and .filter() with custom logic.
+                // However, the easiest way is to use a computed column or just filter in memory for now
+                // since the number of domains is likely small (< 1000).
+                // Let's optimize: query.filter('execution_date', 'cs', `-${String(month).padStart(2, '0')}-`);
+                // Actually, 'cs' (contains) works for strings. DATE in pg can be cast to text.
+            }
         }
 
         if (search) {
@@ -20,6 +30,15 @@ module.exports = {
 
         const { data, error } = await query.order('execution_date', { ascending: true });
         if (error) throw error;
+
+        // If no year was provided but month was, filter in memory
+        if (month && !year) {
+            return data.filter(item => {
+                const date = new Date(item.execution_date);
+                return (date.getMonth() + 1) === month;
+            });
+        }
+
         return data;
     },
 

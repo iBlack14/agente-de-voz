@@ -2684,10 +2684,8 @@ const initDashboardApp = () => {
     console.log('[ViaAI] Loading domain updates...');
     const month = updatesFilterMonth?.value || '';
     const search = updatesSearch?.value || '';
-    const year = new Date().getFullYear();
-    
     try {
-      const resp = await fetch(`/api/updates?month=${month}&year=${year}&search=${search}`);
+      const resp = await fetch(`/api/updates?month=${month}&search=${search}`);
       currentUpdates = await resp.json();
       renderUpdatesTable(currentUpdates);
       updateSelectedCount();
@@ -2723,13 +2721,12 @@ const initDashboardApp = () => {
 
     const grouped = data.reduce((acc, item) => {
       const date = new Date(item.execution_date);
-      const key = `${date.getFullYear()}-${date.getMonth()}`;
+      const key = `${date.getMonth()}`;
       if (!acc[key]) {
         acc[key] = {
           key,
-          monthName: date.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }),
+          monthName: date.toLocaleDateString('es-ES', { month: 'long' }).toUpperCase(),
           monthIndex: date.getMonth(),
-          year: date.getFullYear(),
           items: []
         };
       }
@@ -2738,7 +2735,6 @@ const initDashboardApp = () => {
     }, {});
 
     const groups = Object.values(grouped).sort((a, b) => {
-      if (a.year !== b.year) return a.year - b.year;
       return a.monthIndex - b.monthIndex;
     });
 
@@ -2752,7 +2748,7 @@ const initDashboardApp = () => {
             <h3 class="updates-month-card-title">${escapeHtml(group.monthName)}</h3>
             <p class="updates-month-card-subtitle">${group.items.length} dominios</p>
           </div>
-          <button class="add-to-month-btn w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center hover:bg-primary hover:text-white transition-all" data-month="${group.monthIndex + 1}" data-year="${group.year}" title="Agregar a este mes">
+          <button class="add-to-month-btn w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center hover:bg-primary hover:text-white transition-all" data-month="${group.monthIndex + 1}" data-year="${new Date().getFullYear()}" title="Agregar a este mes">
             <span class="material-symbols-outlined text-lg">add</span>
           </button>
         </div>
