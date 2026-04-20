@@ -2720,13 +2720,18 @@ const initDashboardApp = () => {
     }
 
     const grouped = data.reduce((acc, item) => {
-      const date = new Date(item.execution_date);
-      const key = `${date.getMonth()}`;
+      const parts = String(item.execution_date || '').split('-');
+      if (parts.length < 2) return acc;
+      
+      const monthIdx = parseInt(parts[1], 10) - 1;
+      const key = `${monthIdx}`;
+      
       if (!acc[key]) {
+        const dummyDate = new Date(2024, monthIdx, 15);
         acc[key] = {
           key,
-          monthName: date.toLocaleDateString('es-ES', { month: 'long' }).toUpperCase(),
-          monthIndex: date.getMonth(),
+          monthName: dummyDate.toLocaleDateString('es-ES', { month: 'long' }).toUpperCase(),
+          monthIndex: monthIdx,
           items: []
         };
       }
@@ -2779,7 +2784,12 @@ const initDashboardApp = () => {
                   <p class="update-list-phone">${escapeHtml(u.phone || '—')}</p>
                 </div>
                 <div class="update-list-meta">
-                  <span class="update-list-date">${new Date(u.execution_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}</span>
+                  <span class="update-list-date">${(() => {
+                    const p = String(u.execution_date || '').split('-');
+                    if (p.length < 3) return '—';
+                    const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+                    return `${p[2]} ${months[parseInt(p[1], 10)-1]}`;
+                  })()}</span>
                   <span class="material-symbols-outlined text-xs text-zinc-600">event</span>
                 </div>
               </div>

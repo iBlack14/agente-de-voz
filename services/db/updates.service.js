@@ -34,8 +34,12 @@ module.exports = {
         // If no year was provided but month was, filter in memory
         if (month && !year) {
             return data.filter(item => {
-                const date = new Date(item.execution_date);
-                return (date.getMonth() + 1) === month;
+                // item.execution_date is "YYYY-MM-DD"
+                if (!item.execution_date) return false;
+                const parts = item.execution_date.split('-');
+                if (parts.length < 2) return false;
+                const monthFromDate = parseInt(parts[1], 10);
+                return monthFromDate === month;
             });
         }
 
