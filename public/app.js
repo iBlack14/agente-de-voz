@@ -2720,16 +2720,18 @@ const initDashboardApp = () => {
     }
 
     const grouped = data.reduce((acc, item) => {
-      // Check for priority marker [PRIO] in notes
-      if (item.notes?.includes('[PRIO]')) {
-        const key = 'priority';
+      // Check for custom category marker [CAT:Name] in notes
+      const catMatch = item.notes?.match(/\[CAT:(.*?)\]/);
+      if (catMatch) {
+        const catName = catMatch[1].trim();
+        const key = `cat_${catName}`;
         if (!acc[key]) {
           acc[key] = {
             key,
-            monthName: 'DESTACADOS / PRIORIDAD ⭐',
-            monthIndex: -1, // Sort first
+            monthName: catName.toUpperCase(),
+            monthIndex: -10, // Show custom categories first
             items: [],
-            isPriority: true
+            isCustomCategory: true
           };
         }
         acc[key].items.push(item);
@@ -2760,10 +2762,10 @@ const initDashboardApp = () => {
     });
 
     updatesTableBody.innerHTML = groups.map(group => `
-      <section class="updates-month-card ${group.isPriority ? 'priority-card' : ''}">
+      <section class="updates-month-card ${group.isCustomCategory ? 'priority-card' : ''}">
         <div class="updates-month-card-head">
-          <div class="updates-month-card-icon ${group.isPriority ? 'priority-icon' : ''}">
-            <span class="material-symbols-outlined text-xl">${group.isPriority ? 'grade' : 'calendar_month'}</span>
+          <div class="updates-month-card-icon ${group.isCustomCategory ? 'priority-icon' : ''}">
+            <span class="material-symbols-outlined text-xl">${group.isCustomCategory ? 'folder_special' : 'calendar_month'}</span>
           </div>
           <div class="flex-1">
             <h3 class="updates-month-card-title">${escapeHtml(group.monthName)}</h3>
@@ -3064,10 +3066,11 @@ const initDashboardApp = () => {
     document.getElementById('new-update-phone').value = update.phone || '';
     document.getElementById('new-update-date').value = update.execution_date || '';
     
-    // Check for priority marker
+    // Check for custom category
     const noteContent = update.notes || '';
-    document.getElementById('new-update-notes').value = noteContent.replace(' [PRIO]', '').trim();
-    document.getElementById('new-update-priority').checked = noteContent.includes('[PRIO]');
+    const catMatch = noteContent.match(/\[CAT:(.*?)\]/);
+    document.getElementById('new-update-category').value = catMatch ? catMatch[1] : '';
+    document.getElementById('new-update-notes').value = noteContent.replace(/\[CAT:.*?\]/, '').trim();
 
     newUpdateModal.classList.add('visible');
   };
@@ -3140,13 +3143,11 @@ const initDashboardApp = () => {
       const method = editingUpdateId ? 'PUT' : 'POST';
       const url = editingUpdateId ? `/api/updates/${editingUpdateId}` : '/api/updates';
 
-      // Inject [PRIO] if checked
-      const isPriority = document.getElementById('new-update-priority')?.checked;
-      let finalNotes = notes;
-      if (isPriority && !finalNotes.includes('[PRIO]')) {
-        finalNotes = (finalNotes + ' [PRIO]').trim();
-      } else if (!isPriority) {
-        finalNotes = finalNotes.replace(' [PRIO]', '').trim();
+      // Inject [CAT:Name] if provided
+      const customCategory = document.getElementById('new-update-category')?.value.trim();
+      let finalNotes = notes.replace(/\[CAT:.*?\]/g, '').trim(); // Remove existing tags
+      if (customCategory) {
+        finalNotes = `[CAT:${customCategory}] ${finalNotes}`.trim();
       }
 
       const resp = await fetch(url, {
