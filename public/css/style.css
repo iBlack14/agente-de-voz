@@ -170,36 +170,56 @@ main > header {
     border: 2px solid var(--primary);
     border-radius: 1.5rem;
     background: linear-gradient(145deg, rgba(25, 2, 45, 0.8), rgba(10, 1, 24, 0.95));
-    padding: 1.5rem;
+    background: rgba(10, 1, 24, 0.4);
+    border: 1px solid rgba(207, 0, 218, 0.4);
+    border-radius: 2rem;
+    padding: 2rem;
+    position: relative;
     overflow: hidden;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4), 0 0 15px rgba(207, 0, 218, 0.1);
-    transition: all 0.3s ease;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.5), 
+                inset 0 0 20px rgba(207, 0, 218, 0.05);
 }
 
 .updates-month-card:hover {
-    border-color: #ff00ff;
-    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.5), 0 0 30px rgba(207, 0, 218, 0.2);
-    transform: translateY(-2px);
+    border-color: #cf00da;
+    box-shadow: 0 15px 50px -5px rgba(207, 0, 218, 0.2);
+    transform: translateY(-4px);
+}
+
+/* Specific styling for custom/priority boxes */
+.priority-card {
+    border: 2px solid #cf00da !important;
+    background: rgba(207, 0, 218, 0.03) !important;
+    box-shadow: 0 0 50px rgba(207, 0, 218, 0.1) !important;
 }
 
 .updates-month-card-head {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    margin-bottom: 1rem;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
 }
 
 .updates-month-card-icon {
-    width: 3rem;
-    height: 3rem;
-    border-radius: 0.95rem;
-    display: inline-flex;
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1.5px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.4);
+    display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(180deg, rgba(99, 102, 241, 0.18) 0%, rgba(207, 0, 218, 0.12) 100%);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    color: #a5b4fc;
-    flex-shrink: 0;
+    transition: all 0.3s ease;
+}
+
+.updates-month-card:hover .updates-month-card-icon,
+.priority-card .updates-month-card-icon {
+    background: #cf00da;
+    border-color: #cf00da;
+    color: #fff;
+    box-shadow: 0 0 20px rgba(207, 0, 218, 0.4);
 }
 
 .updates-month-card-title {
@@ -259,32 +279,46 @@ main > header {
 }
 
 .updates-domain-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    display: grid;
+    grid-template-columns: repeat(1, 1fr);
+    gap: 0.75rem;
+}
+
+@media (min-width: 1024px) {
+    .updates-domain-list {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1440px) {
+    .updates-domain-list {
+        grid-template-columns: repeat(3, 1fr);
+    }
 }
 
 /* New List Style for Domains */
 .update-domain-item-list {
-    position: relative;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1.5px solid rgba(255, 255, 255, 0.05);
+    border-radius: 1.25rem;
+    padding: 1.25rem;
     display: flex;
     align-items: center;
-    padding: 1rem 0.5rem;
     gap: 1rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-    transition: all 0.2s ease;
     cursor: pointer;
-    border-radius: 0.75rem;
-    margin: 0 -0.5rem;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .update-domain-item-list:hover {
-    background: rgba(207, 0, 218, 0.05);
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(207, 0, 218, 0.3);
+    transform: scale(1.02);
 }
 
-.update-domain-item-list.is-selected {
-    background: rgba(207, 0, 218, 0.1);
+.update-domain-item-list.selected {
+    background: rgba(207, 0, 218, 0.1) !important;
+    border-color: #cf00da !important;
+    box-shadow: 0 0 20px rgba(207, 0, 218, 0.1);
 }
 
 .update-list-check {

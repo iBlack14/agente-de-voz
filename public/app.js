@@ -2771,9 +2771,14 @@ const initDashboardApp = () => {
           <div class="updates-month-card-icon ${group.isCustomCategory ? 'priority-icon' : ''}">
             <span class="material-symbols-outlined text-xl">${group.isCustomCategory ? 'folder_special' : 'calendar_month'}</span>
           </div>
-          <div class="flex-1">
+          <div class="flex-1 flex items-center gap-2">
             <h3 class="updates-month-card-title">${escapeHtml(group.monthName)}</h3>
-            <p class="updates-month-card-subtitle">${itemCount} ${itemCount === 1 ? 'dominio' : 'dominios'}</p>
+            ${group.isCustomCategory ? `
+              <button onclick="renameCategory('${escapeHtml(group.monthName)}')" class="p-1 text-zinc-500 hover:text-primary transition-colors">
+                <span class="material-symbols-outlined text-sm">edit_note</span>
+              </button>
+            ` : ''}
+            <p class="updates-month-card-subtitle ml-auto">${itemCount} ${itemCount === 1 ? 'dominio' : 'dominios'}</p>
           </div>
           <button onclick="openNewUpdateInBox('${group.isCustomCategory ? escapeHtml(group.monthName) : ''}', ${!group.isCustomCategory ? group.monthIndex + 1 : 'null'})" class="p-2.5 bg-primary text-white hover:scale-110 shadow-lg shadow-primary/20 rounded-xl transition-all flex items-center gap-2">
             <span class="material-symbols-outlined text-sm">add</span>
@@ -2786,7 +2791,7 @@ const initDashboardApp = () => {
               <input type="checkbox" class="updates-month-select-all rounded border-white/10 bg-black/40" data-month-key="${escapeHtml(group.key)}">
               <span><span class="updates-month-selected-count">0</span> seleccionados</span>
             </label>
-             <div class="custom-select-wrapper updates-month-reminder-container ml-4" style="width: 220px;">
+             <div class="custom-select-wrapper updates-month-reminder-container ml-4" style="width: 250px;">
                 <div class="custom-select-trigger font-bold uppercase text-[9px] tracking-widest text-primary border-primary/20 bg-primary/5">
                     <span>ACTUALIZACIONES</span>
                 </div>
@@ -2794,7 +2799,7 @@ const initDashboardApp = () => {
                     <div class="custom-select-option" data-value="">ACTUALIZACIONES</div>
                     ${getUpdatesReminderOptionsHtml(true)}
                 </div>
-                <select class="hidden-select updates-month-reminder">
+                <select class="hidden-select updates-month-reminder" onchange="updateBatchPreview(this)">
                     <option value="">ACTUALIZACIONES</option>
                 </select>
             </div>
@@ -2803,6 +2808,13 @@ const initDashboardApp = () => {
             <button type="button" class="updates-month-call-btn px-5 py-2 bg-primary text-white font-black rounded-xl text-[10px] uppercase shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed" disabled>Llamar Ahora</button>
             <button type="button" class="updates-month-schedule-btn px-5 py-2 bg-white/5 border border-white/5 text-white font-bold rounded-xl text-[10px] uppercase hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed" disabled>Programar</button>
           </div>
+        </div>
+        <div class="updates-reminder-preview px-6 pb-4 hidden" id="preview-${escapeHtml(group.key)}">
+            <div class="flex items-center gap-2 text-[9px] font-black text-primary/60 uppercase tracking-widest mb-1">
+                <span class="material-symbols-outlined text-[10px]">info</span>
+                Vista del Lote:
+            </div>
+            <p class="text-[10px] text-zinc-500 italic line-clamp-1"></p>
         </div>
         <div class="updates-domain-list">
           ${itemCount === 0 
@@ -3044,6 +3056,32 @@ const initDashboardApp = () => {
     updateSelectedCount();
   });
 
+  window.renameCategory = async (oldName) => {
+    const newName = await appPrompt(`Renombrar cuadro "${oldName}" a:`, oldName);
+    if (!newName || newName === oldName) return;
+
+    const itemsToUpdate = currentUpdates.filter(u => u.notes?.includes(`[CAT:${oldName}]`));
+    if (itemsToUpdate.length === 0) return;
+
+    let successCount = 0;
+    for (const item of itemsToUpdate) {
+      const newNotes = item.notes.replace(`[CAT:${oldName}]`, `[CAT:${newName}]`);
+      try {
+        const resp = await fetch(`/api/updates/${item.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ notes: newNotes })
+        });
+        if (resp.ok) successCount++;
+      } catch (e) {  }
+    }
+
+    if (successCount > 0) {
+      appAlert(`✅ Cuadro renombrado a "${newName}".`);
+      window.loadUpdates();
+    }
+  };
+
   updatesCallNowBtn?.addEventListener('click', async () => {
     const selectedIds = Array.from(document.querySelectorAll('.update-checkbox:checked')).map(cb => cb.dataset.id);
     const promptId = updatesBatchReminder.value;
@@ -3055,6 +3093,39 @@ const initDashboardApp = () => {
     const promptId = updatesBatchReminder.value;
     await triggerUpdatesBatchAction({ selectedIds, promptId, mode: 'schedule', triggerButton: updatesScheduleBtn });
   });
+
+  // Global Preview Listener
+  document.getElementById('updates-batch-reminder')?.addEventListener('change', (e) => {
+    const previewArea = document.getElementById('updates-global-preview');
+    const previewText = document.getElementById('global-preview-text');
+    if (!previewArea || !previewText) return;
+    
+    const selectedText = e.target.options[e.target.selectedIndex].text;
+    if (e.target.value) {
+      previewArea.classList.remove('hidden');
+      previewText.textContent = selectedText;
+    } else {
+      previewArea.classList.add('hidden');
+    }
+  });
+
+  window.updateBatchPreview = (selectEl) => {
+    const toolbar = selectEl.closest('.updates-month-toolbar');
+    if (!toolbar) return;
+    
+    const key = toolbar.dataset.monthKey;
+    const previewArea = document.getElementById(`preview-${key}`);
+    const selectedText = selectEl.options[selectEl.selectedIndex].text;
+    
+    if (previewArea) {
+      if (selectEl.value) {
+        previewArea.classList.remove('hidden');
+        previewArea.querySelector('p').textContent = selectedText;
+      } else {
+        previewArea.classList.add('hidden');
+      }
+    }
+  };
 
   window.openNewUpdateInBox = (category = '', month = null) => {
     editingUpdateId = null;
