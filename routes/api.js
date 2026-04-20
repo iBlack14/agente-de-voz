@@ -304,6 +304,13 @@ router.post('/updates/schedule-batch', async (req, res) => {
       return res.status(400).json({ error: 'updateIds y promptId son requeridos' });
     }
     const result = await updatesService.scheduleBatch({ updateIds, promptId, scheduledFor });
+    
+    // Trigger scheduler immediately if no scheduled date (immediate call)
+    if (!scheduledFor) {
+        const { processScheduledCalls } = require('../services/telephony/scheduler.service');
+        processScheduledCalls().catch(e => console.error('Error triggering scheduler:', e));
+    }
+
     res.json({ success: true, ...result });
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -56,29 +56,15 @@ module.exports = {
   readCallLog: async () => {
     try {
         const historyLimit = 200;
+        // Use single query with nested transcripts to avoid URI Too Long (IN clause limits)
         const { data: calls, error } = await supabase
             .from('calls')
-            .select('*')
+            .select('*, call_transcripts(*)')
             .order('started_at', { ascending: false, nullsFirst: false })
             .limit(historyLimit);
 
         if (error) throw error;
         if (!calls || !calls.length) return [];
-
-        const ids = calls.map(c => c.call_id);
-        const { data: transcripts, error: tError } = await supabase
-            .from('call_transcripts')
-            .select('*')
-            .in('call_id', ids)
-            .order('id', { ascending: true });
-
-        if (tError) throw tError;
-
-        const transcriptsMap = (transcripts || []).reduce((acc, t) => {
-            if (!acc[t.call_id]) acc[t.call_id] = [];
-            acc[t.call_id].push({ role: t.role, text: t.text, at: t.at });
-            return acc;
-        }, {});
 
         return calls.map(r => ({
             callId: r.call_id,
@@ -97,7 +83,10 @@ module.exports = {
             turnCount: r.turn_count,
             status: r.status,
             recordingUrl: r.recording_url,
-            transcript: transcriptsMap[r.call_id] || []
+            // Map nested transcripts and ensure they are sorted by ID
+            transcript: (r.call_transcripts || [])
+                .sort((a, b) => (a.id || 0) - (b.id || 0))
+                .map(t => ({ role: t.role, text: t.text, at: t.at }))
         }));
     } catch (err) {
         console.error('[Repository] Error reading logs:', err.message);

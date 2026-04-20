@@ -122,4 +122,4 @@ function startScheduler() {
     console.log('✅ [Supabase Scheduler] Motor Nativo: ACTIVADO');
 }
 
-module.exports = { startScheduler, recoverStuckScheduledCalls };
+module.exports = { startScheduler, recoverStuckScheduledCalls, processScheduledCalls };
