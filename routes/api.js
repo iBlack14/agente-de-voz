@@ -9,7 +9,7 @@ const {
 const { readCallLog, logCall, getUsageStats } = require('../services/db/repository');
 const { makeOutboundCall } = require('../services/telephony/telnyxClient');
 const { setCallContext } = require('../services/telephony/context.service');
-const { isValidE164 } = require('../services/utils');
+const { isValidE164, formatToE164 } = require('../services/utils');
 
 // New: Updates Service
 const updatesService = require('../services/db/updates.service');
@@ -78,11 +78,12 @@ router.get('/voices', async (req, res) => {
 const { callQueue } = require('../services/telephony/queue.service');
 
 router.post('/make-call', async (req, res) => {
-  const { number, domain, mode, greeting, instructions, retry_interval, scheduled_for, batch_id, batch_label } = req.body || {};
+  let { number, domain, mode, greeting, instructions, retry_interval, scheduled_for, batch_id, batch_label } = req.body || {};
+  number = formatToE164(number);
   console.log(`📞 [API] Intento de llamada a: ${number} | Modo: ${scheduled_for ? 'Programado' : 'Inmediato'}`);
 
   if (!number || !isValidE164(number)) {
-    console.error(`❌ [API] Número inválido: ${number}`);
+    console.error(`❌ [API] Número inválido tras limpieza: ${number}`);
     return res.status(400).json({ error: 'Número inválido' });
   }
 

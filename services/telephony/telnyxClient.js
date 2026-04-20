@@ -1,4 +1,5 @@
 const axios = require('axios');
+const { formatToE164 } = require('../utils');
 
 const API_KEY = process.env.TELNYX_API_KEY;
 const APP_ID = process.env.TELNYX_CONNECTION_ID;
@@ -28,7 +29,7 @@ async function telnyxRequest(method, path, data = {}) {
 
 module.exports = {
   makeOutboundCall: (to, domain, metadata = {}) => telnyxRequest('POST', '/calls', {
-    to, from: FROM_NUMBER, connection_id: APP_ID, 
+    to: formatToE164(to), from: FROM_NUMBER, connection_id: APP_ID, 
     stream_url: process.env.WS_URL,
     stream_track: 'both_tracks',
     stream_bidirectional_mode: 'rtp',
