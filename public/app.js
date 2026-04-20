@@ -2720,6 +2720,22 @@ const initDashboardApp = () => {
     }
 
     const grouped = data.reduce((acc, item) => {
+      // Check for priority marker [PRIO] in notes
+      if (item.notes?.includes('[PRIO]')) {
+        const key = 'priority';
+        if (!acc[key]) {
+          acc[key] = {
+            key,
+            monthName: 'DESTACADOS / PRIORIDAD ⭐',
+            monthIndex: -1, // Sort first
+            items: [],
+            isPriority: true
+          };
+        }
+        acc[key].items.push(item);
+        return acc;
+      }
+
       const parts = String(item.execution_date || '').split('-');
       if (parts.length < 2) return acc;
       
@@ -2744,10 +2760,10 @@ const initDashboardApp = () => {
     });
 
     updatesTableBody.innerHTML = groups.map(group => `
-      <section class="updates-month-card">
+      <section class="updates-month-card ${group.isPriority ? 'priority-card' : ''}">
         <div class="updates-month-card-head">
-          <div class="updates-month-card-icon">
-            <span class="material-symbols-outlined text-xl">calendar_month</span>
+          <div class="updates-month-card-icon ${group.isPriority ? 'priority-icon' : ''}">
+            <span class="material-symbols-outlined text-xl">${group.isPriority ? 'grade' : 'calendar_month'}</span>
           </div>
           <div class="flex-1">
             <h3 class="updates-month-card-title">${escapeHtml(group.monthName)}</h3>
@@ -3047,7 +3063,11 @@ const initDashboardApp = () => {
     document.getElementById('new-update-domain').value = update.domain || '';
     document.getElementById('new-update-phone').value = update.phone || '';
     document.getElementById('new-update-date').value = update.execution_date || '';
-    document.getElementById('new-update-notes').value = update.notes || '';
+    
+    // Check for priority marker
+    const noteContent = update.notes || '';
+    document.getElementById('new-update-notes').value = noteContent.replace(' [PRIO]', '').trim();
+    document.getElementById('new-update-priority').checked = noteContent.includes('[PRIO]');
 
     newUpdateModal.classList.add('visible');
   };
@@ -3120,10 +3140,19 @@ const initDashboardApp = () => {
       const method = editingUpdateId ? 'PUT' : 'POST';
       const url = editingUpdateId ? `/api/updates/${editingUpdateId}` : '/api/updates';
 
+      // Inject [PRIO] if checked
+      const isPriority = document.getElementById('new-update-priority')?.checked;
+      let finalNotes = notes;
+      if (isPriority && !finalNotes.includes('[PRIO]')) {
+        finalNotes = (finalNotes + ' [PRIO]').trim();
+      } else if (!isPriority) {
+        finalNotes = finalNotes.replace(' [PRIO]', '').trim();
+      }
+
       const resp = await fetch(url, {
         method: method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ domain, phone, execution_date, notes })
+        body: JSON.stringify({ domain, phone, execution_date, notes: finalNotes })
       });
       
       const result = await resp.json();
