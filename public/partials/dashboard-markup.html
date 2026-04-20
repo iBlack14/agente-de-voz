@@ -304,11 +304,14 @@
 
             <!-- TAB: CONTROL -->
             <div id="tab-retrybook" class="tab-content space-y-8">
-                 <section class="glass-card grid grid-cols-1 lg:grid-cols-4 gap-6">
+                 <section class="glass-card grid grid-cols-1 lg:grid-cols-5 gap-6">
                     <div><p class="text-[9px] text-slate-500 uppercase mb-2">Total Intentos</p><h4 id="rb-total-attempts" class="text-2xl font-bold text-white">0</h4></div>
                     <div><p class="text-[9px] text-slate-500 uppercase mb-2">Contestaron</p><h4 id="rb-total-answered" class="text-2xl font-bold text-emerald-400">0</h4></div>
                     <div><p class="text-[9px] text-slate-500 uppercase mb-2">Pendientes</p><h4 id="rb-total-pending" class="text-2xl font-bold text-rose-400">0</h4></div>
                     <div><select id="retrybook-root-select" class="w-full bg-black/20 border border-white/5 rounded-xl py-2 px-3 text-xs text-white"></select></div>
+                    <div class="flex items-end">
+                        <button id="purge-reminders-btn" class="w-full py-2 bg-rose-500/10 border border-rose-500/20 text-rose-500 font-bold rounded-xl text-[9px] uppercase hover:bg-rose-500/20 transition-all">Purgar Re-intentos</button>
+                    </div>
                  </section>
                  <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
                     <div class="lg:col-span-6 glass-card p-0 overflow-hidden">

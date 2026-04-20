@@ -3148,6 +3148,28 @@ const initDashboardApp = () => {
     }
   });
 
+      // Purgar recordatorios listener
+      const purgeRemindersBtn = document.getElementById('purge-reminders-btn');
+      if (purgeRemindersBtn) {
+        purgeRemindersBtn.addEventListener('click', async () => {
+          const confirm = await appPrompt('Escribe "PURGAR" para confirmar la eliminación de todos los recordatorios pendientes:', 'PURGAR');
+          if (confirm === 'PURGAR') {
+            try {
+              const resp = await fetch('/api/scheduled', { method: 'DELETE' });
+              const result = await resp.json();
+              if (result.success) {
+                appAlert('Éxito: Se han eliminado todos los recordatorios pendientes.');
+                if (typeof loadCallHistory === 'function') loadCallHistory();
+              } else {
+                appAlert(`Error: ${result.error || 'Error al purgar recordatorios.'}`, true);
+              }
+            } catch (e) {
+              appAlert('Error de conexión', true);
+            }
+          }
+        });
+      }
+
       // Load Initial Prompts and then init Premium Selects
       if (typeof loadPrompts === 'function') loadPrompts().then(initPremiumSelects);
       if (typeof loadReminderPrompts === 'function') loadReminderPrompts().then(initPremiumSelects);
