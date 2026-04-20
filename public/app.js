@@ -2771,8 +2771,9 @@ const initDashboardApp = () => {
             <h3 class="updates-month-card-title">${escapeHtml(group.monthName)}</h3>
             <p class="updates-month-card-subtitle">${group.items.length} dominios</p>
           </div>
-          <button class="add-to-month-btn w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center hover:bg-primary hover:text-white transition-all" data-month="${group.monthIndex + 1}" data-year="${new Date().getFullYear()}" title="Agregar a este mes">
-            <span class="material-symbols-outlined text-lg">add</span>
+          <button onclick="openNewUpdateInBox('${group.isCustomCategory ? escapeHtml(group.monthName) : ''}', ${!group.isCustomCategory ? group.monthIndex + 1 : 'null'})" class="p-2.5 bg-primary text-white hover:scale-110 shadow-lg shadow-primary/20 rounded-xl transition-all flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">add</span>
+            <span class="text-[9px] font-black uppercase tracking-widest hidden md:inline">Agregar</span>
           </button>
         </div>
         <div class="updates-month-toolbar" data-month-key="${escapeHtml(group.key)}">
@@ -3039,6 +3040,56 @@ const initDashboardApp = () => {
     await triggerUpdatesBatchAction({ selectedIds, promptId, mode: 'schedule', triggerButton: updatesScheduleBtn });
   });
 
+  window.openNewUpdateInBox = (category = '', month = null) => {
+    editingUpdateId = null;
+    newUpdateForm.reset();
+    
+    const title = newUpdateModal.querySelector('h3');
+    const submitBtn = newUpdateForm.querySelector('button[type="submit"]');
+    if (title) title.textContent = 'Nuevo Registro';
+    if (submitBtn) submitBtn.textContent = 'GUARDAR REGISTRO';
+
+    document.getElementById('new-update-category').value = category;
+    
+    const dateInput = document.getElementById('new-update-date');
+    if (month && dateInput) {
+       const now = new Date();
+       const year = now.getFullYear();
+       const day = Math.min(now.getDate(), new Date(year, month, 0).getDate());
+       dateInput.value = getLocalDateInputValue(new Date(year, month - 1, day));
+    } else if (dateInput) {
+       dateInput.value = getLocalDateInputValue();
+    }
+
+    newUpdateModal.classList.add('visible');
+    setTimeout(() => document.getElementById('new-update-domain').focus(), 100);
+  };
+
+  // Quick Box Creation
+  document.getElementById('updates-add-category-btn')?.addEventListener('click', async () => {
+    const catName = await appPrompt('Nombre del nuevo Cuadro:', 'Ej: VIP, Campaña Mayo, Urgentes...');
+    if (!catName) return;
+
+    try {
+      const resp = await fetch('/api/updates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          domain: 'CABECERA_DE_CUADRO', 
+          phone: '---', 
+          execution_date: getLocalDateInputValue(), 
+          notes: `[CAT:${catName}] Este es un cuadro nuevo.` 
+        })
+      });
+      if (resp.ok) {
+        appAlert(`✅ Cuadro "${catName}" creado.`);
+        window.loadUpdates();
+      }
+    } catch (e) {
+      appAlert('Error al crear cuadro', true);
+    }
+  });
+
   // Modal: Nuevo Registro Manual
   const newUpdateModal = document.getElementById('new-update-modal');
   const newUpdateForm = document.getElementById('new-update-form');
@@ -3092,27 +3143,6 @@ const initDashboardApp = () => {
         }
     } catch (e) { appAlert('Error de conexión', true); }
   };
-
-  updatesAddBtn?.addEventListener('click', () => {
-    editingUpdateId = null;
-    newUpdateForm.reset();
-    
-    const title = newUpdateModal.querySelector('h3');
-    const subtitle = newUpdateModal.querySelector('p');
-    const submitBtn = newUpdateForm.querySelector('button[type="submit"]');
-    
-    if (title) title.textContent = 'Nuevo Registro';
-    if (subtitle) subtitle.textContent = 'Gestión de Renovaciones';
-    if (submitBtn) submitBtn.textContent = 'GUARDAR REGISTRO';
-
-    const dateInput = document.getElementById('new-update-date');
-    if (dateInput) {
-      dateInput.value = getDefaultUpdateDate();
-      syncUpdatesMonthFilter(getMonthFromDateInput(dateInput.value));
-    }
-    newUpdateModal.classList.add('visible');
-    setTimeout(() => document.getElementById('new-update-domain').focus(), 100);
-  });
 
   document.getElementById('new-update-phone')?.addEventListener('blur', (e) => {
     const val = e.target.value.trim();
