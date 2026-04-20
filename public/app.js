@@ -2761,7 +2761,11 @@ const initDashboardApp = () => {
       return a.monthIndex - b.monthIndex;
     });
 
-    updatesTableBody.innerHTML = groups.map(group => `
+    updatesTableBody.innerHTML = groups.map(group => {
+      const visibleItems = group.items.filter(u => u.domain !== 'CABECERA_DE_CUADRO');
+      const itemCount = visibleItems.length;
+
+      return `
       <section class="updates-month-card ${group.isCustomCategory ? 'priority-card' : ''}">
         <div class="updates-month-card-head">
           <div class="updates-month-card-icon ${group.isCustomCategory ? 'priority-icon' : ''}">
@@ -2769,7 +2773,7 @@ const initDashboardApp = () => {
           </div>
           <div class="flex-1">
             <h3 class="updates-month-card-title">${escapeHtml(group.monthName)}</h3>
-            <p class="updates-month-card-subtitle">${group.items.length} dominios</p>
+            <p class="updates-month-card-subtitle">${itemCount} ${itemCount === 1 ? 'dominio' : 'dominios'}</p>
           </div>
           <button onclick="openNewUpdateInBox('${group.isCustomCategory ? escapeHtml(group.monthName) : ''}', ${!group.isCustomCategory ? group.monthIndex + 1 : 'null'})" class="p-2.5 bg-primary text-white hover:scale-110 shadow-lg shadow-primary/20 rounded-xl transition-all flex items-center gap-2">
             <span class="material-symbols-outlined text-sm">add</span>
@@ -2782,49 +2786,61 @@ const initDashboardApp = () => {
               <input type="checkbox" class="updates-month-select-all rounded border-white/10 bg-black/40" data-month-key="${escapeHtml(group.key)}">
               <span><span class="updates-month-selected-count">0</span> seleccionados</span>
             </label>
-            <select class="updates-month-reminder bg-black/20 border border-white/5 rounded-lg py-1 px-3 text-[10px] text-white outline-none min-w-[200px]">
-              ${getUpdatesReminderOptionsHtml()}
-            </select>
+             <div class="custom-select-wrapper updates-month-reminder-container ml-4" style="width: 220px;">
+                <div class="custom-select-trigger font-bold uppercase text-[9px] tracking-widest text-primary border-primary/20 bg-primary/5">
+                    <span>ACTUALIZACIONES</span>
+                </div>
+                <div class="custom-select-options no-scrollbar">
+                    <div class="custom-select-option" data-value="">ACTUALIZACIONES</div>
+                    ${getUpdatesReminderOptionsHtml(true)}
+                </div>
+                <select class="hidden-select updates-month-reminder">
+                    <option value="">ACTUALIZACIONES</option>
+                </select>
+            </div>
           </div>
           <div class="updates-month-toolbar-right">
             <button type="button" class="updates-month-call-btn px-5 py-2 bg-primary text-white font-black rounded-xl text-[10px] uppercase shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed" disabled>Llamar Ahora</button>
             <button type="button" class="updates-month-schedule-btn px-5 py-2 bg-white/5 border border-white/5 text-white font-bold rounded-xl text-[10px] uppercase hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed" disabled>Programar</button>
           </div>
         </div>
-          <div class="updates-domain-list">
-          ${group.items.map(u => `
-            <article class="update-row update-domain-item-list group" data-month-key="${escapeHtml(group.key)}" onclick="const cb = this.querySelector('.update-checkbox'); if(cb) { cb.checked = !cb.checked; cb.dispatchEvent(new Event('change', { bubbles: true })); }">
-              <div class="update-list-check" onclick="event.stopPropagation()">
-                <input type="checkbox" class="update-checkbox h-4 w-4 rounded-full border border-white/15 bg-black/40 cursor-pointer transition-all outline-none" data-id="${u.id}">
-              </div>
-              <div class="update-list-content">
-                <div class="update-list-main">
-                  <h4 class="update-list-title">${escapeHtml(u.domain)}</h4>
-                  <p class="update-list-phone">${escapeHtml(u.phone || '—')}</p>
+        <div class="updates-domain-list">
+          ${itemCount === 0 
+            ? `<div class="updates-empty-state">No hay dominios en este cuadro.</div>`
+            : visibleItems.map(u => `
+              <article class="update-row update-domain-item-list group" data-month-key="${escapeHtml(group.key)}" onclick="const cb = this.querySelector('.update-checkbox'); if(cb) { cb.checked = !cb.checked; cb.dispatchEvent(new Event('change', { bubbles: true })); }">
+                <div class="update-list-check" onclick="event.stopPropagation()">
+                  <input type="checkbox" class="update-checkbox h-4 w-4 rounded-full border border-white/15 bg-black/40 cursor-pointer transition-all outline-none" data-id="${u.id}">
                 </div>
-                <div class="update-list-meta">
-                  <span class="update-list-date">${(() => {
-                    const p = String(u.execution_date || '').split('-');
-                    if (p.length < 3) return '—';
-                    const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-                    return `${p[2]} ${months[parseInt(p[1], 10)-1]}`;
-                  })()}</span>
-                  <div class="flex items-center gap-1 opacity-10 md:opacity-0 md:group-hover:opacity-100 transition-opacity ml-2">
-                    <button class="p-1 text-slate-400 hover:text-primary transition-colors" onclick="event.stopPropagation(); window.openEditUpdateModal('${u.id}')">
-                      <span class="material-symbols-outlined text-[14px]">edit</span>
-                    </button>
-                    <button class="p-1 text-slate-400 hover:text-rose-500 transition-colors" onclick="event.stopPropagation(); window.deleteUpdateRow('${u.id}')">
-                      <span class="material-symbols-outlined text-[14px]">delete</span>
-                    </button>
+                <div class="update-list-content">
+                  <div class="update-list-main">
+                    <h4 class="update-list-title">${escapeHtml(u.domain)}</h4>
+                    <p class="update-list-phone">${escapeHtml(u.phone || '—')}</p>
                   </div>
-                  <span class="material-symbols-outlined text-xs text-zinc-600 ml-1">event</span>
+                  <div class="update-list-meta">
+                    <span class="update-list-date">${(() => {
+                      const p = String(u.execution_date || '').split('-');
+                      if (p.length < 3) return '—';
+                      const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+                      return `${p[2]} ${months[parseInt(p[1], 10)-1]}`;
+                    })()}</span>
+                    <div class="flex items-center gap-1 opacity-10 md:opacity-0 md:group-hover:opacity-100 transition-opacity ml-2">
+                      <button class="p-1 text-slate-400 hover:text-primary transition-colors" onclick="event.stopPropagation(); window.openEditUpdateModal('${u.id}')">
+                        <span class="material-symbols-outlined text-[14px]">edit</span>
+                      </button>
+                      <button class="p-1 text-slate-400 hover:text-rose-500 transition-colors" onclick="event.stopPropagation(); window.deleteUpdateRow('${u.id}')">
+                        <span class="material-symbols-outlined text-[14px]">delete</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </article>
-          `).join('')}
+              </article>
+            `).join('')
+          }
         </div>
       </section>
-    `).join('');
+    `;
+    }).join('');
     
     // Add click event for "Add to month" buttons
     document.querySelectorAll('.add-to-month-btn').forEach(btn => {
