@@ -206,6 +206,16 @@ router.get('/stats', async (req, res) => {
   try { res.json(await getUsageStats()); } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+router.delete('/history', async (req, res) => {
+  try {
+    const { error } = await supabase.from('calls').delete().neq('status', 'in-progress'); // Don't delete active calls
+    if (error) throw error;
+    res.json({ success: true, message: 'Historial de llamadas purgado correctamente.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.post('/tts-preview', async (req, res) => {
   const { text } = req.body;
   if (!text || !text.trim()) return res.status(400).json({ error: 'Texto requerido' });

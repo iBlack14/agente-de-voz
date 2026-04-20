@@ -3199,6 +3199,28 @@ const initDashboardApp = () => {
         });
       }
 
+      // Purgar historial listener
+      const purgeHistoryBtn = document.getElementById('purge-history-btn');
+      if (purgeHistoryBtn) {
+        purgeHistoryBtn.addEventListener('click', async () => {
+          const confirm = await appPrompt('Escribe "BORRAR TODO" para confirmar la eliminación PERMANENTE de todo el historial de llamadas:', 'BORRAR TODO');
+          if (confirm === 'BORRAR TODO') {
+            try {
+              const resp = await fetch('/api/history', { method: 'DELETE' });
+              const result = await resp.json();
+              if (result.success) {
+                appAlert('Éxito: El historial de llamadas ha sido vaciado.');
+                if (typeof loadCallHistory === 'function') loadCallHistory();
+              } else {
+                appAlert(`Error: ${result.error || 'No se pudo purgar el historial.'}`, true);
+              }
+            } catch (e) {
+              appAlert('Error de conexión', true);
+            }
+          }
+        });
+      }
+
       // Load Initial Prompts and then init Premium Selects
       if (typeof loadPrompts === 'function') loadPrompts().then(initPremiumSelects);
       if (typeof loadReminderPrompts === 'function') loadReminderPrompts().then(initPremiumSelects);
