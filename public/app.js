@@ -1527,6 +1527,7 @@ const initDashboardApp = () => {
   function showTranscript(call) {
     const dur = call.durationSec != null ? formatDuration(call.durationSec) : '—';
     const date = call.startedAt ? new Date(call.startedAt).toLocaleString('es-ES') : '—';
+    const callScript = [call.reminderGreeting, call.reminderInstructions].filter(Boolean).join('\n\n').trim();
     modalMeta.innerHTML = `
       <span>📞 ${escapeHtml(call.from || '?')}</span>
       <span>→</span>
@@ -1554,7 +1555,13 @@ const initDashboardApp = () => {
 
     const transcript = call.transcript || [];
     if (!transcript.length) {
-      modalBody.innerHTML = `
+      modalBody.innerHTML = callScript ? `
+        <div class="space-y-4 px-2">
+          <div class="text-[9px] font-black uppercase tracking-[0.3em] text-primary/70">Guion usado en la llamada</div>
+          <div class="bg-primary/10 border border-primary/20 p-5 rounded-2xl text-[13px] leading-relaxed text-white whitespace-pre-wrap shadow-lg">
+            ${escapeHtml(callScript)}
+          </div>
+        </div>` : `
         <div class="flex flex-col items-center justify-center py-20 opacity-20 text-slate-500">
           <span class="material-symbols-outlined text-6xl mb-4">chat_bubble_outline</span>
           <p class="text-[10px] font-bold uppercase tracking-[0.3em]">Sin registro de audio/texto</p>
@@ -2815,7 +2822,6 @@ const initDashboardApp = () => {
               <span><span class="updates-month-selected-count">0</span> seleccionados</span>
             </label>
              <select class="updates-month-reminder w-[350px] bg-black/40 border border-white/10 rounded-xl py-2 px-4 text-[10px] font-bold text-primary uppercase tracking-widest outline-none transition-all" onchange="updateBatchPreview(this)">
-                <option value="">ACTUALIZACIONES</option>
                 ${getUpdatesReminderOptionsHtml(true)}
             </select>
           </div>
@@ -2896,7 +2902,10 @@ const initDashboardApp = () => {
                       const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
                       return `${p[2]} ${months[parseInt(p[1], 10)-1]}`;
                     })()}</span>
-                    <div class="flex items-center gap-1 opacity-10 md:opacity-0 md:group-hover:opacity-100 transition-opacity ml-2">
+                    <div class="flex items-center gap-1 ml-2">
+                      <button class="p-1 text-primary hover:scale-125 transition-all" onclick="event.stopPropagation(); window.previewIndividualVoice('${u.id}', '${escapeHtml(group.key)}')">
+                        <span class="material-symbols-outlined text-[14px]">play_circle</span>
+                      </button>
                       <button class="p-1 text-slate-400 hover:text-primary transition-colors" onclick="event.stopPropagation(); window.openEditUpdateModal('${u.id}')">
                         <span class="material-symbols-outlined text-[14px]">edit</span>
                       </button>
@@ -2999,6 +3008,35 @@ const initDashboardApp = () => {
       renderUpdatesTable(currentUpdates);
   };
 
+  window.previewIndividualVoice = async (id, groupKey) => {
+      const update = currentUpdates.find(u => String(u.id) === String(id));
+      if (!update) {
+          console.warn('[ViaAI] No se encontro el registro para previsualizar audio:', id, groupKey);
+          appAlert('No se encontró el registro para reproducir la vista previa.', true);
+          return;
+      }
+
+      const toolbar = document.querySelector(`.updates-month-toolbar[data-month-key="${groupKey}"]`);
+      const promptId = toolbar?.querySelector('.updates-month-reminder')?.value;
+      const previewArea = document.getElementById(`preview-${groupKey}`);
+      const textarea = previewArea?.querySelector('textarea');
+      
+      if (!promptId) {
+          appAlert('Por favor selecciona un recordatorio en la parte superior del cuadro para poder escuchar la vista previa.', true);
+          return;
+      }
+
+      const prompt = currentReminderPrompts.find(p => p.id === promptId);
+      if (!prompt) return;
+
+      // Use the generic personalization logic
+      const fullText = textarea?.value?.trim() || `${prompt.greeting || ''}\n\n${prompt.text || ''}`.trim();
+      const personalized = getPersonalizedPreviewText(fullText, update.domain);
+      
+      console.log('[ViaAI] Playback session started for individual domain:', update.domain);
+      playNeuralStream(personalized);
+  };
+
   function paintUpdateCheckboxState(cb) {
     if (!cb) return;
     const row = cb.closest('.update-row');
@@ -3050,6 +3088,7 @@ const initDashboardApp = () => {
   async function triggerUpdatesBatchAction({ selectedIds, promptId, mode, triggerButton }) {
     if (!selectedIds?.length) return appAlert('Selecciona al menos un dominio.', true);
     if (!promptId) return appAlert('Por favor selecciona un recordatorio.', true);
+    const customPayload = getBatchCustomPayload(promptId, triggerButton);
 
     if (mode === 'call') {
       try {
@@ -3060,7 +3099,7 @@ const initDashboardApp = () => {
         const resp = await fetch('/api/updates/schedule-batch', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ updateIds: selectedIds, promptId })
+          body: JSON.stringify({ updateIds: selectedIds, promptId, ...(customPayload || {}) })
         });
         const result = await resp.json();
         if (result.success) {
@@ -3091,7 +3130,7 @@ const initDashboardApp = () => {
       const resp = await fetch('/api/updates/schedule-batch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ updateIds: selectedIds, promptId, scheduledFor: new Date(time).toISOString() })
+        body: JSON.stringify({ updateIds: selectedIds, promptId, scheduledFor: new Date(time).toISOString(), ...(customPayload || {}) })
       });
       const result = await resp.json();
       if (result.success) {
@@ -3215,10 +3254,12 @@ const initDashboardApp = () => {
     const saveBtn = previewArea?.querySelector('button');
     
     const val = selectEl.value;
-    if (previewArea && val && reminderTemplates[val]) {
+    const prompt = currentReminderPrompts.find(p => p.id === val);
+    
+    if (previewArea && prompt) {
       previewArea.classList.remove('hidden');
       if (textarea) {
-        textarea.value = reminderTemplates[val].text || '';
+        textarea.value = (prompt.greeting ? prompt.greeting + '\n\n' : '') + (prompt.text || '');
         if (saveBtn) saveBtn.classList.add('hidden');
       }
     } else if (previewArea) {
@@ -3226,19 +3267,21 @@ const initDashboardApp = () => {
     }
   };
 
-  window.saveLocalTemplate = (key, val) => {
+  window.saveLocalTemplate = (key) => {
     const previewArea = document.getElementById(`preview-${key}`);
     const textarea = previewArea?.querySelector('textarea');
     const saveBtn = previewArea?.querySelector('button');
     
-    // We need to know which template was selected in THIS box
     const toolbar = previewArea.previousElementSibling;
     const select = toolbar.querySelector('.updates-month-reminder');
     const tplId = select.value;
+    const prompt = currentReminderPrompts.find(p => p.id === tplId);
 
-    if (tplId && reminderTemplates[tplId] && textarea) {
-      reminderTemplates[tplId].text = textarea.value;
-      appAlert(`✅ Cambios guardados para "${tplId}".`);
+    if (prompt && textarea) {
+      // In a real app we might want to save this to DB, 
+      // but for now we update the local object so it persists during the session
+      prompt.text = textarea.value;
+      appAlert(`✅ Cambios temporales para "${prompt.name}" guardados.`);
       if (saveBtn) saveBtn.classList.add('hidden');
     }
   };
@@ -3248,9 +3291,116 @@ const initDashboardApp = () => {
     if (btn) btn.classList.remove('hidden');
   };
 
-  const getPersonalizedPreviewText = (text) => {
+  /**
+   * REPRODUCTOR NEURAL: Envía el texto al servidor TTS y reproduce el stream MP3
+   */
+  async function playNeuralStream(text) {
+      if (!text) return;
+      try {
+          console.log('[ViaAI] Neural Stream Request:', text.substring(0, 40));
+          showPreviewBar();
+          if (previewPulse) previewPulse.classList.add('animate-pulse');
+          if (!previewAudio) throw new Error('No se encontró el reproductor de audio');
+
+          const previousUrl = previewAudio.dataset.objectUrl;
+          if (previousUrl) {
+              URL.revokeObjectURL(previousUrl);
+              delete previewAudio.dataset.objectUrl;
+          }
+
+          const resp = await fetch('/api/tts-preview', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text })
+          });
+          
+          if (!resp.ok) {
+              const err = await resp.json();
+              throw new Error(err.error || 'Servidor de voz ocupado');
+          }
+          
+          const blob = await resp.blob();
+          if (blob.size < 100) throw new Error('Audio generado vacío (verificar API Key)');
+
+          const url = URL.createObjectURL(blob);
+          previewAudio.src = url;
+          previewAudio.dataset.objectUrl = url;
+          previewAudio.load();
+          
+          // Requerido para Chrome: Manejar la promesa de play()
+          const playPromise = previewAudio.play();
+          if (playPromise !== undefined) {
+              playPromise.then(() => {
+                  if (previewPulse) previewPulse.classList.remove('animate-pulse');
+                  console.log('[ViaAI] Reproducción exitosa.');
+              }).catch(error => {
+                  console.warn('[ViaAI] Autoplay bloqueado o fallo:', error);
+                  appAlert('Haz clic en cualquier parte de la página y vuelve a intentarlo para activar el audio.', true);
+              });
+          }
+      } catch (e) {
+          console.error('[ViaAI] Playback Failure:', e);
+          appAlert(`Error de voz: ${e.message}`, true);
+      }
+  }
+
+  const getCurrentTimeGreeting = () => {
+    const hour = Number(new Intl.DateTimeFormat('es-PE', {
+      hour: 'numeric',
+      hour12: false,
+      timeZone: 'America/Lima'
+    }).format(new Date()));
+
+    if (hour >= 5 && hour < 12) return 'Buenos dias';
+    if (hour >= 12 && hour < 19) return 'Buenas tardes';
+    return 'Buenas noches';
+  };
+
+  const formatDomainForSpeech = (value) => {
+    if (!value) return '';
+    return String(value)
+      .replace(/^www\./i, 'doble u doble u doble u punto ')
+      .replace(/\./g, ' punto ')
+      .replace(/-/g, ' guion ')
+      .replace(/_/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
+
+  const applyTimeGreeting = (text) => {
+    if (!text) return text;
+    const greeting = getCurrentTimeGreeting();
+    return text
+      .replace(/Buenas\s*\(\)/gi, greeting)
+      .replace(/\(\)/g, greeting)
+      .replace(/\bBuenos\s+d[ií]as\b/gi, greeting)
+      .replace(/\bBuenas\s+tardes\b/gi, greeting)
+      .replace(/\bBuenas\s+noches\b/gi, greeting);
+  };
+
+  const normalizeSpeechText = (text) => {
+    if (!text) return '';
+
+    return text
+      .replace(/[“”"]/g, '')
+      .replace(/\bVIA\s+COMUNICATIVA\b/gi, 'Via Comunicativa')
+      .replace(/publicidad que marca tu e[xx][ií]to/gi, 'publicidad que impulsa tu exito')
+      .replace(/\bs\/\.?\s?(\d+)(?:\.(\d{1,2}))?/gi, (_, amount, cents) => {
+        if (cents) return `${amount} con ${cents} soles`;
+        return `${amount} soles`;
+      })
+      .replace(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/g, '$1 $2 $3')
+      .replace(/[;:]+/g, ', ')
+      .replace(/\.{3,}/g, ', ')
+      .replace(/\s+,/g, ',')
+      .replace(/\s+\./g, '.')
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
+
+  const getPersonalizedPreviewText = (text, overrideDomain = null) => {
     if (!text) return "";
-    let final = text;
+    let final = normalizeSpeechText(applyTimeGreeting(text));
     
     // 1. Tratamiento de Moneda (S/.) -> "soles"
     // Buscamos patrones como s/.250 o s/ 250 o s/250.00
@@ -3259,20 +3409,21 @@ const initDashboardApp = () => {
     });
 
     // 2. Personalización de Dominio
-    const selectedCheckboxes = document.querySelectorAll('.update-checkbox:checked');
-    if (selectedCheckboxes.length > 0) {
-      const firstRow = selectedCheckboxes[0].closest('.update-row');
-      let domainName = firstRow?.querySelector('.update-list-title')?.textContent.trim() || "";
-      
-      if (domainName) {
-        // Limpiamos el dominio para que suene profesional en TTS
-        let phoneticDomain = domainName
-            .replace(/www\./gi, 'triple doble u punto ')
-            .replace(/\./g, ' punto ');
+    let domainName = overrideDomain;
+    
+    if (!domainName) {
+        const selectedCheckboxes = document.querySelectorAll('.update-checkbox:checked');
+        if (selectedCheckboxes.length > 0) {
+            const firstRow = selectedCheckboxes[0].closest('.update-row');
+            domainName = firstRow?.querySelector('.update-list-title')?.textContent.trim() || "";
+        }
+    }
+    
+    if (domainName) {
+        let phoneticDomain = formatDomainForSpeech(domainName);
             
         final = final.replace(/dominio\s*\.{2,}|…/gi, ` ${phoneticDomain} `);
         final = final.replace(/\.{2,}/g, ` ${phoneticDomain} `);
-      }
     } else {
         final = final.replace(/dominio\s*\.{2,}|…/gi, ' su página web ');
         final = final.replace(/\.{2,}/g, ' su página ');
@@ -3288,11 +3439,49 @@ const initDashboardApp = () => {
     return final.replace(/\s+/g, ' ').trim();
   };
 
+  function getBatchCustomPayload(promptId, contextEl = null) {
+    const prompt = currentReminderPrompts.find(p => p.id === promptId);
+    if (!prompt) return null;
+
+    let textarea = null;
+    if (contextEl) {
+      const toolbar = contextEl.closest('.updates-month-toolbar');
+      if (toolbar) {
+        const previewArea = document.getElementById(`preview-${toolbar.dataset.monthKey}`);
+        textarea = previewArea?.querySelector('textarea') || null;
+      }
+    } else {
+      textarea = globalPreviewTextarea || null;
+    }
+
+    if (!textarea) {
+      textarea = globalPreviewTextarea || null;
+    }
+
+    const rawText = textarea?.value?.trim();
+    if (!rawText) return null;
+
+    const defaultText = `${prompt.greeting || ''}\n\n${prompt.text || ''}`.trim();
+    if (rawText === defaultText) return null;
+
+    const blocks = rawText.split(/\n\s*\n/).map(chunk => chunk.trim()).filter(Boolean);
+    if (!blocks.length) return null;
+
+    if (blocks.length === 1) {
+      return { customGreeting: '', customInstructions: blocks[0] };
+    }
+
+    return {
+      customGreeting: blocks.shift() || '',
+      customInstructions: blocks.join('\n\n')
+    };
+  }
+
   document.getElementById('preview-global-voice-btn')?.addEventListener('click', () => {
     const text = globalPreviewTextarea.value;
     if (!text) return;
     const personalized = getPersonalizedPreviewText(text);
-    if (typeof previewVoice === 'function') previewVoice(personalized);
+    playNeuralStream(personalized);
   });
 
   window.previewLocalVoice = (key) => {
@@ -3300,7 +3489,7 @@ const initDashboardApp = () => {
     const textarea = previewArea?.querySelector('textarea');
     if (!textarea || !textarea.value) return;
     const personalized = getPersonalizedPreviewText(textarea.value);
-    if (typeof previewVoice === 'function') previewVoice(personalized);
+    playNeuralStream(personalized);
   };
 
   window.openNewUpdateInBox = (category = '', month = null) => {

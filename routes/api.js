@@ -77,9 +77,34 @@ router.get('/voices', async (req, res) => {
 
 const { callQueue } = require('../services/telephony/queue.service');
 
+function getTimeGreeting() {
+  const hour = Number(new Intl.DateTimeFormat('es-PE', {
+    hour: 'numeric',
+    hour12: false,
+    timeZone: 'America/Lima'
+  }).format(new Date()));
+
+  if (hour >= 5 && hour < 12) return 'Buenos dias';
+  if (hour >= 12 && hour < 19) return 'Buenas tardes';
+  return 'Buenas noches';
+}
+
+function applyTimeGreeting(text) {
+  if (!text) return text;
+  const greeting = getTimeGreeting();
+  return text
+    .replace(/Buenas\s*\(\)/gi, greeting)
+    .replace(/\(\)/g, greeting)
+    .replace(/\bBuenos\s+d[ií]as\b/gi, greeting)
+    .replace(/\bBuenas\s+tardes\b/gi, greeting)
+    .replace(/\bBuenas\s+noches\b/gi, greeting);
+}
+
 router.post('/make-call', async (req, res) => {
   let { number, domain, mode, greeting, instructions, retry_interval, scheduled_for, batch_id, batch_label } = req.body || {};
   number = formatToE164(number);
+  greeting = applyTimeGreeting(greeting);
+  instructions = applyTimeGreeting(instructions);
   console.log(`📞 [API] Intento de llamada a: ${number} | Modo: ${scheduled_for ? 'Programado' : 'Inmediato'}`);
 
   if (!number || !isValidE164(number)) {
@@ -310,11 +335,11 @@ router.post('/updates', async (req, res) => {
 
 router.post('/updates/schedule-batch', async (req, res) => {
   try {
-    const { updateIds, promptId, scheduledFor } = req.body;
+    const { updateIds, promptId, scheduledFor, customGreeting, customInstructions } = req.body;
     if (!updateIds || !promptId) {
       return res.status(400).json({ error: 'updateIds y promptId son requeridos' });
     }
-    const result = await updatesService.scheduleBatch({ updateIds, promptId, scheduledFor });
+    const result = await updatesService.scheduleBatch({ updateIds, promptId, scheduledFor, customGreeting, customInstructions });
     
     // Trigger scheduler immediately if no scheduled date (immediate call)
     if (!scheduledFor) {

@@ -46,14 +46,14 @@
         '/public/partials/dashboard-markup.html'
       ]);
       await loadScriptWithFallback([
-        '/app.js?v=10',
-        'app.js?v=10',
-        '/public/app.js?v=10'
+        '/app.js?v=16',
+        'app.js?v=16',
+        '/public/app.js?v=16'
       ]);
       await loadScriptWithFallback([
-        '/js/profile-image-modal.js?v=10',
-        'js/profile-image-modal.js?v=10',
-        '/public/js/profile-image-modal.js?v=10'
+        '/js/profile-image-modal.js?v=16',
+        'js/profile-image-modal.js?v=16',
+        '/public/js/profile-image-modal.js?v=16'
       ]);
     } catch (error) {
       console.error('[DashboardLoader]', error);

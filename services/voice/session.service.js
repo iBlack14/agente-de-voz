@@ -27,17 +27,50 @@ function getTimeGreeting() {
   return h >= 5 && h < 12 ? 'Buenos días' : (h >= 12 && h < 19 ? 'Buenas tardes' : 'Buenas noches');
 }
 
+function formatDomainForSpeech(value) {
+  if (!value) return '';
+  return String(value)
+    .replace(/^www\./i, 'doble u doble u doble u punto ')
+    .replace(/\./g, ' punto ')
+    .replace(/-/g, ' guion ')
+    .replace(/_/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function normalizeSpeechText(text) {
+  if (!text) return '';
+  return String(text)
+    .replace(/[“”"]/g, '')
+    .replace(/\bVIA\s+COMUNICATIVA\b/gi, 'Via Comunicativa')
+    .replace(/publicidad que marca tu e[xx][ií]to/gi, 'publicidad que impulsa tu exito')
+    .replace(/\bs\/\.?\s?(\d+)(?:\.(\d{1,2}))?/gi, (_, amount, cents) => {
+      if (cents) return `${amount} con ${cents} soles`;
+      return `${amount} soles`;
+    })
+    .replace(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/g, '$1 $2 $3')
+    .replace(/[;:]+/g, ', ')
+    .replace(/\.{3,}/g, ', ')
+    .replace(/\s+,/g, ',')
+    .replace(/\s+\./g, '.')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function replacePlaceholders(text, domainData) {
   let result = text
     .replace(/Buenas \(\)/gi, getTimeGreeting())
-    .replace(/\(\)/g, getTimeGreeting());
+    .replace(/\(\)/g, getTimeGreeting())
+    .replace(/\bBuenos\s+d[ií]as\b/gi, getTimeGreeting())
+    .replace(/\bBuenas\s+tardes\b/gi, getTimeGreeting())
+    .replace(/\bBuenas\s+noches\b/gi, getTimeGreeting());
   
   for (const placeholder of DOMAIN_PLACEHOLDERS) {
     result = result.split(placeholder).join(domainData);
     result = result.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), domainData);
   }
   
-  return result.trim();
+  return normalizeSpeechText(result);
 }
 
 /**
@@ -191,7 +224,7 @@ function createSession(ws) {
     if (domainData && domainData !== 'su sitio web') {
         const domains = domainData.split(/[,\s]+/).filter(d => d.trim().length > 0);
         if (domains.length > 0) {
-            const list = domains.join(' y ');
+            const list = domains.map(formatDomainForSpeech).join(' y ');
             domainData = domains.length === 1 ? `${list}, repito, ${list}` : `${list}. Repito los dominios: ${list}`;
         }
     }
@@ -230,12 +263,12 @@ async function precomputeGreeting(callId) {
         
         let domainData = context?.domain || 'su sitio web';
         if (domainData && domainData !== 'su sitio web') {
-            const domains = domainData.split(/[,\s]+/).filter(d => d.trim().length > 0);
-            if (domains.length > 0) {
-                const list = domains.join(' y ');
-                domainData = domains.length === 1 ? `${list}, repito, ${list}` : `${list}. Repito los dominios: ${list}`;
-            }
+        const domains = domainData.split(/[,\s]+/).filter(d => d.trim().length > 0);
+        if (domains.length > 0) {
+            const list = domains.map(formatDomainForSpeech).join(' y ');
+            domainData = domains.length === 1 ? `${list}, repito, ${list}` : `${list}. Repito los dominios: ${list}`;
         }
+    }
         
         greeting = replacePlaceholders(greeting, domainData);
 

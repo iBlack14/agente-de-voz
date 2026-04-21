@@ -49,7 +49,7 @@ module.exports = {
     /**
      * Schedule a batch of calls from updates
      */
-    scheduleBatch: async ({ updateIds, promptId, scheduledFor }) => {
+    scheduleBatch: async ({ updateIds, promptId, scheduledFor, customGreeting, customInstructions }) => {
         // 1. Fetch updates to get phone numbers and domains
         const { data: updates, error: fetchError } = await supabase
             .from('updates')
@@ -68,11 +68,33 @@ module.exports = {
         if (promptError) throw promptError;
 
         // 3. Helper for professional replacement (mirroring frontend logic)
+        const getTimeGreeting = () => {
+            const hour = Number(new Intl.DateTimeFormat('es-PE', {
+                hour: 'numeric',
+                hour12: false,
+                timeZone: 'America/Lima'
+            }).format(new Date()));
+
+            if (hour >= 5 && hour < 12) return 'Buenos dias';
+            if (hour >= 12 && hour < 19) return 'Buenas tardes';
+            return 'Buenas noches';
+        };
+
         const personalizeText = (text, domain) => {
             if (!text) return text;
             const cleanDomain = (domain || 'su sitio web').replace(/^www\./i, '');
-            return text.replace(/dominio(\.\.\.|…)/gi, `dominio ${cleanDomain}`);
+            const greeting = getTimeGreeting();
+            return text
+                .replace(/Buenas\s*\(\)/gi, greeting)
+                .replace(/\(\)/g, greeting)
+                .replace(/\bBuenos\s+d[ií]as\b/gi, greeting)
+                .replace(/\bBuenas\s+tardes\b/gi, greeting)
+                .replace(/\bBuenas\s+noches\b/gi, greeting)
+                .replace(/dominio(\.\.\.|…)/gi, `dominio ${cleanDomain}`);
         };
+
+        const greetingBase = typeof customGreeting === 'string' ? customGreeting : prompt.greeting;
+        const instructionsBase = typeof customInstructions === 'string' ? customInstructions : prompt.text;
 
         // 4. Prepare scheduled calls with personalized content
         const scheduledCalls = updates
@@ -81,8 +103,8 @@ module.exports = {
                 to_number: u.phone,
                 domain: u.domain,
                 batch_label: `Campana ${prompt.name}`,
-                greeting: personalizeText(prompt.greeting, u.domain),
-                instructions: personalizeText(prompt.text, u.domain),
+                greeting: personalizeText(greetingBase, u.domain),
+                instructions: personalizeText(instructionsBase, u.domain),
                 scheduled_for: scheduledFor || new Date().toISOString(),
                 status: 'pending'
             }));
