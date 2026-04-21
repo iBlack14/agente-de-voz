@@ -67,15 +67,22 @@ module.exports = {
         
         if (promptError) throw promptError;
 
-        // 3. Prepare scheduled calls
+        // 3. Helper for professional replacement (mirroring frontend logic)
+        const personalizeText = (text, domain) => {
+            if (!text) return text;
+            const cleanDomain = (domain || 'su sitio web').replace(/^www\./i, '');
+            return text.replace(/dominio(\.\.\.|…)/gi, `dominio ${cleanDomain}`);
+        };
+
+        // 4. Prepare scheduled calls with personalized content
         const scheduledCalls = updates
             .filter(u => u.phone) // Only those with phones
             .map(u => ({
                 to_number: u.phone,
                 domain: u.domain,
                 batch_label: `Campana ${prompt.name}`,
-                greeting: prompt.greeting,
-                instructions: prompt.text,
+                greeting: personalizeText(prompt.greeting, u.domain),
+                instructions: personalizeText(prompt.text, u.domain),
                 scheduled_for: scheduledFor || new Date().toISOString(),
                 status: 'pending'
             }));
