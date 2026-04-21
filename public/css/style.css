@@ -279,40 +279,31 @@ main > header {
 }
 
 .updates-domain-list {
-    display: grid;
-    grid-template-columns: repeat(1, 1fr);
-    gap: 0.75rem;
-}
-
-@media (min-width: 1024px) {
-    .updates-domain-list {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-@media (min-width: 1440px) {
-    .updates-domain-list {
-        grid-template-columns: repeat(3, 1fr);
-    }
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0 1.5rem 1.5rem 1.5rem;
+    width: 100%;
 }
 
 /* New List Style for Domains */
-.update-domain-item-list {
-    background: rgba(255, 255, 255, 0.02);
-    border: 1.5px solid rgba(255, 255, 255, 0.05);
-    border-radius: 1.25rem;
-    padding: 1.25rem;
+.update-row {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 1rem;
+    padding: 0.75rem 1.5rem;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    gap: 1.5rem;
+    width: 100%;
 }
 
-.update-domain-item-list:hover {
+.update-row:hover {
     background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(207, 0, 218, 0.3);
-    transform: scale(1.02);
+    border-color: rgba(207, 0, 218, 0.4);
+    transform: translateX(6px);
 }
 
 .update-domain-item-list.selected {
@@ -538,6 +529,7 @@ textarea:focus, input:focus, select:focus {
     user-select: none;
 }
 
+
 .custom-select-trigger {
     display: flex;
     align-items: center;
@@ -547,13 +539,17 @@ textarea:focus, input:focus, select:focus {
     min-height: 46px;
     padding: 0.75rem 1rem;
     background: rgba(0, 0, 0, 0.2);
-    border: 1px solid var(--border);
-    border-radius: 0.75rem;
-    color: #fff;
-    font-size: 0.75rem;
-    font-weight: 600;
+    background: rgba(207, 0, 218, 0.05);
+    border: 1px solid rgba(207, 0, 218, 0.2);
+    border-radius: 1rem;
+    color: #cf00da;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
     cursor: pointer;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
 .custom-select-trigger:hover {
@@ -582,6 +578,7 @@ textarea:focus, input:focus, select:focus {
 }
 
 .custom-select-options {
+    min-width: 350px;
     position: absolute;
     top: calc(100% + 8px);
     left: 0;
@@ -608,9 +605,10 @@ textarea:focus, input:focus, select:focus {
 }
 
 .custom-select-option {
-    padding: 0.9rem 1.25rem;
+    padding: 1rem 1.5rem;
     color: #e2e8f0;
-    font-size: 0.8rem;
+    font-size: 11px;
+    white-space: nowrap;
     font-weight: 600;
     line-height: 1.4;
     cursor: pointer;

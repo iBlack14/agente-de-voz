@@ -2686,12 +2686,18 @@ const initDashboardApp = () => {
     const search = updatesSearch?.value || '';
     try {
       const resp = await fetch(`/api/updates?month=${month}&search=${search}`);
+      console.log('[ViaAI] Fetch status:', resp.status);
+      if (!resp.ok) {
+          throw new Error(`HTTP Error: ${resp.status}`);
+      }
       currentUpdates = await resp.json();
+      console.log('[ViaAI] Data received:', currentUpdates?.length, 'records');
       renderUpdatesTable(currentUpdates);
       updateSelectedCount();
       loadUpdatesReminders();
     } catch (e) {
-      console.error('Error loading updates:', e);
+      console.error('[ViaAI] Critical error loading updates:', e);
+      updatesTableBody.innerHTML = `<div class="updates-empty-state text-rose-500">Error de conexión: ${e.message}</div>`;
     }
   };
 
@@ -2713,14 +2719,20 @@ const initDashboardApp = () => {
   }
 
   function renderUpdatesTable(data) {
-    if (!updatesTableBody) return;
-    if (!data.length) {
+    console.log('[ViaAI] Rendering updates table with data count:', data?.length);
+    const listData = (data && data.length > 0) ? data : (currentUpdates || []);
+    if (!updatesTableBody) {
+        console.error('[ViaAI] updates-table-body not found in DOM');
+        return;
+    }
+    
+    if (listData.length === 0) {
+      console.log('[ViaAI] No data to render in updates table');
       updatesTableBody.innerHTML = '<div class="updates-empty-state">No se encontraron registros.</div>';
       return;
     }
 
-    const grouped = data.reduce((acc, item) => {
-      // Check for custom category marker [CAT:Name] in notes
+    const grouped = listData.reduce((acc, item) => {
       const catMatch = item.notes?.match(/\[CAT:(.*?)\]/);
       if (catMatch) {
         const catName = catMatch[1].trim();
@@ -2729,7 +2741,7 @@ const initDashboardApp = () => {
           acc[key] = {
             key,
             monthName: catName.toUpperCase(),
-            monthIndex: -10, // Show custom categories first
+            monthIndex: -10,
             items: [],
             isCustomCategory: true
           };
@@ -2740,10 +2752,8 @@ const initDashboardApp = () => {
 
       const parts = String(item.execution_date || '').split('-');
       if (parts.length < 2) return acc;
-      
       const monthIdx = parseInt(parts[1], 10) - 1;
       const key = `${monthIdx}`;
-      
       if (!acc[key]) {
         const dummyDate = new Date(2024, monthIdx, 15);
         acc[key] = {
@@ -2757,13 +2767,22 @@ const initDashboardApp = () => {
       return acc;
     }, {});
 
-    const groups = Object.values(grouped).sort((a, b) => {
-      return a.monthIndex - b.monthIndex;
-    });
+    const groups = Object.values(grouped).sort((a, b) => a.monthIndex - b.monthIndex);
+
+    if (!window.boxPaginationState) window.boxPaginationState = {};
 
     updatesTableBody.innerHTML = groups.map(group => {
       const visibleItems = group.items.filter(u => u.domain !== 'CABECERA_DE_CUADRO');
       const itemCount = visibleItems.length;
+      
+      if (!window.boxCollapseState) window.boxCollapseState = {};
+      const isCollapsed = window.boxCollapseState[group.key] || false;
+      
+      const pageSize = 10;
+      const currentPage = window.boxPaginationState[group.key] || 1;
+      const totalPages = Math.ceil(itemCount / pageSize) || 1;
+      const startIndex = (currentPage - 1) * pageSize;
+      const pagedItems = visibleItems.slice(startIndex, startIndex + pageSize);
 
       return `
       <section class="updates-month-card ${group.isCustomCategory ? 'priority-card' : ''}">
@@ -2778,6 +2797,9 @@ const initDashboardApp = () => {
                 <span class="material-symbols-outlined text-sm">edit_note</span>
               </button>
             ` : ''}
+            <button onclick="window.toggleBoxCollapse('${escapeHtml(group.key)}')" class="p-1 text-zinc-500 hover:text-primary transition-colors ml-1">
+                <span class="material-symbols-outlined text-[16px]">${isCollapsed ? 'visibility_off' : 'visibility'}</span>
+            </button>
             <p class="updates-month-card-subtitle ml-auto">${itemCount} ${itemCount === 1 ? 'dominio' : 'dominios'}</p>
           </div>
           <button onclick="openNewUpdateInBox('${group.isCustomCategory ? escapeHtml(group.monthName) : ''}', ${!group.isCustomCategory ? group.monthIndex + 1 : 'null'})" class="p-2.5 bg-primary text-white hover:scale-110 shadow-lg shadow-primary/20 rounded-xl transition-all flex items-center gap-2">
@@ -2785,48 +2807,86 @@ const initDashboardApp = () => {
             <span class="text-[9px] font-black uppercase tracking-widest hidden md:inline">Agregar</span>
           </button>
         </div>
+        ${!isCollapsed ? `
         <div class="updates-month-toolbar" data-month-key="${escapeHtml(group.key)}">
           <div class="updates-month-toolbar-left">
             <label class="updates-month-toolbar-select">
               <input type="checkbox" class="updates-month-select-all rounded border-white/10 bg-black/40" data-month-key="${escapeHtml(group.key)}">
               <span><span class="updates-month-selected-count">0</span> seleccionados</span>
             </label>
-             <div class="custom-select-wrapper updates-month-reminder-container ml-4" style="width: 250px;">
-                <div class="custom-select-trigger font-bold uppercase text-[9px] tracking-widest text-primary border-primary/20 bg-primary/5">
-                    <span>ACTUALIZACIONES</span>
-                </div>
-                <div class="custom-select-options no-scrollbar">
-                    <div class="custom-select-option" data-value="">ACTUALIZACIONES</div>
-                    ${getUpdatesReminderOptionsHtml(true)}
-                </div>
-                <select class="hidden-select updates-month-reminder" onchange="updateBatchPreview(this)">
-                    <option value="">ACTUALIZACIONES</option>
-                </select>
-            </div>
+             <select class="updates-month-reminder w-[350px] bg-black/40 border border-white/10 rounded-xl py-2 px-4 text-[10px] font-bold text-primary uppercase tracking-widest outline-none transition-all" onchange="updateBatchPreview(this)">
+                <option value="">ACTUALIZACIONES</option>
+                ${getUpdatesReminderOptionsHtml(true)}
+            </select>
           </div>
-          <div class="updates-month-toolbar-right">
-            <button type="button" class="updates-month-call-btn px-5 py-2 bg-primary text-white font-black rounded-xl text-[10px] uppercase shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed" disabled>Llamar Ahora</button>
-            <button type="button" class="updates-month-schedule-btn px-5 py-2 bg-white/5 border border-white/5 text-white font-bold rounded-xl text-[10px] uppercase hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed" disabled>Programar</button>
+          <div class="updates-month-toolbar-right flex flex-col gap-2">
+            <button type="button" class="updates-month-call-btn px-6 py-2 bg-primary text-white font-black rounded-xl text-[10px] uppercase shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed" disabled>Llamar Ahora</button>
+            <button type="button" class="updates-month-schedule-btn px-6 py-2 bg-white/5 border border-white/5 text-white font-bold rounded-xl text-[10px] uppercase hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed" disabled>Programar</button>
           </div>
         </div>
-        <div class="updates-reminder-preview px-6 pb-4 hidden" id="preview-${escapeHtml(group.key)}">
-            <div class="flex items-center gap-2 text-[9px] font-black text-primary/60 uppercase tracking-widest mb-1">
-                <span class="material-symbols-outlined text-[10px]">info</span>
-                Vista del Lote:
+        <div class="updates-reminder-preview px-6 pb-6 hidden" id="preview-${escapeHtml(group.key)}">
+            <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-2 text-[9px] font-black text-primary/60 uppercase tracking-[0.2em]">
+                    <span class="material-symbols-outlined text-[10px]">terminal</span>
+                    Contenido del Lote:
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="previewLocalVoice('${escapeHtml(group.key)}')" class="flex items-center gap-2 px-2 py-1 bg-white/5 border border-white/10 text-white text-[8px] font-black rounded uppercase tracking-widest hover:bg-primary transition-all">
+                        <span class="material-symbols-outlined text-[10px]">play_circle</span>
+                        Escuchar
+                    </button>
+                    <button onclick="saveLocalTemplate('${escapeHtml(group.key)}')" id="save-btn-${escapeHtml(group.key)}" class="px-2 py-1 bg-primary text-white text-[8px] font-black rounded uppercase tracking-widest hidden transition-all">
+                        Guardar
+                    </button>
+                </div>
             </div>
-            <p class="text-[10px] text-zinc-500 italic line-clamp-1"></p>
+            <textarea 
+                oninput="handlePreviewInput('save-btn-${escapeHtml(group.key)}')"
+                class="w-full bg-black/40 border border-white/5 rounded-xl p-3 text-[10px] text-zinc-400 font-medium leading-relaxed focus:border-primary/30 outline-none min-h-[60px] resize-none"
+                placeholder="Escribe las instrucciones aquí..."></textarea>
         </div>
         <div class="updates-domain-list">
           ${itemCount === 0 
             ? `<div class="updates-empty-state">No hay dominios en este cuadro.</div>`
-            : visibleItems.map(u => `
-              <article class="update-row update-domain-item-list group" data-month-key="${escapeHtml(group.key)}" onclick="const cb = this.querySelector('.update-checkbox'); if(cb) { cb.checked = !cb.checked; cb.dispatchEvent(new Event('change', { bubbles: true })); }">
+            : pagedItems.map(u => `
+              <article class="update-row group" data-month-key="${escapeHtml(group.key)}" onclick="const cb = this.querySelector('.update-checkbox'); if(cb) { cb.checked = !cb.checked; cb.dispatchEvent(new Event('change', { bubbles: true })); }">
                 <div class="update-list-check" onclick="event.stopPropagation()">
                   <input type="checkbox" class="update-checkbox h-4 w-4 rounded-full border border-white/15 bg-black/40 cursor-pointer transition-all outline-none" data-id="${u.id}">
                 </div>
                 <div class="update-list-content">
                   <div class="update-list-main">
-                    <h4 class="update-list-title">${escapeHtml(u.domain)}</h4>
+                    <div class="flex items-center gap-2">
+                      <h4 class="update-list-title">${escapeHtml(u.domain)}</h4>
+                      ${(() => {
+                        const today = new Date();
+                        today.setHours(0,0,0,0);
+                        const target = new Date(u.execution_date);
+                        target.setHours(0,0,0,0);
+                        const diffTime = target - today;
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                        
+                        let badgeClass = 'bg-zinc-800 text-zinc-400';
+                        let label = '';
+
+                        if (diffDays === 0) {
+                          badgeClass = 'bg-rose-500/20 text-rose-500 border border-rose-500/30 animate-pulse';
+                          label = 'Vence Hoy';
+                        } else if (diffDays > 0 && diffDays <= 7) {
+                          badgeClass = 'bg-orange-500/20 text-orange-400 border border-orange-500/30';
+                          label = `Faltan ${diffDays}d`;
+                        } else if (diffDays > 0 && diffDays <= 30) {
+                          badgeClass = 'bg-amber-500/20 text-amber-400 border border-amber-500/30';
+                          label = `Faltan ${diffDays}d`;
+                        } else if (diffDays < 0) {
+                          badgeClass = 'bg-zinc-900 text-zinc-500 border border-white/5';
+                          label = `Venció hace ${Math.abs(diffDays)}d`;
+                        } else {
+                          return ''; 
+                        }
+                        
+                        return `<span class="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-tighter ${badgeClass}">${label}</span>`;
+                      })()}
+                    </div>
                     <p class="update-list-phone">${escapeHtml(u.phone || '—')}</p>
                   </div>
                   <div class="update-list-meta">
@@ -2850,9 +2910,22 @@ const initDashboardApp = () => {
             `).join('')
           }
         </div>
+        ` : ''}
+        ${!isCollapsed && totalPages > 1 ? `
+        <div class="px-6 pb-6 flex items-center justify-center gap-4">
+            <button onclick="window.changeBoxPage('${escapeHtml(group.key)}', -1)" class="p-2 bg-white/5 border border-white/5 rounded-lg text-white hover:bg-primary transition-all disabled:opacity-20" ${currentPage === 1 ? 'disabled' : ''}>
+                <span class="material-symbols-outlined text-sm">chevron_left</span>
+            </button>
+            <span class="text-[10px] font-black text-primary/60 uppercase tracking-widest">Página ${currentPage} de ${totalPages}</span>
+            <button onclick="window.changeBoxPage('${escapeHtml(group.key)}', 1)" class="p-2 bg-white/5 border border-white/5 rounded-lg text-white hover:bg-primary transition-all disabled:opacity-20" ${currentPage === totalPages ? 'disabled' : ''}>
+                <span class="material-symbols-outlined text-sm">chevron_right</span>
+            </button>
+        </div>
+        ` : ''}
       </section>
     `;
     }).join('');
+    console.log('[ViaAI] Render complete.');
     
     // Add click event for "Add to month" buttons
     document.querySelectorAll('.add-to-month-btn').forEach(btn => {
@@ -2860,8 +2933,6 @@ const initDashboardApp = () => {
         e.stopPropagation();
         const month = btn.dataset.month;
         const year = btn.dataset.year;
-        
-        // Open the "New Update" modal and pre-fill the date
         if (updatesAddBtn) {
           updatesAddBtn.click();
           const dateInput = document.getElementById('new-update-date');
@@ -2874,7 +2945,6 @@ const initDashboardApp = () => {
       });
     });
     
-    // Add event listeners to checkboxes
     document.querySelectorAll('.update-checkbox').forEach(cb => {
       cb.addEventListener('change', () => {
         paintUpdateCheckboxState(cb);
@@ -2913,9 +2983,21 @@ const initDashboardApp = () => {
       });
     });
 
-    // Initialize premium selects for the new dynamically created elements
     setTimeout(initPremiumSelects, 50);
   }
+
+  window.changeBoxPage = (key, delta) => {
+      if (!window.boxPaginationState) window.boxPaginationState = {};
+      const current = window.boxPaginationState[key] || 1;
+      window.boxPaginationState[key] = current + delta;
+      renderUpdatesTable(currentUpdates);
+  };
+
+  window.toggleBoxCollapse = (key) => {
+      if (!window.boxCollapseState) window.boxCollapseState = {};
+      window.boxCollapseState[key] = !(window.boxCollapseState[key] || false);
+      renderUpdatesTable(currentUpdates);
+  };
 
   function paintUpdateCheckboxState(cb) {
     if (!cb) return;
@@ -3094,18 +3176,32 @@ const initDashboardApp = () => {
     await triggerUpdatesBatchAction({ selectedIds, promptId, mode: 'schedule', triggerButton: updatesScheduleBtn });
   });
 
-  // Global Preview Listener
+  // Global Preview logic
+  const updatesBatchReminderArea = document.getElementById('updates-global-preview');
+  const globalPreviewTextarea = document.getElementById('global-preview-textarea');
+  const saveGlobalPreviewBtn = document.getElementById('save-global-preview-btn');
+
   document.getElementById('updates-batch-reminder')?.addEventListener('change', (e) => {
-    const previewArea = document.getElementById('updates-global-preview');
-    const previewText = document.getElementById('global-preview-text');
-    if (!previewArea || !previewText) return;
-    
-    const selectedText = e.target.options[e.target.selectedIndex].text;
-    if (e.target.value) {
-      previewArea.classList.remove('hidden');
-      previewText.textContent = selectedText;
+    const val = e.target.value;
+    if (val && reminderTemplates[val]) {
+      updatesBatchReminderArea.classList.remove('hidden');
+      globalPreviewTextarea.value = reminderTemplates[val].text || '';
+      saveGlobalPreviewBtn.classList.add('hidden');
     } else {
-      previewArea.classList.add('hidden');
+      updatesBatchReminderArea.classList.add('hidden');
+    }
+  });
+
+  globalPreviewTextarea?.addEventListener('input', () => {
+    saveGlobalPreviewBtn.classList.remove('hidden');
+  });
+
+  saveGlobalPreviewBtn?.addEventListener('click', () => {
+    const val = document.getElementById('updates-batch-reminder').value;
+    if (val && reminderTemplates[val]) {
+      reminderTemplates[val].text = globalPreviewTextarea.value;
+      appAlert(`✅ Instrucciones de "${val}" actualizadas.`);
+      saveGlobalPreviewBtn.classList.add('hidden');
     }
   });
 
@@ -3115,16 +3211,96 @@ const initDashboardApp = () => {
     
     const key = toolbar.dataset.monthKey;
     const previewArea = document.getElementById(`preview-${key}`);
-    const selectedText = selectEl.options[selectEl.selectedIndex].text;
+    const textarea = previewArea?.querySelector('textarea');
+    const saveBtn = previewArea?.querySelector('button');
     
-    if (previewArea) {
-      if (selectEl.value) {
-        previewArea.classList.remove('hidden');
-        previewArea.querySelector('p').textContent = selectedText;
-      } else {
-        previewArea.classList.add('hidden');
+    const val = selectEl.value;
+    if (previewArea && val && reminderTemplates[val]) {
+      previewArea.classList.remove('hidden');
+      if (textarea) {
+        textarea.value = reminderTemplates[val].text || '';
+        if (saveBtn) saveBtn.classList.add('hidden');
       }
+    } else if (previewArea) {
+      previewArea.classList.add('hidden');
     }
+  };
+
+  window.saveLocalTemplate = (key, val) => {
+    const previewArea = document.getElementById(`preview-${key}`);
+    const textarea = previewArea?.querySelector('textarea');
+    const saveBtn = previewArea?.querySelector('button');
+    
+    // We need to know which template was selected in THIS box
+    const toolbar = previewArea.previousElementSibling;
+    const select = toolbar.querySelector('.updates-month-reminder');
+    const tplId = select.value;
+
+    if (tplId && reminderTemplates[tplId] && textarea) {
+      reminderTemplates[tplId].text = textarea.value;
+      appAlert(`✅ Cambios guardados para "${tplId}".`);
+      if (saveBtn) saveBtn.classList.add('hidden');
+    }
+  };
+
+  window.handlePreviewInput = (btnId) => {
+    const btn = document.getElementById(btnId);
+    if (btn) btn.classList.remove('hidden');
+  };
+
+  const getPersonalizedPreviewText = (text) => {
+    if (!text) return "";
+    let final = text;
+    
+    // 1. Tratamiento de Moneda (S/.) -> "soles"
+    // Buscamos patrones como s/.250 o s/ 250 o s/250.00
+    final = final.replace(/s\/\.?\s?(\d+)(\.\d+)?/gi, (match, p1) => {
+        return `${p1} soles `;
+    });
+
+    // 2. Personalización de Dominio
+    const selectedCheckboxes = document.querySelectorAll('.update-checkbox:checked');
+    if (selectedCheckboxes.length > 0) {
+      const firstRow = selectedCheckboxes[0].closest('.update-row');
+      let domainName = firstRow?.querySelector('.update-list-title')?.textContent.trim() || "";
+      
+      if (domainName) {
+        // Limpiamos el dominio para que suene profesional en TTS
+        let phoneticDomain = domainName
+            .replace(/www\./gi, 'triple doble u punto ')
+            .replace(/\./g, ' punto ');
+            
+        final = final.replace(/dominio\s*\.{2,}|…/gi, ` ${phoneticDomain} `);
+        final = final.replace(/\.{2,}/g, ` ${phoneticDomain} `);
+      }
+    } else {
+        final = final.replace(/dominio\s*\.{2,}|…/gi, ' su página web ');
+        final = final.replace(/\.{2,}/g, ' su página ');
+    }
+
+    // 3. Tratamiento de Números (1 por 1 solo para teléfonos, no para montos)
+    // Buscamos números de 7 o más cifras (probablemente teléfonos) para leerlos dígito a dígito
+    final = final.replace(/\d{7,15}/g, (match) => {
+        return match.split('').join(' ');
+    });
+    
+    // Limpieza final de espacios
+    return final.replace(/\s+/g, ' ').trim();
+  };
+
+  document.getElementById('preview-global-voice-btn')?.addEventListener('click', () => {
+    const text = globalPreviewTextarea.value;
+    if (!text) return;
+    const personalized = getPersonalizedPreviewText(text);
+    if (typeof previewVoice === 'function') previewVoice(personalized);
+  });
+
+  window.previewLocalVoice = (key) => {
+    const previewArea = document.getElementById(`preview-${key}`);
+    const textarea = previewArea?.querySelector('textarea');
+    if (!textarea || !textarea.value) return;
+    const personalized = getPersonalizedPreviewText(textarea.value);
+    if (typeof previewVoice === 'function') previewVoice(personalized);
   };
 
   window.openNewUpdateInBox = (category = '', month = null) => {

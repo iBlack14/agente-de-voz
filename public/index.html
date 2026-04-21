@@ -98,6 +98,9 @@
     </div>
 
     <script>
+        // Redirect directly to Advanced Mode as requested
+        window.location.href = '/advanced';
+        
         function selectMode(mode) {
             console.log('selectMode called with:', mode);
             const remember = document.getElementById('remember-choice').checked;
