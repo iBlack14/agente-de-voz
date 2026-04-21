@@ -2908,7 +2908,10 @@ const initDashboardApp = () => {
             <h3 class="updates-month-card-title">${escapeHtml(group.monthName)}</h3>
             ${group.isCustomCategory ? `
               <button onclick="renameCategory('${escapeHtml(group.monthName)}')" class="p-1 text-zinc-500 hover:text-primary transition-colors">
-                <span class="material-symbols-outlined text-sm">edit_note</span>
+                  <span class="material-symbols-outlined text-sm">edit_note</span>
+              </button>
+              <button onclick="deleteCategory('${escapeHtml(group.monthName)}')" class="p-1 text-zinc-500 hover:text-rose-500 transition-colors">
+                  <span class="material-symbols-outlined text-sm">delete</span>
               </button>
             ` : ''}
             <button onclick="window.toggleBoxCollapse('${escapeHtml(group.key)}')" class="p-1 text-zinc-500 hover:text-primary transition-colors ml-1">
@@ -3307,6 +3310,25 @@ const initDashboardApp = () => {
     if (successCount > 0) {
       appAlert(`✅ Cuadro renombrado a "${newName}".`);
       window.loadUpdates();
+    }
+  };
+
+  window.deleteCategory = async (catName) => {
+    const confirm = await appPrompt(`¿Deseas ELIMINAR COMPLETAMENTE el cuadro "${catName}" y todos sus dominios asociados?\nEscribe "ELIMINAR" para confirmar:`, 'ELIMINAR');
+    if (confirm !== 'ELIMINAR') return;
+
+    try {
+      const resp = await fetch(`/api/updates/category/${encodeURIComponent(catName)}`, {
+        method: 'DELETE'
+      });
+      if (resp.ok) {
+        appAlert(`✅ Cuadro "${catName}" eliminado exitosamente.`);
+        window.loadUpdates();
+      } else {
+        appAlert('Error al eliminar el cuadro.', true);
+      }
+    } catch (e) {
+      appAlert('Error de conexión', true);
     }
   };
 

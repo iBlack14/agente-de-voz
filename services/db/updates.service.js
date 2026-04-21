@@ -170,5 +170,34 @@ module.exports = {
             .eq('id', id);
         if (error) throw error;
         return { success: true };
+    },
+
+    /**
+     * Delete all entries in a category
+     */
+    deleteByCategory: async (categoryName) => {
+        const { data: items, error: fetchError } = await supabase
+            .from('updates')
+            .select('id, notes')
+            .like('notes', `%[CAT:${categoryName}]%`);
+        
+        if (fetchError) throw fetchError;
+        
+        const idsToDelete = items
+            .filter(item => {
+                const match = item.notes?.match(/\[CAT:(.*?)\]/);
+                return match && match[1] === categoryName;
+            })
+            .map(item => item.id);
+
+        if (idsToDelete.length === 0) return { success: true };
+
+        const { error: deleteError } = await supabase
+            .from('updates')
+            .delete()
+            .in('id', idsToDelete);
+            
+        if (deleteError) throw deleteError;
+        return { success: true };
     }
 };

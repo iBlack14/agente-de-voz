@@ -389,6 +389,15 @@ router.put('/updates/:id', async (req, res) => {
   }
 });
 
+router.delete('/updates/category/:name', async (req, res) => {
+  try {
+    const result = await updatesService.deleteByCategory(req.params.name);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.delete('/updates/:id', async (req, res) => {
   try {
     const result = await updatesService.deleteUpdate(req.params.id);
