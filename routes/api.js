@@ -6,6 +6,8 @@ const {
   readPrompts, upsertPrompt, setActivePrompt, deletePrompt,
   readReminderPrompts, upsertReminderPrompt, setActiveReminderPrompt, deleteReminderPrompt 
 } = require('../services/prompts/promptService');
+const { readVoiceSettings, saveVoiceSettings } = require('../services/config/voiceSettings.service');
+const { normalizeText } = require('../services/ai/tts.service');
 const { readCallLog, logCall, getUsageStats } = require('../services/db/repository');
 const { makeOutboundCall } = require('../services/telephony/telnyxClient');
 const { setCallContext } = require('../services/telephony/context.service');
@@ -73,6 +75,22 @@ router.get('/voices', async (req, res) => {
     const voices = response.data.voices.map(v => ({ id: v.voice_id, name: v.name, category: v.category }));
     res.json({ count: voices.length, voices });
   } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.get('/voice-settings', async (req, res) => {
+  try {
+    res.json(await readVoiceSettings());
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.put('/voice-settings', async (req, res) => {
+  try {
+    res.json({ success: true, data: await saveVoiceSettings(req.body || {}) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 const { callQueue } = require('../services/telephony/queue.service');
@@ -245,15 +263,23 @@ router.post('/tts-preview', async (req, res) => {
   const { text } = req.body;
   if (!text || !text.trim()) return res.status(400).json({ error: 'Texto requerido' });
   const apiKey = process.env.ELEVENLABS_API_KEY;
-  const voiceId = process.env.ELEVENLABS_VOICE_ID || '90ipbRoKi4CpHXvKVtl0';
+  const voiceConfig = await readVoiceSettings();
+  const voiceId = voiceConfig.voiceId;
 
   try {
     const response = await axios.post(
-      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream?output_format=mp3_44100_128`,
+      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream?output_format=mp3_44100_128&optimize_streaming_latency=${voiceConfig.latencyOptimization}`,
       {
-        text: text.trim(),
-        model_id: 'eleven_turbo_v2_5',
-        voice_settings: { stability: 0.5, similarity_boost: 0.8, use_speaker_boost: true }
+        text: normalizeText(text.trim()),
+        model_id: voiceConfig.modelId,
+        apply_text_normalization: voiceConfig.applyTextNormalization,
+        voice_settings: {
+          speed: voiceConfig.speed,
+          stability: voiceConfig.stability,
+          similarity_boost: voiceConfig.similarityBoost,
+          style: voiceConfig.style,
+          use_speaker_boost: voiceConfig.useSpeakerBoost
+        }
       },
       {
         headers: { 'xi-api-key': apiKey, 'Content-Type': 'application/json' },

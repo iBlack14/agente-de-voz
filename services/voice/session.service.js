@@ -13,8 +13,16 @@ const readyGreetings = new Map();
 const TIMEZONE_OFFSET = parseInt(process.env.TIMEZONE_OFFSET) || -5;
 const DOMAIN_PLACEHOLDERS = [
   '{DOMAIN}', '{DOMINIO}', '{CLIENTE}', '{DATOS}',
-  'aqui ira el dominio', '......', '...',
+  'aqui ira el dominio', '......',
   '[dominio]', '(dominio)', '[datos]', '(datos)'
+];
+const DOMAIN_CONTEXT_PATTERNS = [
+  /\bdominio\b\s*(?:\.{2,}|…)/gi,
+  /\bservicio\s+web\b\s*(?:\.{2,}|…)/gi,
+  /\bsitio\s+web\b\s*(?:\.{2,}|…)/gi,
+  /\bdesarrollo\s+web\b\s*(?:\.{2,}|…)/gi,
+  /\bp[aá]gina\s+web\b\s*(?:\.{2,}|…)/gi,
+  /\bproyecto\s+web\b\s*(?:\.{2,}|…)/gi
 ];
 
 function getLocalTime() {
@@ -57,6 +65,20 @@ function normalizeSpeechText(text) {
     .trim();
 }
 
+function injectDomainContext(text, domainData) {
+  if (!text) return text;
+
+  let result = text;
+  for (const pattern of DOMAIN_CONTEXT_PATTERNS) {
+    result = result.replace(pattern, (match) => {
+      const base = match.replace(/\s*(?:\.{2,}|…)\s*$/g, '').trim();
+      return `${base} ${domainData}`;
+    });
+  }
+
+  return result;
+}
+
 function replacePlaceholders(text, domainData) {
   let result = text
     .replace(/Buenas \(\)/gi, getTimeGreeting())
@@ -69,7 +91,9 @@ function replacePlaceholders(text, domainData) {
     result = result.split(placeholder).join(domainData);
     result = result.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), domainData);
   }
-  
+
+  result = injectDomainContext(result, domainData);
+
   return normalizeSpeechText(result);
 }
 

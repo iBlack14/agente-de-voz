@@ -214,6 +214,80 @@
                         </div>
                     </section>
                 </div>
+                <section class="glass-card">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+                        <div>
+                            <h3 class="text-[10px] font-bold text-primary uppercase tracking-widest">Motor de Voz</h3>
+                            <p class="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-2">Configura la voz sin tocar el env</p>
+                        </div>
+                        <button id="save-voice-settings-btn" class="px-5 py-3 bg-primary text-white font-bold rounded-xl transition-all uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20">Guardar Voz</button>
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4">
+                        <div class="space-y-2 xl:col-span-2">
+                            <label class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Voice ID</label>
+                            <input id="voice-id-input" class="w-full bg-black/20 border border-white/5 rounded-xl py-3 px-4 text-sm text-white focus:border-primary outline-none" placeholder="ID de voz ElevenLabs">
+                        </div>
+                        <div class="space-y-2 xl:col-span-2">
+                            <label class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Modelo</label>
+                            <input id="voice-model-input" class="w-full bg-black/20 border border-white/5 rounded-xl py-3 px-4 text-sm text-white focus:border-primary outline-none" placeholder="eleven_turbo_v2_5">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Velocidad</label>
+                            <input id="voice-speed-input" type="range" min="0.7" max="1.2" step="0.05" class="w-full accent-primary">
+                            <p id="voice-speed-value" class="text-[10px] text-slate-400 font-bold">1.00x</p>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Estabilidad</label>
+                            <input id="voice-stability-input" type="range" min="0" max="1" step="0.05" class="w-full accent-primary">
+                            <p id="voice-stability-value" class="text-[10px] text-slate-400 font-bold">0.50</p>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Claridad</label>
+                            <input id="voice-similarity-input" type="range" min="0" max="1" step="0.05" class="w-full accent-primary">
+                            <p id="voice-similarity-value" class="text-[10px] text-slate-400 font-bold">0.80</p>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Estilo</label>
+                            <input id="voice-style-input" type="range" min="0" max="1" step="0.05" class="w-full accent-primary">
+                            <p id="voice-style-value" class="text-[10px] text-slate-400 font-bold">0.00</p>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Latencia</label>
+                            <select id="voice-latency-input" class="w-full bg-black/20 border border-white/5 rounded-xl py-3 px-4 text-xs text-white">
+                                <option value="0">0 · Calidad</option>
+                                <option value="1">1 · Rápida</option>
+                                <option value="2">2 · Más rápida</option>
+                                <option value="3">3 · Máxima</option>
+                                <option value="4">4 · Máxima sin normalizar</option>
+                            </select>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Normalización</label>
+                            <select id="voice-normalization-input" class="w-full bg-black/20 border border-white/5 rounded-xl py-3 px-4 text-xs text-white">
+                                <option value="auto">Auto</option>
+                                <option value="on">On</option>
+                                <option value="off">Off</option>
+                            </select>
+                        </div>
+                        <label class="flex items-center gap-3 rounded-xl border border-white/5 bg-black/20 px-4 py-3 mt-7">
+                            <input id="voice-speaker-boost-input" type="checkbox" class="rounded border-white/10 bg-black/40">
+                            <span class="text-[10px] font-bold uppercase tracking-widest text-white">Speaker Boost</span>
+                        </label>
+                    </div>
+                    <div class="mt-6 pt-6 border-t border-white/5 space-y-3">
+                        <div class="flex items-center justify-between gap-4">
+                            <div>
+                                <h4 class="text-[10px] font-bold text-primary uppercase tracking-widest">Prueba de Voz</h4>
+                                <p class="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-2">Escribe y escucha al instante</p>
+                            </div>
+                            <button id="preview-voice-settings-btn" class="px-4 py-2 bg-white/5 border border-white/10 text-white text-[10px] font-black rounded-xl uppercase tracking-widest hover:bg-primary transition-all flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[14px]">play_circle</span>
+                                Probar
+                            </button>
+                        </div>
+                        <textarea id="voice-preview-text" class="w-full bg-black/20 border border-white/5 rounded-xl py-4 px-4 text-sm text-white focus:border-primary outline-none min-h-[120px] resize-none" placeholder="Escribe aquí un texto para escuchar cómo suena la voz con esta configuración..."></textarea>
+                    </div>
+                </section>
             </div>
 
             <!-- TAB: RECORDATORIOS -->

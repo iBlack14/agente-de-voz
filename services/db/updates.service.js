@@ -90,7 +90,12 @@ module.exports = {
                 .replace(/\bBuenos\s+d[ií]as\b/gi, greeting)
                 .replace(/\bBuenas\s+tardes\b/gi, greeting)
                 .replace(/\bBuenas\s+noches\b/gi, greeting)
-                .replace(/dominio(\.\.\.|…)/gi, `dominio ${cleanDomain}`);
+                .replace(/\bdominio\b\s*(?:\.{2,}|…)/gi, `dominio ${cleanDomain}`)
+                .replace(/\bservicio\s+web\b\s*(?:\.{2,}|…)/gi, `servicio web ${cleanDomain}`)
+                .replace(/\bsitio\s+web\b\s*(?:\.{2,}|…)/gi, `sitio web ${cleanDomain}`)
+                .replace(/\bdesarrollo\s+web\b\s*(?:\.{2,}|…)/gi, `desarrollo web ${cleanDomain}`)
+                .replace(/\bp[aá]gina\s+web\b\s*(?:\.{2,}|…)/gi, `pagina web ${cleanDomain}`)
+                .replace(/\bproyecto\s+web\b\s*(?:\.{2,}|…)/gi, `proyecto web ${cleanDomain}`);
         };
 
         const greetingBase = typeof customGreeting === 'string' ? customGreeting : prompt.greeting;

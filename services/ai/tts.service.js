@@ -1,4 +1,5 @@
 const axios = require('axios');
+const { readVoiceSettings } = require('../config/voiceSettings.service');
 
 /**
  * Normalizes text for better AI speech synthesis.
@@ -29,7 +30,8 @@ const { logUsage } = require('../db/repository');
  */
 async function textToSpeech(text, callId) {
   const apiKey = process.env.ELEVENLABS_API_KEY;
-  const voiceId = process.env.ELEVENLABS_VOICE_ID || '90ipbRoKi4CpHXvKVtl0';
+  const voiceConfig = await readVoiceSettings();
+  const voiceId = voiceConfig.voiceId;
   
   const normalized = normalizeText(text);
   if (!normalized) return null;
@@ -39,15 +41,22 @@ async function textToSpeech(text, callId) {
       logUsage({ callId, service: 'elevenlabs', metric: 'characters', value: normalized.length }).catch(() => {});
   }
 
-  const url = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream?output_format=ulaw_8000`;
+  const url = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream?output_format=ulaw_8000&optimize_streaming_latency=${voiceConfig.latencyOptimization}`;
 
   try {
     const response = await axios.post(
       url,
       {
         text: normalized,
-        model_id: 'eleven_turbo_v2_5',
-        voice_settings: { stability: 0.5, similarity_boost: 0.8, use_speaker_boost: true }
+        model_id: voiceConfig.modelId,
+        apply_text_normalization: voiceConfig.applyTextNormalization,
+        voice_settings: {
+          speed: voiceConfig.speed,
+          stability: voiceConfig.stability,
+          similarity_boost: voiceConfig.similarityBoost,
+          style: voiceConfig.style,
+          use_speaker_boost: voiceConfig.useSpeakerBoost
+        }
       },
       {
         headers: { 'xi-api-key': apiKey, 'Content-Type': 'application/json' },
@@ -62,4 +71,4 @@ async function textToSpeech(text, callId) {
   }
 }
 
-module.exports = { textToSpeech };
+module.exports = { textToSpeech, normalizeText };

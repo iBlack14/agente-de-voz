@@ -3,15 +3,27 @@
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>ViaAI Voice - Login</title>
+    <title>ViaBox | Acceso</title>
     <link rel="icon" type="image/png" href="assets/favicon.png">
-    
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet" />
-    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet"/>
     <script src="https://cdn.tailwindcss.com"></script>
-    
     <style>
+        :root {
+            --bg: #070114;
+            --surface: rgba(20, 3, 33, 0.78);
+            --surface-strong: rgba(31, 4, 48, 0.92);
+            --border: rgba(207, 0, 218, 0.26);
+            --border-soft: rgba(255, 255, 255, 0.08);
+            --primary: #cf00da;
+            --primary-hover: #e033ea;
+            --secondary: #7c3aed;
+            --text: #f5f2ff;
+            --text-dim: #a59ab9;
+            --error: #f87171;
+            --success: #34d399;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -19,131 +31,258 @@
         }
 
         body {
-            background: linear-gradient(135deg, #0f172a 0%, #1a1f3a 50%, #0d1629 100%);
-            font-family: 'Inter', sans-serif;
             min-height: 100vh;
+            font-family: 'Inter', sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(circle at 18% 20%, rgba(207, 0, 218, 0.22) 0%, transparent 32%),
+                radial-gradient(circle at 80% 15%, rgba(124, 58, 237, 0.18) 0%, transparent 28%),
+                radial-gradient(circle at 72% 78%, rgba(207, 0, 218, 0.12) 0%, transparent 30%),
+                linear-gradient(180deg, #090113 0%, #12011b 46%, #070114 100%);
             display: flex;
             align-items: center;
             justify-content: center;
+            padding: 32px;
+            overflow: hidden;
         }
 
-        .login-container {
-            width: 100%;
-            max-width: 400px;
-            padding: 0 20px;
+        .background-grid,
+        .background-frame {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
         }
 
-        .login-card {
-            background: rgba(15, 23, 42, 0.7);
-            backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-            padding: 48px 32px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        .background-grid {
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+            background-size: 48px 48px;
+            mask-image: radial-gradient(circle at center, black 38%, transparent 85%);
+            opacity: 0.55;
         }
 
-        .logo-section {
+        .background-frame::before,
+        .background-frame::after {
+            content: "";
+            position: absolute;
+            border: 1px solid rgba(207, 0, 218, 0.14);
+            border-radius: 32px;
+        }
+
+        .background-frame::before {
+            inset: 24px;
+        }
+
+        .background-frame::after {
+            inset: 72px 88px;
+            border-color: rgba(124, 58, 237, 0.12);
+        }
+
+        .login-shell {
+            position: relative;
+            width: min(1040px, 100%);
+            display: grid;
+            grid-template-columns: minmax(320px, 1.1fr) minmax(360px, 420px);
+            border-radius: 28px;
+            overflow: hidden;
+            border: 1px solid var(--border-soft);
+            background: rgba(7, 1, 20, 0.45);
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.48);
+            backdrop-filter: blur(20px);
+        }
+
+        .brand-panel {
+            position: relative;
+            padding: 56px 52px;
+            background:
+                linear-gradient(160deg, rgba(207, 0, 218, 0.1) 0%, rgba(16, 2, 28, 0.18) 45%, rgba(10, 1, 24, 0.92) 100%),
+                url('assets/logo.png') no-repeat right 46px bottom 46px / 120px auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 620px;
+        }
+
+        .brand-panel::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at 20% 20%, rgba(207, 0, 218, 0.18) 0%, transparent 34%),
+                radial-gradient(circle at 80% 78%, rgba(124, 58, 237, 0.16) 0%, transparent 32%);
+            pointer-events: none;
+        }
+
+        .brand-block,
+        .brand-footer {
+            position: relative;
+            z-index: 1;
+        }
+
+        .brand-mark {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 18px;
+            margin-bottom: 0;
             text-align: center;
-            margin-bottom: 40px;
         }
 
-        .logo {
-            width: 56px;
-            height: 56px;
-            margin: 0 auto 20px;
-            opacity: 0;
-            animation: slideDown 0.6s ease-out forwards;
+        .brand-icon {
+            width: 112px;
+            height: 112px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
         }
 
-        .logo-img {
+        .brand-icon img {
             width: 100%;
             height: 100%;
             object-fit: contain;
         }
 
-        .logo-title {
-            font-size: 28px;
+        .brand-name {
+            font-size: 34px;
+            font-weight: 800;
+            letter-spacing: -0.04em;
+        }
+
+        .brand-footer {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #c4b5fd;
+            font-size: 12px;
             font-weight: 700;
-            color: #ffffff;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            position: absolute;
+            left: 52px;
+            bottom: 46px;
+        }
+
+        .brand-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 999px;
+            background: #34d399;
+            box-shadow: 0 0 18px rgba(52, 211, 153, 0.45);
+        }
+
+        .login-panel {
+            padding: 44px 40px;
+            background: linear-gradient(180deg, rgba(24, 4, 37, 0.96) 0%, rgba(11, 2, 22, 0.98) 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .panel-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            width: fit-content;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(207, 0, 218, 0.1);
+            border: 1px solid rgba(207, 0, 218, 0.2);
+            color: #f0abfc;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            margin-bottom: 18px;
+        }
+
+        .panel-title {
+            font-size: 30px;
+            font-weight: 800;
+            letter-spacing: -0.04em;
             margin-bottom: 8px;
-            opacity: 0;
-            animation: slideDown 0.6s ease-out 0.1s forwards;
         }
 
-        .logo-subtitle {
+        .panel-copy {
+            color: var(--text-dim);
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 28px;
+        }
+
+        .error-message {
+            display: none;
+            margin-bottom: 18px;
+            padding: 12px 14px;
+            border-radius: 12px;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.25);
+            color: #fecaca;
             font-size: 13px;
-            color: #94a3b8;
-            font-weight: 500;
-            letter-spacing: 1px;
-            opacity: 0;
-            animation: slideDown 0.6s ease-out 0.2s forwards;
+            font-weight: 600;
         }
 
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        .error-message.show {
+            display: block;
         }
 
         .form-group {
-            margin-bottom: 24px;
+            margin-bottom: 18px;
         }
 
         .form-label {
             display: block;
-            font-size: 13px;
-            font-weight: 600;
-            color: #cbd5e1;
             margin-bottom: 8px;
+            color: #cbd5e1;
+            font-size: 11px;
+            font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.16em;
         }
 
         .form-input-wrapper {
             position: relative;
         }
 
+        .form-icon {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #8b7ba8;
+            font-size: 20px;
+            pointer-events: none;
+            transition: color 0.2s ease;
+        }
+
         .form-input {
             width: 100%;
-            padding: 12px 16px 12px 44px;
-            background: rgba(2, 6, 23, 0.5);
-            border: 1.5px solid rgba(255, 255, 255, 0.08);
-            border-radius: 10px;
-            color: #ffffff;
+            padding: 15px 46px 15px 48px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text);
             font-size: 14px;
-            transition: all 0.3s ease;
-            font-family: 'Inter', sans-serif;
+            font-family: inherit;
+            transition: all 0.2s ease;
         }
 
         .form-input::placeholder {
-            color: #64748b;
+            color: #75688e;
         }
 
         .form-input:focus {
             outline: none;
-            background: rgba(14, 165, 233, 0.05);
-            border-color: #0ea5e9;
-            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
-        }
-
-        .form-icon {
-            position: absolute;
-            left: 14px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #94a3b8;
-            font-size: 20px;
-            transition: color 0.3s ease;
-            pointer-events: none;
+            border-color: rgba(207, 0, 218, 0.55);
+            background: rgba(207, 0, 218, 0.05);
+            box-shadow: 0 0 0 3px rgba(207, 0, 218, 0.12);
         }
 
         .form-input-wrapper:has(.form-input:focus) .form-icon {
-            color: #0ea5e9;
+            color: #f0abfc;
         }
 
         .toggle-password {
@@ -151,131 +290,141 @@
             right: 12px;
             top: 50%;
             transform: translateY(-50%);
-            background: none;
             border: none;
-            color: #94a3b8;
-            cursor: pointer;
-            padding: 4px;
-            display: flex;
+            background: none;
+            color: #8b7ba8;
+            width: 28px;
+            height: 28px;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
-            transition: color 0.3s ease;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s ease;
         }
 
         .toggle-password:hover {
-            color: #cbd5e1;
-        }
-
-        .error-message {
-            display: none;
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            border-radius: 10px;
-            padding: 12px;
-            margin-bottom: 24px;
-            color: #fca5a5;
-            font-size: 13px;
-            font-weight: 500;
-            text-align: center;
-            animation: shake 0.4s ease-in-out;
-        }
-
-        .error-message.show {
-            display: block;
-        }
-
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            75% { transform: translateX(5px); }
+            color: var(--text);
+            background: rgba(255, 255, 255, 0.04);
         }
 
         .submit-btn {
             width: 100%;
-            padding: 13px;
-            background: linear-gradient(135deg, #0ea5e9, #0284c7);
+            margin-top: 8px;
+            padding: 15px 18px;
             border: none;
-            border-radius: 10px;
-            color: #ffffff;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--primary), #ff00ea);
+            color: white;
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            cursor: pointer;
+            box-shadow: 0 12px 28px rgba(207, 0, 218, 0.28);
+            transition: all 0.2s ease;
         }
 
         .submit-btn:hover:not(:disabled) {
-            background: linear-gradient(135deg, #06b6d4, #0284c7);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(14, 165, 233, 0.3);
-        }
-
-        .submit-btn:active:not(:disabled) {
-            transform: translateY(0);
+            transform: translateY(-1px);
+            background: linear-gradient(135deg, var(--primary-hover), #ff33ef);
+            box-shadow: 0 16px 34px rgba(207, 0, 218, 0.36);
         }
 
         .submit-btn:disabled {
-            opacity: 0.7;
+            opacity: 0.72;
             cursor: not-allowed;
         }
 
         .submit-btn.success {
             background: linear-gradient(135deg, #10b981, #059669);
+            box-shadow: 0 14px 28px rgba(16, 185, 129, 0.28);
         }
 
         .footer-text {
+            margin-top: 20px;
             text-align: center;
-            margin-top: 32px;
-            font-size: 12px;
-            color: #64748b;
+            color: #7d7193;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.05em;
         }
 
-        @media (max-width: 480px) {
-            .login-card {
-                padding: 36px 24px;
+        @media (max-width: 920px) {
+            body {
+                padding: 18px;
             }
 
-            .logo-title {
-                font-size: 24px;
+            .login-shell {
+                grid-template-columns: 1fr;
             }
 
-            .form-group {
-                margin-bottom: 20px;
+            .brand-panel {
+                min-height: auto;
+                padding: 36px 28px;
+                background:
+                    linear-gradient(160deg, rgba(207, 0, 218, 0.1) 0%, rgba(16, 2, 28, 0.18) 45%, rgba(10, 1, 24, 0.92) 100%);
+            }
+
+            .brand-footer {
+                position: static;
+                margin-top: 32px;
+            }
+
+            .login-panel {
+                padding: 30px 24px 28px;
+            }
+
+            .background-frame::after {
+                inset: 56px 28px;
             }
         }
     </style>
 </head>
 <body>
-    <div class="login-container">
-        <div class="login-card">
-            <!-- Logo Section -->
-            <div class="logo-section">
-                <div class="logo">
-                    <img src="assets/logo.png" alt="ViaAI" class="logo-img">
+    <div class="background-grid"></div>
+    <div class="background-frame"></div>
+
+    <div class="login-shell">
+        <section class="brand-panel">
+            <div class="brand-block">
+                <div class="brand-mark">
+                    <div class="brand-icon">
+                        <img src="assets/logo.png" alt="ViaBox">
+                    </div>
+                    <div class="brand-name">ViaBox</div>
                 </div>
-                <h1 class="logo-title">ViaAI Voice</h1>
-                <p class="logo-subtitle">SECURE ACCESS</p>
             </div>
 
-            <!-- Form -->
+            <div class="brand-footer">
+                <span class="brand-dot"></span>
+                <span>Sistema Operativo Activo</span>
+            </div>
+        </section>
+
+        <section class="login-panel">
+            <div class="panel-chip">
+                <span class="material-symbols-rounded" style="font-size:16px;">lock</span>
+                <span>ViaBox</span>
+            </div>
+            <h2 class="panel-title">Iniciar sesión</h2>
+            <p class="panel-copy">Accede con tu usuario y contraseña para entrar al panel.</p>
+
             <form id="login-form">
-                <!-- Error Message -->
                 <div id="error-msg" class="error-message"></div>
 
-                <!-- Username -->
                 <div class="form-group">
                     <label class="form-label">Usuario</label>
                     <div class="form-input-wrapper">
                         <span class="material-symbols-rounded form-icon">person</span>
-                        <input 
-                            id="username" 
-                            type="text" 
-                            class="form-input" 
+                        <input
+                            id="username"
+                            type="text"
+                            class="form-input"
                             placeholder="Ingresa tu usuario"
                             autocomplete="off"
                             required
@@ -283,15 +432,14 @@
                     </div>
                 </div>
 
-                <!-- Password -->
                 <div class="form-group">
                     <label class="form-label">Contraseña</label>
                     <div class="form-input-wrapper">
                         <span class="material-symbols-rounded form-icon">lock</span>
-                        <input 
-                            id="password" 
-                            type="password" 
-                            class="form-input" 
+                        <input
+                            id="password"
+                            type="password"
+                            class="form-input"
                             placeholder="Ingresa tu contraseña"
                             autocomplete="off"
                             required
@@ -302,16 +450,14 @@
                     </div>
                 </div>
 
-                <!-- Submit Button -->
                 <button type="submit" id="submit-btn" class="submit-btn">
-                    <span>ACCEDER</span>
+                    <span>Acceder</span>
                     <span class="material-symbols-rounded" style="font-size: 20px;">arrow_forward</span>
                 </button>
             </form>
 
-            <!-- Footer -->
-            <p class="footer-text">© 2026 ViaAI. Todos los derechos reservados.</p>
-        </div>
+            <p class="footer-text">© 2026 ViaBox. Todos los derechos reservados.</p>
+        </section>
     </div>
 
     <script>
@@ -322,7 +468,6 @@
         const submitBtn = document.getElementById('submit-btn');
         const errorMsg = document.getElementById('error-msg');
 
-        // Toggle password visibility
         togglePwBtn.addEventListener('click', (e) => {
             e.preventDefault();
             const isPassword = passwordInput.type === 'password';
@@ -330,10 +475,9 @@
             togglePwBtn.innerHTML = `<span class="material-symbols-rounded" style="font-size: 20px;">${isPassword ? 'visibility' : 'visibility_off'}</span>`;
         });
 
-        // Handle form submission
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const username = usernameInput.value.trim();
             const password = passwordInput.value;
 
@@ -344,7 +488,7 @@
 
             errorMsg.classList.remove('show');
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span>AUTENTICANDO...</span>';
+            submitBtn.innerHTML = '<span>Autenticando...</span>';
 
             try {
                 const response = await fetch('/api/login', {
@@ -357,25 +501,23 @@
                 const data = await response.json();
 
                 if (response.ok && data.success) {
-                    // Success animation
                     submitBtn.classList.add('success');
-                    submitBtn.innerHTML = '<span>ACCESO CONCEDIDO</span><span class="material-symbols-rounded" style="font-size: 20px;">check_circle</span>';
-                    
-                    // Fade out and redirect
-                    document.querySelector('.login-container').style.opacity = '0';
-                    document.querySelector('.login-container').style.transform = 'scale(0.95)';
-                    document.querySelector('.login-container').style.transition = 'all 0.4s ease';
-                    
+                    submitBtn.innerHTML = '<span>Acceso concedido</span><span class="material-symbols-rounded" style="font-size: 20px;">check_circle</span>';
+
+                    document.querySelector('.login-shell').style.opacity = '0';
+                    document.querySelector('.login-shell').style.transform = 'scale(0.98)';
+                    document.querySelector('.login-shell').style.transition = 'all 0.35s ease';
+
                     setTimeout(() => {
                         window.location.href = '/selection';
-                    }, 600);
+                    }, 500);
                 } else {
                     throw new Error(data.message || 'Credenciales inválidas');
                 }
             } catch (error) {
                 showError(error.message);
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = '<span>ACCEDER</span><span class="material-symbols-rounded" style="font-size: 20px;">arrow_forward</span>';
+                submitBtn.innerHTML = '<span>Acceder</span><span class="material-symbols-rounded" style="font-size: 20px;">arrow_forward</span>';
             }
         });
 
@@ -387,7 +529,6 @@
             }, 4000);
         }
 
-        // Focus on username input on load
         window.addEventListener('load', () => {
             usernameInput.focus();
         });

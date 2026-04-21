@@ -401,12 +401,79 @@ const initDashboardApp = () => {
   const textInput = document.getElementById('prompt-text');
   const savePromptBtn = document.getElementById('save-prompt-btn');
   const newPromptBtn = document.getElementById('new-prompt-btn');
+  const voiceIdInput = document.getElementById('voice-id-input');
+  const voiceModelInput = document.getElementById('voice-model-input');
+  const voiceSpeedInput = document.getElementById('voice-speed-input');
+  const voiceSpeedValue = document.getElementById('voice-speed-value');
+  const voiceStabilityInput = document.getElementById('voice-stability-input');
+  const voiceStabilityValue = document.getElementById('voice-stability-value');
+  const voiceSimilarityInput = document.getElementById('voice-similarity-input');
+  const voiceSimilarityValue = document.getElementById('voice-similarity-value');
+  const voiceStyleInput = document.getElementById('voice-style-input');
+  const voiceStyleValue = document.getElementById('voice-style-value');
+  const voiceLatencyInput = document.getElementById('voice-latency-input');
+  const voiceNormalizationInput = document.getElementById('voice-normalization-input');
+  const voiceSpeakerBoostInput = document.getElementById('voice-speaker-boost-input');
+  const saveVoiceSettingsBtn = document.getElementById('save-voice-settings-btn');
+  const previewVoiceSettingsBtn = document.getElementById('preview-voice-settings-btn');
+  const voicePreviewText = document.getElementById('voice-preview-text');
 
   let currentPrompts = [];
   let activeId = null;
 
   let currentReminderPrompts = [];
   let activeReminderId = null;
+  let currentVoiceSettings = null;
+
+  function bindVoiceRange(input, output, formatter = (value) => value) {
+    if (!input || !output) return;
+    const render = () => { output.textContent = formatter(input.value); };
+    input.addEventListener('input', render);
+    render();
+  }
+
+  bindVoiceRange(voiceSpeedInput, voiceSpeedValue, value => `${Number(value).toFixed(2)}x`);
+  bindVoiceRange(voiceStabilityInput, voiceStabilityValue, value => Number(value).toFixed(2));
+  bindVoiceRange(voiceSimilarityInput, voiceSimilarityValue, value => Number(value).toFixed(2));
+  bindVoiceRange(voiceStyleInput, voiceStyleValue, value => Number(value).toFixed(2));
+
+  function fillVoiceSettingsForm(settings) {
+    currentVoiceSettings = settings;
+    if (voiceIdInput) voiceIdInput.value = settings.voiceId || '';
+    if (voiceModelInput) voiceModelInput.value = settings.modelId || '';
+    if (voiceSpeedInput) {
+      voiceSpeedInput.value = settings.speed ?? 1;
+      voiceSpeedInput.dispatchEvent(new Event('input'));
+    }
+    if (voiceStabilityInput) {
+      voiceStabilityInput.value = settings.stability ?? 0.5;
+      voiceStabilityInput.dispatchEvent(new Event('input'));
+    }
+    if (voiceSimilarityInput) {
+      voiceSimilarityInput.value = settings.similarityBoost ?? 0.8;
+      voiceSimilarityInput.dispatchEvent(new Event('input'));
+    }
+    if (voiceStyleInput) {
+      voiceStyleInput.value = settings.style ?? 0;
+      voiceStyleInput.dispatchEvent(new Event('input'));
+    }
+    if (voiceLatencyInput) voiceLatencyInput.value = String(settings.latencyOptimization ?? 0);
+    if (voiceNormalizationInput) voiceNormalizationInput.value = settings.applyTextNormalization || 'auto';
+    if (voiceSpeakerBoostInput) voiceSpeakerBoostInput.checked = settings.useSpeakerBoost !== false;
+  }
+
+  async function loadVoiceSettings() {
+    try {
+      const response = await fetch('/api/voice-settings');
+      const data = await response.json();
+      fillVoiceSettingsForm(data);
+      if (voicePreviewText && !voicePreviewText.value.trim()) {
+        voicePreviewText.value = 'Buenas () estimado cliente. Esta es una prueba de voz para verificar velocidad, claridad y estilo.';
+      }
+    } catch (e) {
+      console.error('Error cargando voice settings:', e);
+    }
+  }
 
   async function loadPrompts() {
     try {
@@ -435,6 +502,8 @@ const initDashboardApp = () => {
           reminderTemplates = currentReminderPrompts.reduce((acc, p) => { acc[p.id] = p; return acc; }, { mensaje_personalizado: { greeting: '', text: '' } });
       }
     } catch (e) { console.error('Error cargando reminders:', e); }
+
+    await loadVoiceSettings();
   }
 
   function fillPromptFields() {
@@ -463,6 +532,44 @@ const initDashboardApp = () => {
       savePromptBtn.textContent = '✓ CAMBIOS GUARDADOS';
       setTimeout(() => savePromptBtn.textContent = 'GUARDAR CAMBIOS', 2000);
     } catch { savePromptBtn.textContent = 'ERROR'; }
+  });
+
+  saveVoiceSettingsBtn?.addEventListener('click', async () => {
+    const payload = {
+      voiceId: voiceIdInput?.value.trim(),
+      modelId: voiceModelInput?.value.trim(),
+      speed: Number(voiceSpeedInput?.value || 1),
+      stability: Number(voiceStabilityInput?.value || 0.5),
+      similarityBoost: Number(voiceSimilarityInput?.value || 0.8),
+      style: Number(voiceStyleInput?.value || 0),
+      latencyOptimization: Number(voiceLatencyInput?.value || 0),
+      applyTextNormalization: voiceNormalizationInput?.value || 'auto',
+      useSpeakerBoost: !!voiceSpeakerBoostInput?.checked
+    };
+
+    saveVoiceSettingsBtn.disabled = true;
+    saveVoiceSettingsBtn.textContent = 'GUARDANDO...';
+    try {
+      const response = await fetch('/api/voice-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'No se pudo guardar la voz');
+      fillVoiceSettingsForm(data.data || payload);
+      appAlert('✅ Voz AI actualizada. El preview y las llamadas nuevas usarán esta configuración.');
+      saveVoiceSettingsBtn.textContent = 'GUARDADO';
+      setTimeout(() => {
+        saveVoiceSettingsBtn.disabled = false;
+        saveVoiceSettingsBtn.textContent = 'Guardar Voz';
+      }, 1500);
+    } catch (e) {
+      console.error(e);
+      appAlert(`Error al guardar voz: ${e.message}`, true);
+      saveVoiceSettingsBtn.disabled = false;
+      saveVoiceSettingsBtn.textContent = 'Guardar Voz';
+    }
   });
 
   const reminderMessageTemplate = document.getElementById('reminder-message-template');
@@ -3398,7 +3505,30 @@ const initDashboardApp = () => {
       .trim();
   };
 
-  const getPersonalizedPreviewText = (text, overrideDomain = null) => {
+  const injectDomainContext = (text, domainValue) => {
+    if (!text) return text;
+
+    const patterns = [
+      /\bdominio\b\s*(?:\.{2,}|…)/gi,
+      /\bservicio\s+web\b\s*(?:\.{2,}|…)/gi,
+      /\bsitio\s+web\b\s*(?:\.{2,}|…)/gi,
+      /\bdesarrollo\s+web\b\s*(?:\.{2,}|…)/gi,
+      /\bp[aá]gina\s+web\b\s*(?:\.{2,}|…)/gi,
+      /\bproyecto\s+web\b\s*(?:\.{2,}|…)/gi
+    ];
+
+    let result = text;
+    for (const pattern of patterns) {
+      result = result.replace(pattern, (match) => {
+        const base = match.replace(/\s*(?:\.{2,}|…)\s*$/g, '').trim();
+        return `${base} ${domainValue}`;
+      });
+    }
+
+    return result;
+  };
+
+  function getPersonalizedPreviewText(text, overrideDomain = null) {
     if (!text) return "";
     let final = normalizeSpeechText(applyTimeGreeting(text));
     
@@ -3421,12 +3551,9 @@ const initDashboardApp = () => {
     
     if (domainName) {
         let phoneticDomain = formatDomainForSpeech(domainName);
-            
-        final = final.replace(/dominio\s*\.{2,}|…/gi, ` ${phoneticDomain} `);
-        final = final.replace(/\.{2,}/g, ` ${phoneticDomain} `);
+        final = injectDomainContext(final, phoneticDomain);
     } else {
-        final = final.replace(/dominio\s*\.{2,}|…/gi, ' su página web ');
-        final = final.replace(/\.{2,}/g, ' su página ');
+        final = injectDomainContext(final, 'su pagina web');
     }
 
     // 3. Tratamiento de Números (1 por 1 solo para teléfonos, no para montos)
@@ -3437,7 +3564,7 @@ const initDashboardApp = () => {
     
     // Limpieza final de espacios
     return final.replace(/\s+/g, ' ').trim();
-  };
+  }
 
   function getBatchCustomPayload(promptId, contextEl = null) {
     const prompt = currentReminderPrompts.find(p => p.id === promptId);
@@ -3482,6 +3609,45 @@ const initDashboardApp = () => {
     if (!text) return;
     const personalized = getPersonalizedPreviewText(text);
     playNeuralStream(personalized);
+  });
+
+  previewVoiceSettingsBtn?.addEventListener('click', async () => {
+    const text = voicePreviewText?.value?.trim();
+    if (!text) return appAlert('Escribe un texto para probar la voz.', true);
+
+    const payload = {
+      voiceId: voiceIdInput?.value.trim(),
+      modelId: voiceModelInput?.value.trim(),
+      speed: Number(voiceSpeedInput?.value || 1),
+      stability: Number(voiceStabilityInput?.value || 0.5),
+      similarityBoost: Number(voiceSimilarityInput?.value || 0.8),
+      style: Number(voiceStyleInput?.value || 0),
+      latencyOptimization: Number(voiceLatencyInput?.value || 0),
+      applyTextNormalization: voiceNormalizationInput?.value || 'auto',
+      useSpeakerBoost: !!voiceSpeakerBoostInput?.checked
+    };
+
+    previewVoiceSettingsBtn.disabled = true;
+    previewVoiceSettingsBtn.innerHTML = '<span class="material-symbols-outlined text-[14px]">hourglass_top</span> Probando';
+    try {
+      const saveResp = await fetch('/api/voice-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const saveData = await saveResp.json();
+      if (!saveResp.ok) throw new Error(saveData.error || 'No se pudo aplicar la configuración');
+      fillVoiceSettingsForm(saveData.data || payload);
+
+      const personalized = getPersonalizedPreviewText(text);
+      await playNeuralStream(personalized);
+    } catch (e) {
+      console.error(e);
+      appAlert(`Error al probar la voz: ${e.message}`, true);
+    } finally {
+      previewVoiceSettingsBtn.disabled = false;
+      previewVoiceSettingsBtn.innerHTML = '<span class="material-symbols-outlined text-[14px]">play_circle</span> Probar';
+    }
   });
 
   window.previewLocalVoice = (key) => {
