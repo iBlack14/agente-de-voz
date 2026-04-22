@@ -349,8 +349,8 @@ router.get('/updates', async (req, res) => {
 router.post('/updates', async (req, res) => {
   try {
     const { domain, phone, execution_date, notes } = req.body;
-    if (!domain || !execution_date) {
-      return res.status(400).json({ error: 'Dominio y fecha son obligatorios' });
+    if (!execution_date) {
+      return res.status(400).json({ error: 'La fecha es obligatoria' });
     }
     const data = await updatesService.createUpdate({ domain, phone, execution_date, notes });
     res.json(data);

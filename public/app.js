@@ -2850,7 +2850,7 @@ const initDashboardApp = () => {
       const catMatch = item.notes?.match(/\[CAT:(.*?)\]/);
       if (catMatch) {
         const catName = catMatch[1].trim();
-        const key = `cat_${catName}`;
+        const key = `cat_${catName.toUpperCase()}`;
         if (!acc[key]) {
           acc[key] = {
             key,
@@ -3291,12 +3291,18 @@ const initDashboardApp = () => {
     const newName = await appPrompt(`Renombrar cuadro "${oldName}" a:`, oldName);
     if (!newName || newName === oldName) return;
 
-    const itemsToUpdate = currentUpdates.filter(u => u.notes?.includes(`[CAT:${oldName}]`));
+    const itemsToUpdate = currentUpdates.filter(u => {
+      const match = u.notes?.match(/\[CAT:(.*?)\]/);
+      return match && match[1].trim().toUpperCase() === oldName.toUpperCase();
+    });
+
     if (itemsToUpdate.length === 0) return;
 
     let successCount = 0;
     for (const item of itemsToUpdate) {
-      const newNotes = item.notes.replace(`[CAT:${oldName}]`, `[CAT:${newName}]`);
+      const match = item.notes.match(/\[CAT:(.*?)\]/);
+      const currentCatTag = match[0];
+      const newNotes = item.notes.replace(currentCatTag, `[CAT:${newName.toUpperCase()}]`);
       try {
         const resp = await fetch(`/api/updates/${item.id}`, {
           method: 'PUT',
@@ -3804,7 +3810,7 @@ const initDashboardApp = () => {
     const execution_date = document.getElementById('new-update-date').value;
     const notes = document.getElementById('new-update-notes').value.trim();
 
-    if (!domain || !execution_date) return appAlert('Dominio y fecha son obligatorios.', true);
+    if (!execution_date) return appAlert('La fecha de renovación es obligatoria.', true);
 
     try {
       btn.disabled = true;
