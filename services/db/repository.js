@@ -12,6 +12,20 @@ module.exports = {
     const transcript = Array.isArray(entry.transcript) ? entry.transcript : null;
 
     try {
+        // 1. Check current status to avoid overwriting terminal states (race condition)
+        const { data: existing } = await supabase
+            .from('calls')
+            .select('status')
+            .eq('call_id', callId)
+            .single();
+
+        const terminalStatuses = ['answered', 'completed', 'no_answer', 'failed', 'busy', 'reminder_completed', 'hangup', 'ws_close'];
+        if (existing && terminalStatuses.includes(existing.status) && entry.status === 'queued') {
+            // console.debug(`[Repository] Skipping status overwrite for ${callId}: current=${existing.status}, new=queued`);
+            // We still update other fields but keep the terminal status
+            entry.status = existing.status;
+        }
+
         const { error } = await supabase.from('calls').upsert({
             call_id: callId,
             direction: entry.direction,

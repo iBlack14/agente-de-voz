@@ -35,6 +35,7 @@ module.exports = {
     stream_bidirectional_mode: 'rtp',
     stream_bidirectional_codec: 'PCMU',
     stream_bidirectional_sampling_rate: 8000,
+    timeout_secs: 60,
     client_state: Buffer.from(JSON.stringify({ domain, ...metadata })).toString('base64')
   }),
   hangupCall: (callId) => telnyxRequest('POST', `/calls/${callId}/actions/hangup`)

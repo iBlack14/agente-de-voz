@@ -28,11 +28,11 @@ router.post('/telnyx', async (req, res) => {
     else if (direction === 'outgoing' || direction === 'outbound') direction = 'outbound';
 
     const shouldStartInbound = type === 'call.initiated' && direction === 'inbound';
-    const shouldStartOutbound = type === 'call.answered' && direction === 'outbound';
+    const shouldStartOutbound = (type === 'call.answered' || type === 'call.initiated') && direction === 'outbound';
 
     if ((shouldStartInbound || shouldStartOutbound) && !processedCalls.has(callId)) {
       addProcessedCall(callId);
-      if (shouldStartOutbound) addInflightOutbound(callId);
+      if (direction === 'outbound') addInflightOutbound(callId);
       console.log(`[Webhook] 🚀 Incoming Voice Flux (${type} | ${direction})`);
 
       logCall({
