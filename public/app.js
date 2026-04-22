@@ -120,6 +120,118 @@ const initDashboardApp = () => {
       });
   };
 
+  window.appConfirm = function(msg, options = {}) {
+      const modal = document.getElementById('custom-confirm-modal');
+      const content = document.getElementById('custom-confirm-content');
+      const title = document.getElementById('custom-confirm-title');
+      const text = document.getElementById('custom-confirm-text');
+      const cancelBtn = document.getElementById('custom-confirm-cancel');
+      const confirmBtn = document.getElementById('custom-confirm-submit');
+
+      title.textContent = options.title || 'Confirmación';
+      text.textContent = msg;
+      cancelBtn.textContent = options.cancelText || 'Cancelar';
+      confirmBtn.textContent = options.confirmText || 'Confirmar';
+
+      modal.classList.add('visible');
+      setTimeout(() => {
+          content.style.transform = 'scale(1)';
+          confirmBtn.focus();
+      }, 10);
+
+      return new Promise(resolve => {
+          const cleanup = () => {
+              content.style.transform = 'scale(0.95)';
+              modal.classList.remove('visible');
+              cancelBtn.removeEventListener('click', onCancel);
+              confirmBtn.removeEventListener('click', onConfirm);
+              modal.removeEventListener('click', onBackdrop);
+          };
+
+          const onCancel = () => {
+              cleanup();
+              resolve(false);
+          };
+
+          const onConfirm = () => {
+              cleanup();
+              resolve(true);
+          };
+
+          const onBackdrop = (e) => {
+              if (e.target === modal) onCancel();
+          };
+
+          cancelBtn.addEventListener('click', onCancel);
+          confirmBtn.addEventListener('click', onConfirm);
+          modal.addEventListener('click', onBackdrop);
+      });
+  };
+
+  window.appSchedule = function(options = {}) {
+      const modal = document.getElementById('custom-schedule-modal');
+      const content = document.getElementById('custom-schedule-content');
+      const text = document.getElementById('custom-schedule-text');
+      const intervalSelect = document.getElementById('custom-schedule-interval');
+      const countSelect = document.getElementById('custom-schedule-count');
+      const summary = document.getElementById('custom-schedule-summary');
+      const cancelBtn = document.getElementById('custom-schedule-cancel');
+      const confirmBtn = document.getElementById('custom-schedule-submit');
+
+      text.textContent = options.message || 'Define cada cuánto y cuántas veces se ejecutará este lote.';
+      intervalSelect.value = String(options.intervalHours || 2);
+      countSelect.value = String(options.repeatCount || 3);
+
+      const refreshSummary = () => {
+          const intervalHours = parseInt(intervalSelect.value || '2', 10);
+          const repeatCount = parseInt(countSelect.value || '3', 10);
+          summary.textContent = `Se programará ${repeatCount} ${repeatCount === 1 ? 'vez' : 'veces'}, cada ${intervalHours} hora${intervalHours === 1 ? '' : 's'}.`;
+      };
+      refreshSummary();
+
+      modal.classList.add('visible');
+      setTimeout(() => {
+          initPremiumSelects();
+          content.style.transform = 'scale(1)';
+          intervalSelect.focus();
+      }, 10);
+
+      return new Promise(resolve => {
+          const cleanup = () => {
+              content.style.transform = 'scale(0.95)';
+              modal.classList.remove('visible');
+              cancelBtn.removeEventListener('click', onCancel);
+              confirmBtn.removeEventListener('click', onConfirm);
+              modal.removeEventListener('click', onBackdrop);
+              intervalSelect.removeEventListener('change', refreshSummary);
+              countSelect.removeEventListener('change', refreshSummary);
+          };
+
+          const onCancel = () => {
+              cleanup();
+              resolve(null);
+          };
+
+          const onConfirm = () => {
+              cleanup();
+              resolve({
+                  intervalHours: parseInt(intervalSelect.value || '2', 10),
+                  repeatCount: parseInt(countSelect.value || '3', 10)
+              });
+          };
+
+          const onBackdrop = (e) => {
+              if (e.target === modal) onCancel();
+          };
+
+          cancelBtn.addEventListener('click', onCancel);
+          confirmBtn.addEventListener('click', onConfirm);
+          modal.addEventListener('click', onBackdrop);
+          intervalSelect.addEventListener('change', refreshSummary);
+          countSelect.addEventListener('change', refreshSummary);
+      });
+  };
+
   // ─── Tabs Navigation ──────────────────────────────
   const sidebarNav = document.getElementById('sidebar-nav');
   const pageTitle = document.getElementById('page-title');
@@ -752,7 +864,7 @@ const initDashboardApp = () => {
   const historyBatchContainer = document.getElementById('history-batch-container');
 
   function initPremiumSelects() {
-    const selects = document.querySelectorAll('select.form-control, .updates-month-reminder, #reminder-message-template, #prompt-select, #updates-batch-reminder, #retry-interval-select, #reminder-retry');
+    const selects = document.querySelectorAll('select.form-control, .updates-month-reminder, #reminder-message-template, #prompt-select, #updates-batch-reminder, #retry-interval-select, #reminder-retry, #custom-schedule-interval, #custom-schedule-count');
     
     selects.forEach(select => {
       if (!select) return;
@@ -2086,7 +2198,37 @@ const initDashboardApp = () => {
     });
   }
 
+  function getReminderRetryPolicy(intervalValue) {
+    const hours = parseInt(intervalValue || '0', 10);
+    if (!hours) {
+      return {
+        intervalHours: 0,
+        maxAttempts: 1,
+        summary: 'Sin reintento. Se realiza una sola llamada.'
+      };
+    }
+
+    const maxAttempts = Math.max(1, Math.floor(24 / hours));
+    return {
+      intervalHours: hours,
+      maxAttempts,
+      summary: `Se intentará cada ${hours} hora${hours === 1 ? '' : 's'}, máximo ${maxAttempts} intento${maxAttempts === 1 ? '' : 's'} en 24 horas. Luego se detiene automáticamente.`
+    };
+  }
+
+  function syncReminderRetrySummary() {
+    const retrySelect = document.getElementById('reminder-retry');
+    const summaryEl = document.getElementById('reminder-retry-summary');
+    if (!retrySelect || !summaryEl) return;
+
+    const policy = getReminderRetryPolicy(retrySelect.value);
+    summaryEl.textContent = policy.summary;
+  }
+
   if (reminderForm) {
+    document.getElementById('reminder-retry')?.addEventListener('change', syncReminderRetrySummary);
+    syncReminderRetrySummary();
+
     reminderForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const phoneLines = reminderPhones.value.split('\n').filter(l => l.trim().length > 0);
@@ -2112,12 +2254,20 @@ const initDashboardApp = () => {
       const time = document.getElementById('reminder-time')?.value || 'Inmediato';
       const scheduledAt = reminderDeliveryMode === 'scheduled' ? (reminderTimeInput?.value || '') : '';
       const retry = document.getElementById('reminder-retry')?.value || '0';
+      const retryPolicy = getReminderRetryPolicy(retry);
       const msg = document.getElementById('reminder-msg').value;
       const greeting = document.getElementById('reminder-greeting')?.value || '';
 
       if (!numbers.length) return appAlert('Ingresa al menos un número válido manualmente o importándolo desde Excel/Word.', true);
       if (reminderDeliveryMode === 'scheduled' && !scheduledAt) {
         return appAlert('Selecciona fecha y hora para programar el envío.', true);
+      }
+      if (reminderDeliveryMode === 'scheduled' && retryPolicy.intervalHours > 0) {
+        const accepted = await appConfirm(
+          retryPolicy.summary,
+          { title: 'Política de reintento', confirmText: 'Continuar' }
+        );
+        if (!accepted) return;
       }
       const reminderBatch = createBatchMeta('Lote Recordatorio', numbers.length);
 
@@ -2654,13 +2804,18 @@ const initDashboardApp = () => {
           ? (isStuck ? 'text-yellow-300 bg-yellow-500/10 border-yellow-500/30' : 'text-primary bg-primary/10 border-primary/30')
           : (status === 'failed' ? 'text-orange-300 bg-orange-500/10 border-orange-500/30' : 'text-zinc-300 bg-zinc-700/30 border-zinc-600/30');
         const attempts = parseInt(s.attempts || 0, 10);
+        const retryHours = parseInt(s.retry_interval_hours || 0, 10);
+        const maxAttempts = retryHours > 0 ? Math.max(1, Math.floor(24 / retryHours)) : 1;
+        const retryMeta = retryHours > 0
+          ? `Cada ${retryHours}h · ${attempts}/${maxAttempts} intento${maxAttempts === 1 ? '' : 's'}`
+          : `Sin reintento · ${attempts || 1}/1 intento`;
         const errorLine = s.last_error ? `<p class="text-[8px] text-orange-300/80 truncate">${escapeHtml(s.last_error)}</p>` : '';
 
         return `
         <div class="p-3 rounded-lg bg-surface-container-lowest border border-zinc-800/30 flex justify-between items-center group">
           <div class="min-w-0 flex-1">
             <p class="text-[10px] font-bold text-on-surface truncate">${s.to_number}${s.domain ? ' · ' + escapeHtml(s.domain) : ''}</p>
-            <p class="text-[8px] text-zinc-500 uppercase tracking-widest">${new Date(s.scheduled_for).toLocaleString('es-ES', {hour:'2-digit', minute:'2-digit'})} (Int: ${s.retry_interval_hours}h) · Intentos: ${attempts}</p>
+            <p class="text-[8px] text-zinc-500 uppercase tracking-widest">${new Date(s.scheduled_for).toLocaleString('es-ES', {hour:'2-digit', minute:'2-digit'})} · ${retryMeta}</p>
             ${errorLine}
           </div>
           <span class="mr-2 text-[8px] font-bold uppercase tracking-widest px-2 py-1 rounded border ${statusClass}">${statusLabel}</span>
@@ -2904,7 +3059,7 @@ const initDashboardApp = () => {
           <div class="updates-month-card-icon ${group.isCustomCategory ? 'priority-icon' : ''}">
             <span class="material-symbols-outlined text-xl">${group.isCustomCategory ? 'folder_special' : 'calendar_month'}</span>
           </div>
-          <div class="flex-1 flex items-center gap-2">
+          <div class="flex-1 flex items-center gap-2 min-w-0 flex-wrap">
             <h3 class="updates-month-card-title">${escapeHtml(group.monthName)}</h3>
             ${group.isCustomCategory ? `
               <button onclick="renameCategory('${escapeHtml(group.monthName)}')" class="p-1 text-zinc-500 hover:text-primary transition-colors">
@@ -2919,7 +3074,7 @@ const initDashboardApp = () => {
             </button>
             <p class="updates-month-card-subtitle ml-auto">${itemCount} ${itemCount === 1 ? 'dominio' : 'dominios'}</p>
           </div>
-          <button onclick="openNewUpdateInBox('${group.isCustomCategory ? escapeHtml(group.monthName) : ''}', ${!group.isCustomCategory ? group.monthIndex + 1 : 'null'})" class="p-2.5 bg-primary text-white hover:scale-110 shadow-lg shadow-primary/20 rounded-xl transition-all flex items-center gap-2">
+          <button onclick="openNewUpdateInBox('${group.isCustomCategory ? escapeHtml(group.monthName) : ''}', ${!group.isCustomCategory ? group.monthIndex + 1 : 'null'})" class="updates-card-add-btn p-2.5 bg-primary text-white hover:scale-110 shadow-lg shadow-primary/20 rounded-xl transition-all flex items-center gap-2">
             <span class="material-symbols-outlined text-sm">add</span>
             <span class="text-[9px] font-black uppercase tracking-widest hidden md:inline">Agregar</span>
           </button>
@@ -2931,13 +3086,13 @@ const initDashboardApp = () => {
               <input type="checkbox" class="updates-month-select-all rounded border-white/10 bg-black/40" data-month-key="${escapeHtml(group.key)}">
               <span><span class="updates-month-selected-count">0</span> seleccionados</span>
             </label>
-             <select class="updates-month-reminder w-[350px] bg-black/40 border border-white/10 rounded-xl py-2 px-4 text-[10px] font-bold text-primary uppercase tracking-widest outline-none transition-all" onchange="updateBatchPreview(this)">
+             <select class="updates-month-reminder w-full sm:w-[350px] max-w-full bg-black/40 border border-white/10 rounded-xl py-2 px-4 text-[10px] font-bold text-primary uppercase tracking-widest outline-none transition-all" onchange="updateBatchPreview(this)">
                 ${getUpdatesReminderOptionsHtml(true)}
             </select>
           </div>
           <div class="updates-month-toolbar-right flex flex-col gap-2">
-            <button type="button" class="updates-month-call-btn px-6 py-2 bg-primary text-white font-black rounded-xl text-[10px] uppercase shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed" disabled>Llamar Ahora</button>
-            <button type="button" class="updates-month-schedule-btn px-6 py-2 bg-white/5 border border-white/5 text-white font-bold rounded-xl text-[10px] uppercase hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed" disabled>Programar</button>
+            <button type="button" class="updates-month-call-btn w-full sm:w-auto px-6 py-2 bg-primary text-white font-black rounded-xl text-[10px] uppercase shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed" disabled>Llamar Ahora</button>
+            <button type="button" class="updates-month-schedule-btn w-full sm:w-auto px-6 py-2 bg-white/5 border border-white/5 text-white font-bold rounded-xl text-[10px] uppercase hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed" disabled>Programar</button>
           </div>
         </div>
         <div class="updates-reminder-preview px-6 pb-6 hidden" id="preview-${escapeHtml(group.key)}">
@@ -3157,12 +3312,11 @@ const initDashboardApp = () => {
   }
 
   function updateSelectedCount() {
-    if (!updatesSelectedCount) return;
     const checkboxes = Array.from(document.querySelectorAll('.update-checkbox'));
     const selected = checkboxes.filter(cb => cb.checked).length;
-    updatesSelectedCount.textContent = selected;
-    if (updatesCallNowBtn) updatesCallNowBtn.disabled = selected === 0;
-    if (updatesScheduleBtn) updatesScheduleBtn.disabled = selected === 0;
+    if (updatesSelectedCount) updatesSelectedCount.textContent = selected;
+    if (updatesCallNowBtn) updatesCallNowBtn.disabled = true;
+    if (updatesScheduleBtn) updatesScheduleBtn.disabled = true;
     if (updatesSelectAll) {
       updatesSelectAll.checked = checkboxes.length > 0 && selected === checkboxes.length;
       updatesSelectAll.indeterminate = selected > 0 && selected < checkboxes.length;
@@ -3229,8 +3383,12 @@ const initDashboardApp = () => {
       return;
     }
 
-    const time = await appPrompt('Ingresa la fecha y hora para programar (YYYY-MM-DD HH:MM):', new Date().toISOString().slice(0, 16).replace('T', ' '));
-    if (!time) return;
+    const scheduleConfig = await appSchedule({
+      message: 'Define cada cuánto y cuántas veces se ejecutará este lote.',
+      intervalHours: 2,
+      repeatCount: 3
+    });
+    if (!scheduleConfig) return;
 
     try {
       if (triggerButton) {
@@ -3240,11 +3398,17 @@ const initDashboardApp = () => {
       const resp = await fetch('/api/updates/schedule-batch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ updateIds: selectedIds, promptId, scheduledFor: new Date(time).toISOString(), ...(customPayload || {}) })
+        body: JSON.stringify({
+          updateIds: selectedIds,
+          promptId,
+          repeatEveryHours: scheduleConfig.intervalHours,
+          repeatCount: scheduleConfig.repeatCount,
+          ...(customPayload || {})
+        })
       });
       const result = await resp.json();
       if (result.success) {
-        appAlert(`Éxito: ${result.scheduled} llamadas programadas para ${time}.`);
+        appAlert(`Éxito: ${result.scheduled} llamadas programadas. Se ejecutarán ${scheduleConfig.repeatCount} veces, cada ${scheduleConfig.intervalHours} hora${scheduleConfig.intervalHours === 1 ? '' : 's'}.`);
       } else {
         appAlert(`Error: ${result.error}`, true);
       }
@@ -3339,15 +3503,11 @@ const initDashboardApp = () => {
   };
 
   updatesCallNowBtn?.addEventListener('click', async () => {
-    const selectedIds = Array.from(document.querySelectorAll('.update-checkbox:checked')).map(cb => cb.dataset.id);
-    const promptId = updatesBatchReminder.value;
-    await triggerUpdatesBatchAction({ selectedIds, promptId, mode: 'call', triggerButton: updatesCallNowBtn });
+    appAlert('Las acciones de lote se ejecutan desde cada cuadro.', true);
   });
 
   updatesScheduleBtn?.addEventListener('click', async () => {
-    const selectedIds = Array.from(document.querySelectorAll('.update-checkbox:checked')).map(cb => cb.dataset.id);
-    const promptId = updatesBatchReminder.value;
-    await triggerUpdatesBatchAction({ selectedIds, promptId, mode: 'schedule', triggerButton: updatesScheduleBtn });
+    appAlert('Las acciones de lote se ejecutan desde cada cuadro.', true);
   });
 
   // Global Preview logic
@@ -3858,8 +4018,11 @@ const initDashboardApp = () => {
       const purgeRemindersBtn = document.getElementById('purge-reminders-btn');
       if (purgeRemindersBtn) {
         purgeRemindersBtn.addEventListener('click', async () => {
-          const confirm = await appPrompt('Escribe "PURGAR" para confirmar la eliminación de todos los recordatorios pendientes:', 'PURGAR');
-          if (confirm === 'PURGAR') {
+          const confirmed = await appConfirm(
+            'Se eliminarán todos los recordatorios pendientes.',
+            { title: 'Confirmar purga', confirmText: 'Purgar' }
+          );
+          if (confirmed) {
             try {
               const resp = await fetch('/api/scheduled', { method: 'DELETE' });
               const result = await resp.json();
@@ -3880,8 +4043,11 @@ const initDashboardApp = () => {
       const purgeHistoryBtn = document.getElementById('purge-history-btn');
       if (purgeHistoryBtn) {
         purgeHistoryBtn.addEventListener('click', async () => {
-          const confirm = await appPrompt('Escribe "BORRAR TODO" para confirmar la eliminación PERMANENTE de todo el historial de llamadas:', 'BORRAR TODO');
-          if (confirm === 'BORRAR TODO') {
+          const confirmed = await appConfirm(
+            'Se eliminará permanentemente todo el historial de llamadas.',
+            { title: 'Confirmar eliminación', confirmText: 'Borrar todo' }
+          );
+          if (confirmed) {
             try {
               const resp = await fetch('/api/history', { method: 'DELETE' });
               const result = await resp.json();

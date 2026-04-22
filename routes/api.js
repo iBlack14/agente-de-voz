@@ -361,11 +361,19 @@ router.post('/updates', async (req, res) => {
 
 router.post('/updates/schedule-batch', async (req, res) => {
   try {
-    const { updateIds, promptId, scheduledFor, customGreeting, customInstructions } = req.body;
+    const { updateIds, promptId, scheduledFor, repeatEveryHours, repeatCount, customGreeting, customInstructions } = req.body;
     if (!updateIds || !promptId) {
       return res.status(400).json({ error: 'updateIds y promptId son requeridos' });
     }
-    const result = await updatesService.scheduleBatch({ updateIds, promptId, scheduledFor, customGreeting, customInstructions });
+    const result = await updatesService.scheduleBatch({
+      updateIds,
+      promptId,
+      scheduledFor,
+      repeatEveryHours,
+      repeatCount,
+      customGreeting,
+      customInstructions
+    });
     
     // Trigger scheduler immediately if no scheduled date (immediate call)
     if (!scheduledFor) {

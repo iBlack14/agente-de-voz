@@ -49,7 +49,7 @@ module.exports = {
     /**
      * Schedule a batch of calls from updates
      */
-    scheduleBatch: async ({ updateIds, promptId, scheduledFor, customGreeting, customInstructions }) => {
+    scheduleBatch: async ({ updateIds, promptId, scheduledFor, repeatEveryHours, repeatCount, customGreeting, customInstructions }) => {
         // 1. Fetch updates to get phone numbers and domains
         const { data: updates, error: fetchError } = await supabase
             .from('updates')
@@ -100,19 +100,33 @@ module.exports = {
 
         const greetingBase = typeof customGreeting === 'string' ? customGreeting : prompt.greeting;
         const instructionsBase = typeof customInstructions === 'string' ? customInstructions : prompt.text;
+        const intervalHours = Math.max(1, parseInt(repeatEveryHours || 2, 10));
+        const totalRuns = Math.max(1, parseInt(repeatCount || (scheduledFor ? 1 : 3), 10));
+        const firstRunAt = scheduledFor ? new Date(scheduledFor) : new Date();
 
         // 4. Prepare scheduled calls with personalized content
         const scheduledCalls = updates
             .filter(u => u.phone) // Only those with phones
-            .map(u => ({
-                to_number: u.phone,
-                domain: u.domain,
-                batch_label: `Campana ${prompt.name}`,
-                greeting: personalizeText(greetingBase, u.domain),
-                instructions: personalizeText(instructionsBase, u.domain),
-                scheduled_for: scheduledFor || new Date().toISOString(),
-                status: 'pending'
-            }));
+            .flatMap(u => {
+                const greeting = personalizeText(greetingBase, u.domain);
+                const instructions = personalizeText(instructionsBase, u.domain);
+
+                return Array.from({ length: totalRuns }, (_, idx) => {
+                    const runAt = new Date(firstRunAt.getTime() + (idx * intervalHours * 60 * 60 * 1000));
+                    return {
+                        to_number: u.phone,
+                        domain: u.domain,
+                        batch_label: totalRuns > 1
+                            ? `Campana ${prompt.name} · ${idx + 1}/${totalRuns}`
+                            : `Campana ${prompt.name}`,
+                        greeting,
+                        instructions,
+                        scheduled_for: runAt.toISOString(),
+                        retry_interval_hours: 0,
+                        status: 'pending'
+                    };
+                });
+            });
 
         if (scheduledCalls.length === 0) return { scheduled: 0 };
 

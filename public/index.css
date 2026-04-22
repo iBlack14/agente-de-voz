@@ -342,5 +342,26 @@ select.form-control option { background: var(--bg); color: var(--text); }
 .custom-select-option:hover { background: var(--accent); color: white; }
 .custom-select-option.selected { background: rgba(207, 0, 218, 0.2); border-left: 3px solid var(--accent); }
 
+@media (max-width: 640px) {
+  .custom-select-trigger {
+    min-height: 44px;
+    padding: 0.75rem 0.875rem;
+    font-size: 0.85rem;
+  }
+
+  .custom-select-options {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .custom-select-option {
+    padding: 12px 14px;
+    font-size: 0.85rem;
+    white-space: normal;
+    word-break: break-word;
+  }
+}
+
 .noble-scrollbar::-webkit-scrollbar { width: 6px; }
 .noble-scrollbar::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 10px; }

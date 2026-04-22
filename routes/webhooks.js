@@ -75,14 +75,21 @@ router.post('/telnyx', async (req, res) => {
       const ctx = getCallContext(callId);
       
       if (ctx && ctx.retry_interval > 0) {
-          const nextAttempt = new Date(Date.now() + (ctx.retry_interval * 3600000)).toISOString();
-          console.log(`[Webhook] 🔄 Bucle de recordatorio: Programando siguiente llamada para ${payload.to} en ${ctx.retry_interval}h (${nextAttempt})`);
-          
-          await query(
-              `INSERT INTO scheduled_calls (to_number, batch_id, batch_label, domain, greeting, instructions, scheduled_for, retry_interval_hours)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-              [payload.to, ctx.batch_id || null, ctx.batch_label || null, ctx.domain, ctx.customGreeting, ctx.customInstructions, nextAttempt, ctx.retry_interval]
-          );
+          const currentAttempt = Number(ctx.retry_attempts || 1);
+          const maxAttempts = Number(ctx.retry_max_attempts || 1);
+
+          if (currentAttempt < maxAttempts) {
+              const nextAttempt = new Date(Date.now() + (ctx.retry_interval * 3600000)).toISOString();
+              console.log(`[Webhook] 🔄 Reintento ${currentAttempt + 1}/${maxAttempts}: Programando siguiente llamada para ${payload.to} en ${ctx.retry_interval}h (${nextAttempt})`);
+              
+              await query(
+                  `INSERT INTO scheduled_calls (to_number, batch_id, batch_label, domain, greeting, instructions, scheduled_for, retry_interval_hours, attempts)
+                   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+                  [payload.to, ctx.batch_id || null, ctx.batch_label || null, ctx.domain, ctx.customGreeting, ctx.customInstructions, nextAttempt, ctx.retry_interval, currentAttempt]
+              );
+          } else {
+              console.log(`[Webhook] ⏹️ Reintentos detenidos para ${payload.to}. Se alcanzó el máximo de ${maxAttempts} intento(s) en 24h.`);
+          }
       }
     }
 

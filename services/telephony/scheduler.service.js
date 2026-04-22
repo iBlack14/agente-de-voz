@@ -4,6 +4,18 @@ const { setCallContext } = require('./context.service');
 const { logCall } = require('../db/repository');
 const { callQueue } = require('./queue.service');
 
+function getRetryPolicy(intervalHours) {
+    const hours = Number(intervalHours || 0);
+    if (!Number.isFinite(hours) || hours <= 0) {
+        return { intervalHours: 0, maxAttempts: 1 };
+    }
+
+    return {
+        intervalHours: hours,
+        maxAttempts: Math.max(1, Math.floor(24 / hours))
+    };
+}
+
 /**
  * Periodically checks for scheduled calls and triggers them if due.
  */
@@ -63,12 +75,15 @@ async function processScheduledCalls() {
                     
                     const callId = result.data?.call_control_id;
                     if (callId) {
+                        const retryPolicy = getRetryPolicy(task.retry_interval_hours);
                         setCallContext(callId, { 
                             domain: task.domain, 
                             mode: 'reminder', 
                             customGreeting: task.greeting, 
                             customInstructions: task.instructions,
                             retry_interval: task.retry_interval_hours,
+                            retry_attempts: (task.attempts || 0) + 1,
+                            retry_max_attempts: retryPolicy.maxAttempts,
                             batch_id: task.batch_id || null,
                             batch_label: task.batch_label || null
                         });
@@ -92,7 +107,12 @@ async function processScheduledCalls() {
                 
                 await supabase
                     .from('scheduled_calls')
-                    .update({ status: 'completed', updated_at: new Date().toISOString() })
+                    .update({ 
+                        status: 'completed',
+                        attempts: (task.attempts || 0) + 1,
+                        last_error: null,
+                        updated_at: new Date().toISOString()
+                    })
                     .eq('id', task.id);
 
             } catch (err) {
