@@ -10,29 +10,41 @@ const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 Days
 // Middleware to protect routes (HOISTED for use)
 const restrictAccess = async (req, res, next) => {
   try {
-    const publicPaths = ['/login', '/api/login', '/webhook/telnyx', '/health', '/partials/', '/assets/'];
+    const publicPaths = ['/api/login', '/webhook/telnyx', '/health', '/partials/', '/assets/'];
     const isPublic = publicPaths.some(p => req.path.startsWith(p));
     const isStatic = req.path.match(/\.(css|js|png|jpg|jpeg|gif|svg|ico)$/i);
     const isWS = req.headers.upgrade === 'websocket';
 
-    if (isPublic || isStatic || isWS) return next();
+    if (isStatic || isWS || isPublic) return next();
 
     const cookies = parseCookies(req.headers.cookie || '');
     const token = cookies.auth_token;
     
-    if (!token) return handleUnauth(req, res);
+    let isValidSession = false;
+    if (token) {
+      const { data: session, error } = await supabase
+        .from('auth_sessions')
+        .select('*')
+        .eq('token', token)
+        .single();
 
-    // Check Supabase session
-    const { data: session, error } = await supabase
-      .from('auth_sessions')
-      .select('*')
-      .eq('token', token)
-      .single();
-
-    if (error || !session || session.expires_at < Date.now()) {
-      if (token && !error) await supabase.from('auth_sessions').delete().eq('token', token);
-      return handleUnauth(req, res);
+      if (!error && session && session.expires_at > Date.now()) {
+        isValidSession = true;
+      } else if (token) {
+        await supabase.from('auth_sessions').delete().eq('token', token).catch(() => {});
+      }
     }
+
+    // Si ya está autenticado e intenta ir al login, redirigir al dashboard
+    if (isValidSession && req.path === '/login') {
+      return res.redirect('/selection');
+    }
+
+    // Si es el path de login pero no tiene sesión válida, permitir el acceso
+    if (req.path === '/login') return next();
+
+    // Si no es un path público y no tiene sesión válida, denegar
+    if (!isValidSession) return handleUnauth(req, res);
 
     return next();
   } catch (e) {

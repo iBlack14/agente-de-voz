@@ -310,7 +310,7 @@ const initDashboardApp = () => {
     logoutConfirm.addEventListener('click', async () => {
       logoutConfirm.textContent = '...';
       await fetch('/api/logout', { method: 'POST' });
-      window.location.href = '/login.html';
+      window.location.replace('/login');
     });
   }
 
@@ -749,7 +749,7 @@ const initDashboardApp = () => {
                   const errorData = await res.json();
                   if (errorData.code === 'AUTH_EXPIRED') {
                       appAlert('Expiró tu sesión. Serás redirigido al login en 3 segundos...', true);
-                      setTimeout(() => window.location.href = '/login.html', 3000);
+                      setTimeout(() => window.location.replace('/login'), 3000);
                       throw new Error('Sesión expirada');
                   }
                   throw new Error(errorData.error || 'Fallo interno al guardar en base de datos');
@@ -2375,7 +2375,7 @@ const initDashboardApp = () => {
 
                        if (resp.status === 401) {
                            appAlert('Tu sesión ha expirado por un reinicio del servidor. Inicia sesión de nuevo.', true).then(() => {
-                               window.location.href = '/login.html';
+                               window.location.replace('/login');
                            });
                            return; // abort loop
                        }
