@@ -104,6 +104,11 @@ module.exports = {
         const totalRuns = Math.max(1, parseInt(repeatCount || (scheduledFor ? 1 : 3), 10));
         const firstRunAt = scheduledFor ? new Date(scheduledFor) : new Date();
 
+        const stamp = Date.now();
+        const shortId = stamp.toString().slice(-4);
+        const commonBatchId = `batch-${shortId}-${stamp}`;
+        const commonBatchLabel = `Campaña ${prompt.name} [Vol. ${updates.length}] | ID-${shortId}`;
+
         // 4. Prepare scheduled calls with personalized content
         const scheduledCalls = updates
             .filter(u => u.phone) // Only those with phones
@@ -113,9 +118,22 @@ module.exports = {
 
                 return Array.from({ length: totalRuns }, (_, idx) => {
                     const runAt = new Date(firstRunAt.getTime() + (idx * intervalHours * 60 * 60 * 1000));
+                    
+                    // For multiple runs, we might want different batch IDs if the UI expects it for iterations,
+                    // but the user wants to see it as "one batch". 
+                    // Let's use the same commonBatchId but different labels if idx > 0?
+                    // Actually, the UI buildHistoryBatchGroups uses batchId to group.
+                    // If we want them in ONE card, they MUST have the same batchId or follow the retry: format.
+                    
+                    let batchId = commonBatchId;
+                    if (idx > 0) {
+                        batchId = `retry:${commonBatchId}:${idx}:${stamp}`;
+                    }
+
                     return {
                         to_number: u.phone,
                         domain: u.domain,
+                        batch_id: batchId,
                         batch_label: totalRuns > 1
                             ? `Campana ${prompt.name} · ${idx + 1}/${totalRuns}`
                             : `Campana ${prompt.name}`,
@@ -130,7 +148,15 @@ module.exports = {
 
         if (scheduledCalls.length === 0) return { scheduled: 0 };
 
-        // 4. Insert into scheduled_calls
+        // 5. Register the batch in call_batches for the UI to recognize it properly
+        await supabase.from('call_batches').upsert({
+            id: commonBatchId,
+            name: commonBatchLabel,
+            total_destinations: updates.length,
+            created_at: new Date().toISOString()
+        });
+
+        // 6. Insert into scheduled_calls
         const { data, error: insertError } = await supabase
             .from('scheduled_calls')
             .insert(scheduledCalls)

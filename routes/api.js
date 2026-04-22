@@ -251,6 +251,7 @@ router.get('/stats', async (req, res) => {
 
 router.delete('/history', async (req, res) => {
   try {
+    await supabase.from('call_batches').delete().neq('id', 'none');
     const { error } = await supabase.from('calls').delete().neq('status', 'in-progress'); // Don't delete active calls
     if (error) throw error;
     res.json({ success: true, message: 'Historial de llamadas purgado correctamente.' });
