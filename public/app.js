@@ -756,7 +756,10 @@ const initDashboardApp = () => {
               }
 
               await loadPrompts();
-              if (reminderMessageTemplate) reminderMessageTemplate.value = payload.id;
+              if (reminderMessageTemplate) {
+                  reminderMessageTemplate.value = payload.id;
+                  reminderMessageTemplate.dispatchEvent(new Event('change'));
+              }
 
               // Automáticamente activarlo
               await fetch('/api/reminders/active', {
@@ -840,6 +843,23 @@ const initDashboardApp = () => {
         select.value = 'mensaje_personalizado';
         await loadPrompts();
       } catch (e) { appAlert('Error al purgar guion.', true); }
+    });
+  }
+
+  const btnNewReminder = document.getElementById('btn-new-reminder');
+  if (btnNewReminder) {
+    btnNewReminder.addEventListener('click', () => {
+      const select = document.getElementById('reminder-message-template');
+      const messageTextarea = document.getElementById('reminder-msg');
+      if (select) {
+        select.value = 'mensaje_personalizado';
+        select.dispatchEvent(new Event('change'));
+      }
+      if (messageTextarea) {
+        messageTextarea.value = '';
+        messageTextarea.focus();
+      }
+      setReminderSaveButtonMode();
     });
   }
 
