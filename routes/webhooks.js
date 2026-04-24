@@ -9,7 +9,7 @@ const { getCallContext, updateCallContext } = require('../services/telephony/con
 const { hangupCall } = require('../services/telephony/telnyxClient');
 
 const ENABLE_RECORDING_FOR_REMINDERS = String(process.env.ENABLE_RECORDING_FOR_REMINDERS || 'false').toLowerCase() === 'true';
-const ENABLE_RECORDING_FOR_CONVERSATIONAL = String(process.env.ENABLE_RECORDING_FOR_CONVERSATIONAL || 'true').toLowerCase() === 'true';
+const ENABLE_RECORDING_FOR_CONVERSATIONAL = String(process.env.ENABLE_RECORDING_FOR_CONVERSATIONAL || 'false').toLowerCase() === 'true';
 
 function shouldRecordCall(callId) {
   const context = getCallContext(callId);
