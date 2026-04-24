@@ -31,6 +31,44 @@ async function telnyxRequest(method, path, data = {}) {
   }
 }
 
+async function getBalanceDetails() {
+  if (!API_KEY) {
+    return {
+      ok: false,
+      balance: null,
+      available_credit: null,
+      credit_limit: null,
+      pending: null,
+      currency: 'USD',
+      error: 'TELNYX_API_KEY no configurada'
+    };
+  }
+
+  try {
+    const response = await telnyxRequest('GET', '/balance');
+    const data = response?.data || {};
+    return {
+      ok: true,
+      balance: data.balance ?? null,
+      available_credit: data.available_credit ?? null,
+      credit_limit: data.credit_limit ?? null,
+      pending: data.pending ?? null,
+      currency: data.currency || 'USD',
+      error: null
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      balance: null,
+      available_credit: null,
+      credit_limit: null,
+      pending: null,
+      currency: 'USD',
+      error: err.response?.data?.errors?.[0]?.detail || err.message || 'No se pudo consultar el saldo de Telnyx'
+    };
+  }
+}
+
 module.exports = {
   makeOutboundCall: (to, domain, metadata = {}) => {
     const isReminder = metadata?.mode === 'reminder';
@@ -84,5 +122,6 @@ module.exports = {
       } else {
           console.debug(`[Recording] Call ${callId} already ended (expected)`);
       }
-  })
+  }),
+  getBalanceDetails
 };

@@ -9,8 +9,7 @@ const {
 const { readVoiceSettings, saveVoiceSettings } = require('../services/config/voiceSettings.service');
 const { normalizeText } = require('../services/ai/tts.service');
 const { readCallLog, logCall, getUsageStats } = require('../services/db/repository');
-const { makeOutboundCall } = require('../services/telephony/telnyxClient');
-const { hangupCall } = require('../services/telephony/telnyxClient');
+const { makeOutboundCall, hangupCall, getBalanceDetails } = require('../services/telephony/telnyxClient');
 const { setCallContext } = require('../services/telephony/context.service');
 const { isValidE164, formatToE164 } = require('../services/utils');
 const { activeSessions } = require('../services/voice/liveMonitor');
@@ -287,7 +286,19 @@ router.get('/batches/:id/failed', async (req, res) => {
 });
 
 router.get('/stats', async (req, res) => {
-  try { res.json(await getUsageStats()); } catch (err) { res.status(500).json({ error: err.message }); }
+  try {
+    const [usageStats, telnyxBalance] = await Promise.all([
+      getUsageStats(),
+      getBalanceDetails()
+    ]);
+
+    res.json({
+      ...usageStats,
+      telnyx_balance: telnyxBalance
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 router.delete('/history', async (req, res) => {

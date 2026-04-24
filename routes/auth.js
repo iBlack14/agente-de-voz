@@ -31,7 +31,11 @@ const restrictAccess = async (req, res, next) => {
       if (!error && session && session.expires_at > Date.now()) {
         isValidSession = true;
       } else if (token) {
-        await supabase.from('auth_sessions').delete().eq('token', token).catch(() => {});
+        try {
+          await supabase.from('auth_sessions').delete().eq('token', token);
+        } catch (_) {
+          // Ignore cleanup failures for expired or invalid sessions.
+        }
       }
     }
 

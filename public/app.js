@@ -479,11 +479,32 @@ const initDashboardApp = () => {
       const elTTS = document.getElementById('usage-tts-chars');
       const elSTT = document.getElementById('usage-stt-minutes');
       const elTelnyx = document.getElementById('usage-telnyx-seconds');
+      const elTelnyxBalance = document.getElementById('usage-telnyx-balance');
+      const elTelnyxBalanceStatus = document.getElementById('usage-telnyx-balance-status');
+      const telnyxBalance = data.telnyx_balance || {};
+      const currency = telnyxBalance.currency || 'USD';
+      const balanceNumber = Number.parseFloat(telnyxBalance.balance);
+      const canFormatBalance = Number.isFinite(balanceNumber);
 
       if (elGroq) elGroq.textContent = groqTokens.toLocaleString();
       if (elTTS) elTTS.textContent = ttsChars.toLocaleString();
       if (elSTT) elSTT.textContent = (sttSecs / 60).toFixed(2);
       if (elTelnyx) elTelnyx.textContent = (data.telnyx_seconds || 0).toLocaleString();
+      if (elTelnyxBalance) {
+        elTelnyxBalance.textContent = canFormatBalance
+          ? new Intl.NumberFormat('es-PE', { style: 'currency', currency }).format(balanceNumber)
+          : '--';
+      }
+      if (elTelnyxBalanceStatus) {
+        if (telnyxBalance.ok && canFormatBalance) {
+          const availableCredit = Number.parseFloat(telnyxBalance.available_credit);
+          elTelnyxBalanceStatus.textContent = Number.isFinite(availableCredit)
+            ? `Disponible: ${new Intl.NumberFormat('es-PE', { style: 'currency', currency }).format(availableCredit)}`
+            : 'Saldo sincronizado con Telnyx';
+        } else {
+          elTelnyxBalanceStatus.textContent = telnyxBalance.error || 'No se pudo consultar Telnyx';
+        }
+      }
     } catch (e) {}
   }
 
