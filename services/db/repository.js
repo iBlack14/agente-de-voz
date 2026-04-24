@@ -1,4 +1,5 @@
 const { supabase } = require('./supabase.service');
+const USAGE_LOG_BATCH_SIZE = 40;
 
 /**
  * Handles all database interactions using Supabase SDK.
@@ -80,6 +81,50 @@ module.exports = {
         if (error) throw error;
         if (!calls || !calls.length) return [];
 
+        const callIds = calls.map(r => r.call_id).filter(Boolean);
+        let usageByCall = new Map();
+
+        if (callIds.length) {
+            const usageRows = [];
+
+            for (let i = 0; i < callIds.length; i += USAGE_LOG_BATCH_SIZE) {
+                const batchIds = callIds.slice(i, i + USAGE_LOG_BATCH_SIZE);
+                const { data, error: usageError } = await supabase
+                    .from('usage_logs')
+                    .select('call_id, service, metric, value')
+                    .in('call_id', batchIds);
+
+                if (usageError) throw usageError;
+                if (data?.length) usageRows.push(...data);
+            }
+
+            usageByCall = (usageRows || []).reduce((acc, row) => {
+                const callId = row.call_id;
+                if (!callId) return acc;
+
+                if (!acc.has(callId)) {
+                    acc.set(callId, {
+                        groq_tokens_in: 0,
+                        groq_tokens_out: 0,
+                        groq_tokens_total: 0,
+                        elevenlabs_characters: 0,
+                        deepgram_seconds: 0
+                    });
+                }
+
+                const summary = acc.get(callId);
+                const value = Number(row.value) || 0;
+
+                if (row.service === 'groq' && row.metric === 'tokens_in') summary.groq_tokens_in += value;
+                if (row.service === 'groq' && row.metric === 'tokens_out') summary.groq_tokens_out += value;
+                if (row.service === 'elevenlabs' && row.metric === 'characters') summary.elevenlabs_characters += value;
+                if (row.service === 'deepgram' && row.metric === 'seconds') summary.deepgram_seconds += value;
+
+                summary.groq_tokens_total = summary.groq_tokens_in + summary.groq_tokens_out;
+                return acc;
+            }, new Map());
+        }
+
         return calls.map(r => ({
             callId: r.call_id,
             direction: r.direction,
@@ -97,6 +142,16 @@ module.exports = {
             turnCount: r.turn_count,
             status: r.status,
             recordingUrl: r.recording_url,
+            usage: {
+                ...(usageByCall.get(r.call_id) || {
+                    groq_tokens_in: 0,
+                    groq_tokens_out: 0,
+                    groq_tokens_total: 0,
+                    elevenlabs_characters: 0,
+                    deepgram_seconds: 0
+                }),
+                telnyx_seconds: Number(r.duration_sec || 0)
+            },
             // Map nested transcripts and ensure they are sorted by ID
             transcript: (r.call_transcripts || [])
                 .sort((a, b) => (a.id || 0) - (b.id || 0))

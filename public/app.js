@@ -17,6 +17,34 @@ const initDashboardApp = () => {
     const s = sec % 60;
     return `${m}m ${s < 10 ? '0' + s : s}s`;
   };
+  const formatCompactNumber = (value) => {
+    const number = Number(value || 0);
+    return new Intl.NumberFormat('es-PE', { notation: 'compact', maximumFractionDigits: 1 }).format(number);
+  };
+  const formatCurrency = (value, currency = 'USD') => {
+    const number = Number.parseFloat(value);
+    if (!Number.isFinite(number)) return '--';
+    return new Intl.NumberFormat('es-PE', { style: 'currency', currency }).format(number);
+  };
+  const getCallUsage = (call) => ({
+    groq_tokens_in: Number(call?.usage?.groq_tokens_in || 0),
+    groq_tokens_out: Number(call?.usage?.groq_tokens_out || 0),
+    groq_tokens_total: Number(call?.usage?.groq_tokens_total || 0),
+    elevenlabs_characters: Number(call?.usage?.elevenlabs_characters || 0),
+    deepgram_seconds: Number(call?.usage?.deepgram_seconds || 0),
+    telnyx_seconds: Number(call?.usage?.telnyx_seconds || call?.durationSec || 0)
+  });
+  const renderUsageChips = (call) => {
+    const usage = getCallUsage(call);
+    return `
+      <div class="flex flex-wrap gap-2 mt-3">
+        <span class="px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-[10px] font-bold text-indigo-300">Telnyx ${formatDuration(usage.telnyx_seconds)}</span>
+        <span class="px-3 py-1 rounded-full bg-fuchsia-500/10 border border-fuchsia-500/20 text-[10px] font-bold text-fuchsia-300">Groq ${formatCompactNumber(usage.groq_tokens_total)} tok</span>
+        <span class="px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-[10px] font-bold text-cyan-300">Eleven ${formatCompactNumber(usage.elevenlabs_characters)} chars</span>
+        <span class="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-bold text-emerald-300">Deepgram ${formatDuration(usage.deepgram_seconds)}</span>
+      </div>
+    `;
+  };
 
   // Mensajes predefinidos para recordatorios
   let reminderTemplates = {
@@ -481,32 +509,45 @@ const initDashboardApp = () => {
       const elTelnyx = document.getElementById('usage-telnyx-seconds');
       const elTelnyxBalance = document.getElementById('usage-telnyx-balance');
       const elTelnyxBalanceStatus = document.getElementById('usage-telnyx-balance-status');
+      const floatingTelnyxBalance = document.getElementById('floating-telnyx-balance');
+      const floatingTelnyxStatus = document.getElementById('floating-telnyx-status');
+      const floatingTelnyxAvailable = document.getElementById('floating-telnyx-available');
+      const floatingTelnyxPending = document.getElementById('floating-telnyx-pending');
+      const floatingTelnyxLimit = document.getElementById('floating-telnyx-limit');
       const telnyxBalance = data.telnyx_balance || {};
       const currency = telnyxBalance.currency || 'USD';
       const balanceNumber = Number.parseFloat(telnyxBalance.balance);
       const canFormatBalance = Number.isFinite(balanceNumber);
+      const availableCredit = Number.parseFloat(telnyxBalance.available_credit);
+      const pendingAmount = Number.parseFloat(telnyxBalance.pending);
+      const creditLimit = Number.parseFloat(telnyxBalance.credit_limit);
 
       if (elGroq) elGroq.textContent = groqTokens.toLocaleString();
       if (elTTS) elTTS.textContent = ttsChars.toLocaleString();
       if (elSTT) elSTT.textContent = (sttSecs / 60).toFixed(2);
       if (elTelnyx) elTelnyx.textContent = (data.telnyx_seconds || 0).toLocaleString();
       if (elTelnyxBalance) {
-        elTelnyxBalance.textContent = canFormatBalance
-          ? new Intl.NumberFormat('es-PE', { style: 'currency', currency }).format(balanceNumber)
-          : '--';
+        elTelnyxBalance.textContent = canFormatBalance ? formatCurrency(balanceNumber, currency) : '--';
       }
       if (elTelnyxBalanceStatus) {
         if (telnyxBalance.ok && canFormatBalance) {
-          const availableCredit = Number.parseFloat(telnyxBalance.available_credit);
           elTelnyxBalanceStatus.textContent = Number.isFinite(availableCredit)
-            ? `Disponible: ${new Intl.NumberFormat('es-PE', { style: 'currency', currency }).format(availableCredit)}`
+            ? `Disponible: ${formatCurrency(availableCredit, currency)}`
             : 'Saldo sincronizado con Telnyx';
         } else {
           elTelnyxBalanceStatus.textContent = telnyxBalance.error || 'No se pudo consultar Telnyx';
         }
       }
+      if (floatingTelnyxBalance) floatingTelnyxBalance.textContent = canFormatBalance ? formatCurrency(balanceNumber, currency) : '--';
+      if (floatingTelnyxStatus) floatingTelnyxStatus.textContent = telnyxBalance.ok ? 'Sincronizado en vivo desde Telnyx' : (telnyxBalance.error || 'No se pudo consultar Telnyx');
+      if (floatingTelnyxAvailable) floatingTelnyxAvailable.textContent = Number.isFinite(availableCredit) ? formatCurrency(availableCredit, currency) : '--';
+      if (floatingTelnyxPending) floatingTelnyxPending.textContent = Number.isFinite(pendingAmount) ? formatCurrency(pendingAmount, currency) : '--';
+      if (floatingTelnyxLimit) floatingTelnyxLimit.textContent = Number.isFinite(creditLimit) ? formatCurrency(creditLimit, currency) : '--';
     } catch (e) {}
   }
+
+  updateConsumptionOverview();
+  setInterval(updateConsumptionOverview, 60000);
 
   function updateStats(data) {
     const total = data.length;
@@ -1788,6 +1829,7 @@ const initDashboardApp = () => {
     const dur = call.durationSec != null ? formatDuration(call.durationSec) : '—';
     const date = call.startedAt ? new Date(call.startedAt).toLocaleString('es-ES') : '—';
     const callScript = [call.reminderGreeting, call.reminderInstructions].filter(Boolean).join('\n\n').trim();
+    const usage = getCallUsage(call);
     modalMeta.innerHTML = `
       <span>📞 ${escapeHtml(call.from || '?')}</span>
       <span>→</span>
@@ -1813,9 +1855,34 @@ const initDashboardApp = () => {
           </audio>
       </div>` : '';
 
+    const usagePanel = `
+      <div class="space-y-4 px-2 mb-6">
+        <div class="text-[9px] font-black uppercase tracking-[0.3em] text-primary/70">Consumo de esta llamada</div>
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div class="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-4">
+            <div class="text-[9px] uppercase tracking-widest text-indigo-300 font-black">Telnyx</div>
+            <div class="text-lg font-bold text-white mt-2">${formatDuration(usage.telnyx_seconds)}</div>
+          </div>
+          <div class="bg-fuchsia-500/10 border border-fuchsia-500/20 rounded-2xl p-4">
+            <div class="text-[9px] uppercase tracking-widest text-fuchsia-300 font-black">Groq</div>
+            <div class="text-lg font-bold text-white mt-2">${formatCompactNumber(usage.groq_tokens_total)} tok</div>
+            <div class="text-[10px] text-slate-400 mt-1">in ${formatCompactNumber(usage.groq_tokens_in)} / out ${formatCompactNumber(usage.groq_tokens_out)}</div>
+          </div>
+          <div class="bg-cyan-500/10 border border-cyan-500/20 rounded-2xl p-4">
+            <div class="text-[9px] uppercase tracking-widest text-cyan-300 font-black">ElevenLabs</div>
+            <div class="text-lg font-bold text-white mt-2">${formatCompactNumber(usage.elevenlabs_characters)} chars</div>
+          </div>
+          <div class="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4">
+            <div class="text-[9px] uppercase tracking-widest text-emerald-300 font-black">Deepgram</div>
+            <div class="text-lg font-bold text-white mt-2">${formatDuration(usage.deepgram_seconds)}</div>
+          </div>
+        </div>
+      </div>
+    `;
+
     const transcript = call.transcript || [];
     if (!transcript.length) {
-      modalBody.innerHTML = callScript ? `
+      modalBody.innerHTML = usagePanel + (callScript ? `
         <div class="space-y-4 px-2">
           <div class="text-[9px] font-black uppercase tracking-[0.3em] text-primary/70">Guion usado en la llamada</div>
           <div class="bg-primary/10 border border-primary/20 p-5 rounded-2xl text-[13px] leading-relaxed text-white whitespace-pre-wrap shadow-lg">
@@ -1825,9 +1892,10 @@ const initDashboardApp = () => {
         <div class="flex flex-col items-center justify-center py-20 opacity-20 text-slate-500">
           <span class="material-symbols-outlined text-6xl mb-4">chat_bubble_outline</span>
           <p class="text-[10px] font-bold uppercase tracking-[0.3em]">Sin registro de audio/texto</p>
-        </div>`;
+        </div>`);
     } else {
       modalBody.innerHTML = `
+        ${usagePanel}
         <div class="space-y-6 px-2">
           ${transcript.map(msg => {
             const isUser = msg.role === 'user';
@@ -1891,12 +1959,13 @@ const initDashboardApp = () => {
     if (!listBody) return;
 
     if (!rows.length) {
-      listBody.innerHTML = '<tr><td colspan="5" class="px-6 py-12 text-center text-slate-500 italic uppercase text-[9px] tracking-widest">Sin interacciones encontradas</td></tr>';
+      listBody.innerHTML = '<tr><td colspan="8" class="px-6 py-12 text-center text-slate-500 italic uppercase text-[9px] tracking-widest">Sin interacciones encontradas</td></tr>';
       return;
     }
 
     listBody.innerHTML = rows.slice(0, 50).map((c, i) => {
       const cls = classifyOutboundCall(c);
+      const usage = getCallUsage(c);
       
       let statusIcon = 'radio_button_checked';
       let statusColor = 'text-slate-500 shadow-none';
@@ -1917,7 +1986,7 @@ const initDashboardApp = () => {
       }
 
       const started = c.startedAt ? new Date(c.startedAt).toLocaleString('es-ES', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' }) : '—';
-      const dur = c.durationSec != null ? formatDuration(c.durationSec) : '—';
+      const dur = usage.telnyx_seconds ? formatDuration(usage.telnyx_seconds) : '—';
       
       return `
         <tr class="hover:bg-white/[0.03] transition-colors cursor-pointer group" onclick="showTranscriptByCallId('${c.callId}')">
@@ -1935,6 +2004,18 @@ const initDashboardApp = () => {
           </td>
           <td class="px-6 py-4 text-slate-400 font-medium">${escapeHtml(started)}</td>
           <td class="px-6 py-4 text-center font-mono font-bold text-slate-300">${escapeHtml(dur)}</td>
+          <td class="px-6 py-4 text-center">
+            <div class="text-white font-bold">${formatCompactNumber(usage.groq_tokens_total)}</div>
+            <div class="text-[9px] text-slate-500 uppercase tracking-widest">tokens</div>
+          </td>
+          <td class="px-6 py-4 text-center">
+            <div class="text-white font-bold">${formatCompactNumber(usage.elevenlabs_characters)}</div>
+            <div class="text-[9px] text-slate-500 uppercase tracking-widest">chars</div>
+          </td>
+          <td class="px-6 py-4 text-center">
+            <div class="text-white font-bold">${usage.deepgram_seconds ? formatDuration(usage.deepgram_seconds) : '—'}</div>
+            <div class="text-[9px] text-slate-500 uppercase tracking-widest">audio</div>
+          </td>
           <td class="px-6 py-4 text-right">
             <div class="flex items-center justify-end gap-2">
                 ${c.recordingUrl ? '<span class="material-symbols-outlined text-sm text-indigo-400/50">mic</span>' : ''}
