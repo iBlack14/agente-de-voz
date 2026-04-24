@@ -9,6 +9,9 @@ const { getActivePrompt, getActiveReminderPrompt } = require('../prompts/promptS
 const { broadcastToMonitors, registerActiveSession, unregisterActiveSession } = require('./liveMonitor');
 
 const readyGreetings = new Map();
+const ENABLE_STT_FOR_REMINDERS = String(process.env.ENABLE_STT_FOR_REMINDERS || 'false').toLowerCase() === 'true';
+const ENABLE_AMD_FOR_REMINDERS = String(process.env.ENABLE_AMD_FOR_REMINDERS || 'true').toLowerCase() === 'true';
+const AMD_WAIT_TIMEOUT_MS = Math.max(500, parseInt(process.env.REMINDER_AMD_WAIT_MS || '4000', 10));
 
 const TIMEZONE_OFFSET = parseInt(process.env.TIMEZONE_OFFSET) || -5;
 const DOMAIN_PLACEHOLDERS = [
@@ -157,7 +160,9 @@ function createSession(ws) {
   ws.on('close', () => endSession('ws_close'));
 
   async function handleAudioChunk(chunk) {
-    const userFragment = await transcribeAudio(chunk, callId);
+    const userFragment = (isReminderCall && !ENABLE_STT_FOR_REMINDERS)
+      ? ""
+      : await transcribeAudio(chunk, callId);
     if (userFragment?.trim().length > 3) {
       fullTranscript += ' ' + userFragment;
       silenceCount = 0; idleCount = 0;
@@ -227,7 +232,24 @@ function createSession(ws) {
 
   async function sendGreeting() {
     isProcessing = true;
-    const context = getCallContext(callId);
+    let context = getCallContext(callId);
+
+    if (isReminderCall && ENABLE_AMD_FOR_REMINDERS) {
+      const waitUntil = Date.now() + AMD_WAIT_TIMEOUT_MS;
+      while (Date.now() < waitUntil) {
+        context = getCallContext(callId);
+        const amd = String(context?.amd_result || '').toLowerCase();
+        if (amd && amd !== 'pending') {
+          if (['machine', 'fax_detected', 'silence'].includes(amd)) {
+            isProcessing = false;
+            return;
+          }
+          break;
+        }
+        await new Promise(r => setTimeout(r, 150));
+      }
+    }
+
     let greeting;
     let preStream = readyGreetings.get(callId);
     let preLoadedStream = null;

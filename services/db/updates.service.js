@@ -1,4 +1,50 @@
 const { supabase } = require('./supabase.service');
+const { formatToE164, isValidE164 } = require('../utils');
+
+const MAX_BATCH_REPEAT_COUNT = Math.max(1, parseInt(process.env.MAX_BATCH_REPEAT_COUNT || '1', 10));
+const RECENT_CALL_COOLDOWN_HOURS = Math.max(1, parseInt(process.env.RECENT_CALL_COOLDOWN_HOURS || '24', 10));
+
+async function getRecentlyContactedNumbers(numbers) {
+    const normalizedNumbers = Array.from(new Set((numbers || []).filter(Boolean)));
+    if (normalizedNumbers.length === 0) return new Set();
+
+    const cutoff = new Date(Date.now() - RECENT_CALL_COOLDOWN_HOURS * 3600000).toISOString();
+    const recentStatusesToIgnore = ['failed', 'busy', 'no_answer', 'canceled'];
+
+    const [{ data: recentCalls, error: callsError }, { data: recentScheduled, error: scheduledError }] = await Promise.all([
+        supabase
+            .from('calls')
+            .select('to_number,status,started_at')
+            .in('to_number', normalizedNumbers)
+            .gte('started_at', cutoff),
+        supabase
+            .from('scheduled_calls')
+            .select('to_number,status,scheduled_for')
+            .in('to_number', normalizedNumbers)
+            .gte('scheduled_for', cutoff)
+    ]);
+
+    if (callsError) throw callsError;
+    if (scheduledError) throw scheduledError;
+
+    const blocked = new Set();
+
+    for (const row of recentCalls || []) {
+        const status = String(row.status || '').toLowerCase();
+        if (!recentStatusesToIgnore.includes(status)) {
+            blocked.add(row.to_number);
+        }
+    }
+
+    for (const row of recentScheduled || []) {
+        const status = String(row.status || '').toLowerCase();
+        if (status === 'pending' || status === 'processing' || status === 'completed') {
+            blocked.add(row.to_number);
+        }
+    }
+
+    return blocked;
+}
 
 module.exports = {
     /**
@@ -101,7 +147,8 @@ module.exports = {
         const greetingBase = typeof customGreeting === 'string' ? customGreeting : prompt.greeting;
         const instructionsBase = typeof customInstructions === 'string' ? customInstructions : prompt.text;
         const intervalHours = Math.max(1, parseInt(repeatEveryHours || 2, 10));
-        const totalRuns = Math.max(1, parseInt(repeatCount || (scheduledFor ? 1 : 3), 10));
+        const requestedRuns = Math.max(1, parseInt(repeatCount || 1, 10));
+        const totalRuns = Math.min(MAX_BATCH_REPEAT_COUNT, requestedRuns);
         const firstRunAt = scheduledFor ? new Date(scheduledFor) : new Date();
 
         const stamp = Date.now();
@@ -110,14 +157,42 @@ module.exports = {
         const commonBatchLabel = `Campaña ${prompt.name} [Vol. ${updates.length}] | ID-${shortId}`;
 
         // 4. Prepare scheduled calls with personalized content
+        const validNumbers = updates
+            .map(u => formatToE164(u.phone || ''))
+            .filter(isValidE164);
+        const recentlyContacted = await getRecentlyContactedNumbers(validNumbers);
+
+        const seenRuns = new Set();
+        const skippedNumbers = [];
         const scheduledCalls = updates
             .filter(u => u.phone) // Only those with phones
             .flatMap(u => {
+                const normalizedPhone = formatToE164(u.phone);
+                if (!isValidE164(normalizedPhone)) {
+                    skippedNumbers.push({ phone: u.phone, reason: 'invalid_number', domain: u.domain || null });
+                    return [];
+                }
+
+                if (recentlyContacted.has(normalizedPhone)) {
+                    skippedNumbers.push({ phone: normalizedPhone, reason: `recently_contacted_${RECENT_CALL_COOLDOWN_HOURS}h`, domain: u.domain || null });
+                    return [];
+                }
+
                 const greeting = personalizeText(greetingBase, u.domain);
                 const instructions = personalizeText(instructionsBase, u.domain);
 
                 return Array.from({ length: totalRuns }, (_, idx) => {
                     const runAt = new Date(firstRunAt.getTime() + (idx * intervalHours * 60 * 60 * 1000));
+                    const dedupeKey = [
+                        normalizedPhone,
+                        String(u.domain || '').trim().toLowerCase(),
+                        runAt.toISOString()
+                    ].join('|');
+
+                    if (seenRuns.has(dedupeKey)) {
+                        return null;
+                    }
+                    seenRuns.add(dedupeKey);
                     
                     // For multiple runs, we might want different batch IDs if the UI expects it for iterations,
                     // but the user wants to see it as "one batch". 
@@ -131,7 +206,7 @@ module.exports = {
                     }
 
                     return {
-                        to_number: u.phone,
+                        to_number: normalizedPhone,
                         domain: u.domain,
                         batch_id: batchId,
                         batch_label: totalRuns > 1
@@ -143,10 +218,10 @@ module.exports = {
                         retry_interval_hours: 0,
                         status: 'pending'
                     };
-                });
+                }).filter(Boolean);
             });
 
-        if (scheduledCalls.length === 0) return { scheduled: 0 };
+        if (scheduledCalls.length === 0) return { scheduled: 0, skipped: skippedNumbers, capped_repeat_count: totalRuns };
 
         // 5. Register the batch in call_batches for the UI to recognize it properly
         await supabase.from('call_batches').upsert({
@@ -163,7 +238,7 @@ module.exports = {
             .select();
         
         if (insertError) throw insertError;
-        return { scheduled: data.length, data };
+        return { scheduled: data.length, data, skipped: skippedNumbers, capped_repeat_count: totalRuns };
     },
 
     /**

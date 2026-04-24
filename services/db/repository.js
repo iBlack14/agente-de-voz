@@ -19,7 +19,7 @@ module.exports = {
             .eq('call_id', callId)
             .single();
 
-        const terminalStatuses = ['answered', 'completed', 'no_answer', 'failed', 'busy', 'reminder_completed', 'hangup', 'ws_close'];
+        const terminalStatuses = ['answered', 'completed', 'no_answer', 'failed', 'busy', 'reminder_completed', 'hangup', 'ws_close', 'voicemail'];
         if (existing && terminalStatuses.includes(existing.status) && entry.status === 'queued') {
             // console.debug(`[Repository] Skipping status overwrite for ${callId}: current=${existing.status}, new=queued`);
             // We still update other fields but keep the terminal status

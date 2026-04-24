@@ -180,11 +180,11 @@ const initDashboardApp = () => {
 
       text.textContent = options.message || 'Define cada cuánto y cuántas veces se ejecutará este lote.';
       intervalSelect.value = String(options.intervalHours || 2);
-      countSelect.value = String(options.repeatCount || 3);
+      countSelect.value = String(options.repeatCount || 1);
 
       const refreshSummary = () => {
           const intervalHours = parseInt(intervalSelect.value || '2', 10);
-          const repeatCount = parseInt(countSelect.value || '3', 10);
+          const repeatCount = parseInt(countSelect.value || '1', 10);
           summary.textContent = `Se programará ${repeatCount} ${repeatCount === 1 ? 'vez' : 'veces'}, cada ${intervalHours} hora${intervalHours === 1 ? '' : 's'}.`;
       };
       refreshSummary();
@@ -216,7 +216,7 @@ const initDashboardApp = () => {
               cleanup();
               resolve({
                   intervalHours: parseInt(intervalSelect.value || '2', 10),
-                  repeatCount: parseInt(countSelect.value || '3', 10)
+                  repeatCount: parseInt(countSelect.value || '1', 10)
               });
           };
 
@@ -1025,7 +1025,7 @@ const initDashboardApp = () => {
     }
 
     const status = String(call.status || '').toLowerCase();
-    const failedStatuses = new Set(['failed', 'busy', 'no_answer', 'timeout', 'canceled', 'rejected', 'hangup_failed', 'failed_to_dial']);
+    const failedStatuses = new Set(['failed', 'busy', 'no_answer', 'timeout', 'canceled', 'rejected', 'hangup_failed', 'failed_to_dial', 'voicemail']);
     if (failedStatuses.has(status)) return 'unanswered';
 
     return 'pending';
@@ -3406,7 +3406,7 @@ const initDashboardApp = () => {
     const scheduleConfig = await appSchedule({
       message: 'Define cada cuánto y cuántas veces se ejecutará este lote.',
       intervalHours: 2,
-      repeatCount: 3
+      repeatCount: 1
     });
     if (!scheduleConfig) return;
 

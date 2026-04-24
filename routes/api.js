@@ -10,8 +10,11 @@ const { readVoiceSettings, saveVoiceSettings } = require('../services/config/voi
 const { normalizeText } = require('../services/ai/tts.service');
 const { readCallLog, logCall, getUsageStats } = require('../services/db/repository');
 const { makeOutboundCall } = require('../services/telephony/telnyxClient');
+const { hangupCall } = require('../services/telephony/telnyxClient');
 const { setCallContext } = require('../services/telephony/context.service');
 const { isValidE164, formatToE164 } = require('../services/utils');
+const { activeSessions } = require('../services/voice/liveMonitor');
+const { isWithinAllowedCallWindow, getNextAllowedCallTime, CALL_WINDOW_END_HOUR } = require('../services/telephony/callWindow.service');
 
 // New: Updates Service
 const updatesService = require('../services/db/updates.service');
@@ -19,6 +22,33 @@ const updatesService = require('../services/db/updates.service');
 const callRateLimits = new Map();
 const WINDOW = 60_000;
 const MAX = 50;
+const RECENT_CALL_COOLDOWN_HOURS = Math.max(1, parseInt(process.env.RECENT_CALL_COOLDOWN_HOURS || '24', 10));
+
+async function hasRecentContact(number) {
+  const cutoff = new Date(Date.now() - RECENT_CALL_COOLDOWN_HOURS * 3600000).toISOString();
+
+  const [{ data: calls, error: callsError }, { data: scheduled, error: scheduledError }] = await Promise.all([
+    supabase
+      .from('calls')
+      .select('call_id,status,started_at')
+      .eq('to_number', number)
+      .gte('started_at', cutoff)
+      .limit(1),
+    supabase
+      .from('scheduled_calls')
+      .select('id,status,scheduled_for')
+      .eq('to_number', number)
+      .gte('scheduled_for', cutoff)
+      .in('status', ['pending', 'processing', 'completed'])
+      .limit(1)
+  ]);
+
+  if (callsError) throw callsError;
+  if (scheduledError) throw scheduledError;
+
+  const recentCall = (calls || []).find(row => !['failed', 'busy', 'no_answer', 'canceled'].includes(String(row.status || '').toLowerCase()));
+  return Boolean(recentCall || (scheduled || []).length);
+}
 
 router.get('/prompts', async (req, res) => {
   try { res.json(await readPrompts()); } catch (err) { res.status(500).json({ error: err.message }); }
@@ -130,7 +160,14 @@ router.post('/make-call', async (req, res) => {
     return res.status(400).json({ error: 'Número inválido' });
   }
 
+  if (await hasRecentContact(number)) {
+    return res.status(409).json({ error: `Este número ya fue contactado dentro de las últimas ${RECENT_CALL_COOLDOWN_HOURS} horas.` });
+  }
+
   if (scheduled_for) {
+     const normalizedSchedule = isWithinAllowedCallWindow(new Date(scheduled_for))
+       ? new Date(scheduled_for)
+       : getNextAllowedCallTime(new Date(scheduled_for));
      console.log(`📅 [API] Guardando llamada programada en Supabase para: ${scheduled_for}`);
      await supabase.from('scheduled_calls').insert({
         to_number: number,
@@ -139,10 +176,14 @@ router.post('/make-call', async (req, res) => {
         domain,
         greeting,
         instructions,
-        scheduled_for,
+        scheduled_for: normalizedSchedule.toISOString(),
         retry_interval_hours: retry_interval || 0
      });
-     return res.json({ success: true, message: `Llamada programada para ${scheduled_for}` });
+     return res.json({ success: true, message: `Llamada programada para ${normalizedSchedule.toISOString()}` });
+  }
+
+  if (!isWithinAllowedCallWindow()) {
+    return res.status(409).json({ error: `Fuera de horario de llamadas. Después de las ${CALL_WINDOW_END_HOUR}:00 hora Perú ya no se llama.` });
   }
 
   // Add call to neural queue
@@ -306,6 +347,54 @@ router.get('/scheduled', async (req, res) => {
     if (error) throw error;
     res.json(data);
   } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.post('/calls/stop-all', async (req, res) => {
+  try {
+    const activeCallIds = Array.from(activeSessions.keys()).filter(Boolean);
+    const hangupResults = await Promise.allSettled(
+      activeCallIds.map(async (callId) => {
+        await hangupCall(callId);
+        await logCall({
+          callId,
+          endedAt: new Date().toISOString(),
+          status: 'canceled'
+        });
+        return callId;
+      })
+    );
+
+    const { data: queuedTasks, error: fetchError } = await supabase
+      .from('scheduled_calls')
+      .select('id')
+      .in('status', ['pending', 'processing']);
+
+    if (fetchError) throw fetchError;
+
+    const queuedTaskIds = (queuedTasks || []).map(item => item.id);
+    if (queuedTaskIds.length > 0) {
+      const { error: updateError } = await supabase
+        .from('scheduled_calls')
+        .update({
+          status: 'failed',
+          processing_started_at: null,
+          last_error: 'Cancelado manualmente por cierre total',
+          updated_at: new Date().toISOString()
+        })
+        .in('id', queuedTaskIds);
+
+      if (updateError) throw updateError;
+    }
+
+    res.json({
+      success: true,
+      active_calls_requested_to_hangup: activeCallIds.length,
+      active_calls_hangup_errors: hangupResults.filter(r => r.status === 'rejected').length,
+      scheduled_tasks_stopped: queuedTaskIds.length
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 router.post('/scheduled/recover-stuck', async (req, res) => {

@@ -13,5 +13,12 @@ module.exports = {
       contexts.delete(oldest);
     }
   },
-  getCallContext: (callId) => contexts.get(callId) || {}
+  getCallContext: (callId) => contexts.get(callId) || {},
+  updateCallContext: (callId, partial) => {
+    if (!callId) return {};
+    const current = contexts.get(callId) || {};
+    const next = { ...current, ...partial, timestamp: Date.now() };
+    contexts.set(callId, next);
+    return next;
+  }
 };
