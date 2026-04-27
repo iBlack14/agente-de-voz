@@ -26,6 +26,11 @@ const initDashboardApp = () => {
     if (!Number.isFinite(number)) return '--';
     return new Intl.NumberFormat('es-PE', { style: 'currency', currency }).format(number);
   };
+
+  // State for persistent selection across pagination
+  if (!(window.selectedUpdateIds instanceof Set)) {
+    window.selectedUpdateIds = new Set();
+  }
   const getCallUsage = (call) => ({
     groq_tokens_in: Number(call?.usage?.groq_tokens_in || 0),
     groq_tokens_out: Number(call?.usage?.groq_tokens_out || 0),
@@ -3030,6 +3035,16 @@ const initDashboardApp = () => {
   const updatesMonthChips = Array.from(document.querySelectorAll('.updates-month-chip'));
 
   let currentUpdates = [];
+  
+  window.getUpdateGroupKey = (item) => {
+    if (!item) return 'unknown';
+    const catMatch = item.notes?.match(/\[CAT:(.*?)\]/);
+    if (catMatch) return `cat_${catMatch[1].trim().toUpperCase()}`;
+    
+    const parts = String(item.execution_date || '').split('-');
+    if (parts.length < 2) return 'other';
+    return `${parseInt(parts[1], 10) - 1}`;
+  };
 
   function getLocalDateInputValue(date = new Date()) {
     const offset = date.getTimezoneOffset();
@@ -3124,34 +3139,30 @@ const initDashboardApp = () => {
     }
 
     const grouped = listData.reduce((acc, item) => {
-      const catMatch = item.notes?.match(/\[CAT:(.*?)\]/);
-      if (catMatch) {
-        const catName = catMatch[1].trim();
-        const key = `cat_${catName.toUpperCase()}`;
-        if (!acc[key]) {
-          acc[key] = {
-            key,
-            monthName: catName.toUpperCase(),
-            monthIndex: -10,
-            items: [],
-            isCustomCategory: true
-          };
-        }
-        acc[key].items.push(item);
-        return acc;
-      }
-
-      const parts = String(item.execution_date || '').split('-');
-      if (parts.length < 2) return acc;
-      const monthIdx = parseInt(parts[1], 10) - 1;
-      const key = `${monthIdx}`;
+      const key = window.getUpdateGroupKey(item);
+      if (key === 'unknown') return acc;
+      
       if (!acc[key]) {
-        const dummyDate = new Date(2024, monthIdx, 15);
+        let monthName = 'OTROS';
+        let monthIndex = 999;
+        let isCustom = false;
+        
+        if (key.startsWith('cat_')) {
+          monthName = key.replace('cat_', '');
+          monthIndex = -10;
+          isCustom = true;
+        } else if (key !== 'other') {
+          monthIndex = parseInt(key, 10);
+          const dummyDate = new Date(2024, monthIndex, 15);
+          monthName = dummyDate.toLocaleDateString('es-ES', { month: 'long' }).toUpperCase();
+        }
+
         acc[key] = {
           key,
-          monthName: dummyDate.toLocaleDateString('es-ES', { month: 'long' }).toUpperCase(),
-          monthIndex: monthIdx,
-          items: []
+          monthName,
+          monthIndex,
+          items: [],
+          isCustomCategory: isCustom
         };
       }
       acc[key].items.push(item);
@@ -3205,7 +3216,7 @@ const initDashboardApp = () => {
         <div class="updates-month-toolbar" data-month-key="${escapeHtml(group.key)}">
           <div class="updates-month-toolbar-left">
             <label class="updates-month-toolbar-select">
-              <input type="checkbox" class="updates-month-select-all rounded border-white/10 bg-black/40" data-month-key="${escapeHtml(group.key)}">
+              <input type="checkbox" class="updates-month-select-all update-checkbox rounded border-white/10 bg-black/40" data-month-key="${escapeHtml(group.key)}">
               <span><span class="updates-month-selected-count">0</span> seleccionados</span>
             </label>
              <select class="updates-month-reminder w-full sm:w-[350px] max-w-full bg-black/40 border border-white/10 rounded-xl py-2 px-4 text-[10px] font-bold text-primary uppercase tracking-widest outline-none transition-all" onchange="updateBatchPreview(this)">
@@ -3241,10 +3252,12 @@ const initDashboardApp = () => {
         <div class="updates-domain-list">
           ${itemCount === 0 
             ? `<div class="updates-empty-state">No hay dominios en este cuadro.</div>`
-            : pagedItems.map(u => `
-              <article class="update-row group" data-month-key="${escapeHtml(group.key)}" onclick="const cb = this.querySelector('.update-checkbox'); if(cb) { cb.checked = !cb.checked; cb.dispatchEvent(new Event('change', { bubbles: true })); }">
+            : pagedItems.map(u => {
+                const isSelected = window.selectedUpdateIds.has(String(u.id));
+                return `
+              <article class="update-row group ${isSelected ? 'is-selected' : ''}" data-month-key="${escapeHtml(group.key)}" onclick="const cb = this.querySelector('.update-checkbox'); if(cb) { cb.checked = !cb.checked; cb.dispatchEvent(new Event('change', { bubbles: true })); }">
                 <div class="update-list-check" onclick="event.stopPropagation()">
-                  <input type="checkbox" class="update-checkbox h-4 w-4 rounded-full border border-white/15 bg-black/40 cursor-pointer transition-all outline-none" data-id="${u.id}">
+                  <input type="checkbox" class="update-checkbox h-4 w-4 rounded-full border border-white/15 bg-black/40 cursor-pointer transition-all outline-none ${isSelected ? 'is-checked' : ''}" data-id="${u.id}" ${isSelected ? 'checked' : ''}>
                 </div>
                 <div class="update-list-content">
                   <div class="update-list-main">
@@ -3303,7 +3316,7 @@ const initDashboardApp = () => {
                   </div>
                 </div>
               </article>
-            `).join('')
+            `; }).join('')
           }
         </div>
         ` : ''}
@@ -3341,21 +3354,52 @@ const initDashboardApp = () => {
       });
     });
     
-    document.querySelectorAll('.update-checkbox').forEach(cb => {
+    document.querySelectorAll('.update-row .update-checkbox[data-id]').forEach(cb => {
       cb.addEventListener('change', () => {
+        if (!cb.dataset.id) return;
+        const id = String(cb.dataset.id);
+        if (cb.checked) window.selectedUpdateIds.add(id);
+        else window.selectedUpdateIds.delete(id);
         paintUpdateCheckboxState(cb);
         updateSelectedCount();
       });
     });
 
     document.querySelectorAll('.updates-month-select-all').forEach(toggle => {
-      toggle.addEventListener('change', () => {
+      toggle.addEventListener('change', (e) => {
         const monthKey = toggle.dataset.monthKey;
+        const isChecked = toggle.checked;
+        
+        console.log('[ViaAI] Month Select All clicked:', monthKey, 'Checked:', isChecked);
+        
+        // Find all items in this category/month (across all pages)
+        const categoryItems = currentUpdates.filter(u => {
+            if (u.domain === 'CABECERA_DE_CUADRO') return false;
+            return window.getUpdateGroupKey(u) === monthKey;
+        });
+        
+        console.log('[ViaAI] Items found for selection:', categoryItems.length);
+
+        categoryItems.forEach(u => {
+            const sid = String(u.id);
+            if (isChecked) {
+                window.selectedUpdateIds.add(sid);
+            } else {
+                window.selectedUpdateIds.delete(sid);
+            }
+        });
+
+        // Sync visible individual checkboxes
         document.querySelectorAll(`.update-row[data-month-key="${monthKey}"] .update-checkbox`).forEach(cb => {
-          cb.checked = toggle.checked;
+          cb.checked = isChecked;
           paintUpdateCheckboxState(cb);
         });
+        
+        // Ensure the toggle itself is painted
+        paintUpdateCheckboxState(toggle);
+        
         updateSelectedCount();
+        console.log('[ViaAI] Total selected after batch:', window.selectedUpdateIds.size);
       });
     });
 
@@ -3364,7 +3408,15 @@ const initDashboardApp = () => {
         const toolbar = btn.closest('.updates-month-toolbar');
         const monthKey = toolbar?.dataset.monthKey;
         const promptId = toolbar?.querySelector('.updates-month-reminder')?.value || '';
-        const selectedIds = Array.from(document.querySelectorAll(`.update-row[data-month-key="${monthKey}"] .update-checkbox:checked`)).map(cb => cb.dataset.id);
+        
+        // Get all selected IDs for this specific month/category from persistent state
+        const selectedIds = currentUpdates
+          .filter(u => {
+              if (u.domain === 'CABECERA_DE_CUADRO' || !window.selectedUpdateIds.has(String(u.id))) return false;
+              return window.getUpdateGroupKey(u) === monthKey;
+          })
+          .map(u => u.id);
+
         await triggerUpdatesBatchAction({ selectedIds, promptId, mode: 'call', triggerButton: btn });
       });
     });
@@ -3374,12 +3426,21 @@ const initDashboardApp = () => {
         const toolbar = btn.closest('.updates-month-toolbar');
         const monthKey = toolbar?.dataset.monthKey;
         const promptId = toolbar?.querySelector('.updates-month-reminder')?.value || '';
-        const selectedIds = Array.from(document.querySelectorAll(`.update-row[data-month-key="${monthKey}"] .update-checkbox:checked`)).map(cb => cb.dataset.id);
+        
+        // Get all selected IDs for this specific month/category from persistent state
+        const selectedIds = currentUpdates
+          .filter(u => {
+              if (u.domain === 'CABECERA_DE_CUADRO' || !window.selectedUpdateIds.has(String(u.id))) return false;
+              return window.getUpdateGroupKey(u) === monthKey;
+          })
+          .map(u => u.id);
+
         await triggerUpdatesBatchAction({ selectedIds, promptId, mode: 'schedule', triggerButton: btn });
       });
     });
 
     setTimeout(initPremiumSelects, 50);
+    updateSelectedCount();
   }
 
   window.changeBoxPage = (key, delta) => {
@@ -3434,41 +3495,43 @@ const initDashboardApp = () => {
   }
 
   function updateSelectedCount() {
-    const checkboxes = Array.from(document.querySelectorAll('.update-checkbox'));
-    const selected = checkboxes.filter(cb => cb.checked).length;
-    if (updatesSelectedCount) updatesSelectedCount.textContent = selected;
-    if (updatesCallNowBtn) updatesCallNowBtn.disabled = true;
-    if (updatesScheduleBtn) updatesScheduleBtn.disabled = true;
+    const totalLoaded = currentUpdates.filter(u => u.domain !== 'CABECERA_DE_CUADRO').length;
+    const totalSelected = window.selectedUpdateIds.size;
+    
+    if (updatesSelectedCount) updatesSelectedCount.textContent = totalSelected;
+    
     if (updatesSelectAll) {
-      updatesSelectAll.checked = checkboxes.length > 0 && selected === checkboxes.length;
-      updatesSelectAll.indeterminate = selected > 0 && selected < checkboxes.length;
+      updatesSelectAll.checked = totalLoaded > 0 && totalSelected >= totalLoaded;
+      updatesSelectAll.indeterminate = totalSelected > 0 && totalSelected < totalLoaded;
+      paintUpdateCheckboxState(updatesSelectAll);
     }
 
     document.querySelectorAll('.updates-month-toolbar').forEach(toolbar => {
       const monthKey = toolbar.dataset.monthKey;
-      const monthCheckboxes = Array.from(document.querySelectorAll(`.update-row[data-month-key="${monthKey}"] .update-checkbox`));
-      const monthSelected = monthCheckboxes.filter(cb => cb.checked).length;
+      
+      // Calculate selected count for this specific month/category from data
+      const monthItems = currentUpdates.filter(u => {
+          if (u.domain === 'CABECERA_DE_CUADRO') return false;
+          return window.getUpdateGroupKey(u) === monthKey;
+      });
+      
+      const monthTotal = monthItems.length;
+      const monthSelected = monthItems.filter(u => window.selectedUpdateIds.has(String(u.id))).length;
+
       const countEl = toolbar.querySelector('.updates-month-selected-count');
       const monthSelectAll = toolbar.querySelector('.updates-month-select-all');
       const monthCallBtn = toolbar.querySelector('.updates-month-call-btn');
       const monthScheduleBtn = toolbar.querySelector('.updates-month-schedule-btn');
+      
       if (countEl) countEl.textContent = monthSelected;
       if (monthSelectAll) {
-        monthSelectAll.checked = monthCheckboxes.length > 0 && monthSelected === monthCheckboxes.length;
-        monthSelectAll.indeterminate = monthSelected > 0 && monthSelected < monthCheckboxes.length;
+        monthSelectAll.checked = monthTotal > 0 && monthSelected === monthTotal;
+        monthSelectAll.indeterminate = monthSelected > 0 && monthSelected < monthTotal;
         paintUpdateCheckboxState(monthSelectAll);
       }
       if (monthCallBtn) monthCallBtn.disabled = monthSelected === 0;
       if (monthScheduleBtn) monthScheduleBtn.disabled = monthSelected === 0;
     });
-
-    if (updatesSelectAll) {
-      const allCheckboxes = document.querySelectorAll('.update-checkbox');
-      const totalSelected = Array.from(allCheckboxes).filter(cb => cb.checked).length;
-      updatesSelectAll.checked = allCheckboxes.length > 0 && totalSelected === allCheckboxes.length;
-      updatesSelectAll.indeterminate = totalSelected > 0 && totalSelected < allCheckboxes.length;
-      paintUpdateCheckboxState(updatesSelectAll);
-    }
   }
 
   async function triggerUpdatesBatchAction({ selectedIds, promptId, mode, triggerButton }) {
@@ -3565,13 +3628,19 @@ const initDashboardApp = () => {
     searchTimeout = setTimeout(window.loadUpdates, 500);
   });
   
-  updatesSelectAll?.addEventListener('change', () => {
-    document.querySelectorAll('.update-checkbox, .updates-month-select-all').forEach(cb => {
-      cb.checked = updatesSelectAll.checked;
-      paintUpdateCheckboxState(cb);
+    updatesSelectAll?.addEventListener('change', () => {
+      currentUpdates.forEach(u => {
+        if (u.domain === 'CABECERA_DE_CUADRO') return;
+        if (updatesSelectAll.checked) window.selectedUpdateIds.add(String(u.id));
+        else window.selectedUpdateIds.delete(String(u.id));
+      });
+
+      document.querySelectorAll('.update-checkbox, .updates-month-select-all').forEach(cb => {
+        cb.checked = updatesSelectAll.checked;
+        paintUpdateCheckboxState(cb);
+      });
+      updateSelectedCount();
     });
-    updateSelectedCount();
-  });
 
   window.renameCategory = async (oldName) => {
     const newName = await appPrompt(`Renombrar cuadro "${oldName}" a:`, oldName);

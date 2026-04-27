@@ -1,15 +1,15 @@
-require('dotenv').config();
 const { query } = require('./services/db/postgres.service');
 
-async function getCaller() {
+async function check() {
   try {
-    const res = await query(`SELECT from_number, started_at FROM calls WHERE direction = 'inbound' ORDER BY started_at DESC LIMIT 1`);
-    console.log(JSON.stringify(res.rows[0]));
-    process.exit(0);
+    const res = await query('SELECT * FROM updates LIMIT 1');
+    console.log('Update record sample:', res.rows[0]);
+    
+    const cols = await query("SELECT column_name FROM information_schema.columns WHERE table_name = 'updates'");
+    console.log('Update table columns:', cols.rows.map(r => r.column_name));
   } catch (e) {
     console.error(e);
-    process.exit(1);
   }
 }
 
-getCaller();
+check();
